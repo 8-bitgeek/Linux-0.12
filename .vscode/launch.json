@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/system",
+            "miDebuggerServerAddress": "192.168.192.4:1234",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            // "sourceFileMap": {
+            //     "/root/Linux-0.12": "~/Linux-0.12"
+            // },
+            // "setupCommands": [
+            //     // {"text": "set architecture i386:x86-64"},
+            //     {"text": "set substitute-path /root/Linux-0.12 ~/Linux-0.12"}
+            // ]
+        }
+    ]
+}

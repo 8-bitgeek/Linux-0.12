@@ -1,0 +1,16 @@
+**/*.o
+System.map
+Kernel_Image
+bochsout.txt
+boot/bootsect
+boot/bootsect.s
+boot/setup
+boot/setup.s
+core.*
+tools/system
+kernel/blk_drv/blk_drv.a
+kernel/chr_drv/chr_drv.a
+kernel/chr_drv/keyboard.s
+kernel/math/math.a
+lib/lib.a
+system.S
