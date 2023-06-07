@@ -128,7 +128,7 @@ static struct {
 	unsigned long	vc_origin;													/* Used for EGA/VGA fast scroll	*/
 	unsigned long	vc_scr_end;													/* Used for EGA/VGA fast scroll	*/
 	unsigned long	vc_pos;														// 当前光标对应的显示内存位置.
-	unsigned long	vc_x, vc_y;													// 当前光标列,行值.
+	unsigned long	vc_x, vc_y;													// 当前光标列, 行值.
 	unsigned long	vc_top, vc_bottom;											// 滚动时顶行行号;底行行号.
 	unsigned long	vc_npar, vc_par[NPAR];										// 转义序列参数个数和参数数组.
 	unsigned long	vc_video_mem_start;											/* Start of video RAM		*/
@@ -374,10 +374,10 @@ static void scrdown(int currcons)
 	}
 }
 
-// 光标在同列位置下移一行.
-// 如果光标没有处在最后一行,则直接修改光标当前行变量y++,并调整光标对应显示内存位置pos(加上一行字符所对应的内存长度).否则
-// 需要将屏幕窗口内容上移一行.
-// 函数名称lf(line feed 换行)是指处理控制字符LF.
+// 实现换行操作, 光标在同列位置下移一行.
+// 如果光标没有处在最后一行, 则直接修改光标当前行变量 y++, 并调整光标对应显示内存位置 pos(加上一行字符所对应的内存长度). 
+// 否则需要将屏幕窗口内容上移一行.
+// 函数名称 lf(line feed 换行) 是指处理控制字符 LF.
 static void lf(int currcons)
 {
 	if (y + 1 < bottom) {
@@ -402,17 +402,17 @@ static void ri(int currcons)
 	scrdown(currcons);									// 将屏幕窗口内容下移一行
 }
 
-// 光标回到第1列(0列).
-// 调整光标对应内存位置pos.光标所在列号*2即是0列到光标所在列对应的内存字节长度.
-// 函数名称cr(carriage return回车)指明处理的控制字符的回车.
+// 回车操作, 光标回到第 1 列(0 列).
+// 调整光标对应内存位置 pos. 光标所在列号 * 2 即是 0 列到光标所在列对应的内存字节长度.
+// 函数名称 cr(carriage return 回车) 指明处理的控制字符的回车.
 static void cr(int currcons)
 {
-	pos -= x << 1;										// 减去0列到光标处占用的内存字节数.
-	x = 0;
+	pos -= x << 1;										// 减去当前行第 0 列到光标处占用的内存字节数.
+	x = 0; 												// 列号归零，实现回车操作
 }
 
 // 擦除光标前一字符(用空格替代)(del -delete 删除)
-// 如果光标没有处在0列,则将光标对应内存位置pos后退2字节(对应屏幕上一个字符),然后将当前光标变量列值减1,并将光标所在位置处字符符擦除
+// 如果光标没有处在0列,则将光标对应内存位置pos后退2字节(对应屏幕上一个字符), 然后将当前光标变量列值减1, 并将光标所在位置处字符符擦除
 static void del(int currcons)
 {
 	if (x) {
@@ -565,17 +565,17 @@ void csi_m(int currcons)
 		}
 }
 
-// 设置显示光标.
-// 根据光标对应显示内存位置pos,设置显示控制器光标的显示位置.
+// 设置显示光标. 
+// 根据光标对应显示内存位置 pos, 设置显示控制器光标的显示位置.
 static inline void set_cursor(int currcons)
 {
-	// 既然我们需要设置显示光标,说明有键盘操作,因此需要恢复进行黑屏操作的延时计数值.
-	// 另外,显示光标的控制台必须是当前控制台,因此若当前处理的台号currocons不是前台控制台就立刻返回.
+	// 既然我们需要设置显示光标, 说明有键盘操作, 因此需要恢复进行黑屏操作的延时计数值.
+	// 另外, 显示光标的控制台必须是当前控制台, 因此若当前处理的台号 currocons 不是前台控制台就立刻返回.
 	blankcount = blankinterval;						// 复位黑屏操作的计数值.
 	if (currcons != fg_console)
 		return;
-	// 然后使用索引寄存器端口选择显示控制数据寄存器r14(光标当前显示位置高字节),接着写入光标当前位置高字节(向右移动9位表示高字节移到低字节再除以2),
-	// 相对于默认显示内存操作的.再使用索引寄存器选择r15,并将光标当前位置低字节写入其中.
+	// 然后使用索引寄存器端口选择显示控制数据寄存器 r14(光标当前显示位置高字节), 接着写入光标当前位置高字节(向右移动 9 位表示高字节移到低字节再除以 2),
+	// 相对于默认显示内存操作的. 再使用索引寄存器选择 r15, 并将光标当前位置低字节写入其中.
 	cli();
 	outb_p(14, video_port_reg);
 	outb_p(0xff & ((pos - video_mem_base) >> 9), video_port_val);
@@ -588,8 +588,8 @@ static inline void set_cursor(int currcons)
 // 把光标设置到当前虚拟控制台窗口的末端，起到隐藏光标的作用。
 static inline void hide_cursor(int currcons)
 {
-	// 首先使用索引寄存器端口选择控制数据寄存器r14（光标当前显示位置高字节），然后写入光标当前位置高字节（向右移动9位表示高字节移到低字节再除以2），
-	// 是相对于默认显示内存操作的。再使用索引寄存器选择r15，并将光标当前位置低字节写入其中。
+	// 首先使用索引寄存器端口选择控制数据寄存器 r14(光标当前显示位置高字节), 然后写入光标当前位置高字节(向右移动 9 位表示高字节移到低字节再除以 2),
+	// 是相对于默认显示内存操作的. 再使用索引寄存器选择 r15，并将光标当前位置低字节写入其中。
 	outb_p(14, video_port_reg);
 	outb_p(0xff & ((scr_end - video_mem_base) >> 9), video_port_val);
 	outb_p(15, video_port_reg);
@@ -1333,9 +1333,9 @@ void unblank_screen()
 }
 
 // 控制台显示函数
-// 该函数仅用于内核显示函数printk()(kernel/printk.c),用于在当前前台控制台上显示内核信息.
-// 处理方法是循环取出缓冲区中的字符,并根据字符的特性控制光标移动或直接显示在屏幕上.
-// 参数b是null结尾的字符串缓冲区指针。
+// 该函数仅用于内核显示函数 printk()(kernel/printk.c), 用于在当前前台控制台上显示内核信息.
+// 处理方法是循环取出缓冲区中的字符, 并根据字符的特性控制光标移动或直接显示在屏幕上.
+// 参数 b 是 null 结尾的字符串缓冲区指针。
 void console_print(const char * b)
 {
 	int currcons = fg_console;
@@ -1343,35 +1343,35 @@ void console_print(const char * b)
 
 	// 循环读取缓冲区b中的字符。
 	while (c = *(b++)) {
-		// 如果当前字符c是换行符，则对光标执行回车换行操作
-		if (c == 10) {
-			// 光标回到当前行的第0列
+		// 如果当前字符 c 是换行符，则对光标执行回车换行操作
+		if (c == 10) { 		// 回车 + 换行
+			// 光标回到当前行的第 0 列
 			cr(currcons);
 			// 将光标从当前列移动到下一行
 			lf(currcons);
 			continue;
 		}
-		// 如果是回车符，就直接执行回车动作。然后去处理下一个字符。
+		// 如果是回车符，就直接执行回车动作. 然后去处理下一个字符。
 		if (c == 13) {
 			cr(currcons);
 			continue;
 		}
-		// 在读取了一个不是回车或换行字符后，如果发现当前光标列位置x已经到达屏幕右末端，则让光标折返到下一行开始处。
+		// 在读取了一个不是回车或换行字符后，如果发现当前光标列位置 x 已经到达屏幕右末端，则让光标折返到下一行开始处。
 		// 然后把字符放到光标所处显示内存位置处，即在屏幕上显示出来。再把光标右移一格位置，为显示下一个字符作准备。
 		if (x >= video_num_columns) {
-			x -= video_num_columns;
-			pos -= video_size_row;
-			lf(currcons);
+			x -= video_num_columns; 							// 回到第 0 列
+			pos -= video_size_row; 								// 显存位置也回到本行 0 列
+			lf(currcons); 										// 换行, 跳到下一行
 		}
-		// 寄存器al中是需要显示的字符，这里把属性字节放到ah中，然后把ax内容存储到光标内存位置pos处，即在光标处显示字符。
-		__asm__("movb %2, %%ah\n\t"              				// 属性字节放到ah中。
-			"movw %%ax, %1\n\t"              					// ax内容放到pos处。
+		// 寄存器 al 中是需要显示的字符，这里把属性字节放到 ah 中，然后把 ax 内容存储到光标内存位置 pos 处，即在光标处显示字符。
+		__asm__("movb %2, %%ah\n\t"              				// 属性字节放到 ah 中。
+			"movw %%ax, %1\n\t"              					// ax 内容放到 pos 处。
 			::"a" (c),
 			"m" (*(short *)pos),
 			"m" (attr)
 			:);
-		pos += 2;
-		x++;
+		pos += 2; 												// 显存中下一个字符地址
+		x++; 													// 列号自增
 	}
 	set_cursor(currcons);           							// 最后设置的光标内存位置，设置显示控制器中光标位置。
 }

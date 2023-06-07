@@ -30,8 +30,8 @@ int printk(const char *fmt, ...)
 	va_list args;							// va_list实际上是一个字符指针类型.
 	int i;
 
-	// 运行参数处理开始函数.然后使用格式串fmt将参数列表args输出到buf中.返回值i等于输出字符串的长度.再运行参数处理结束函数.最后调用控制台显示
-	// 函数并返回显示字符数.
+	// 运行参数处理开始函数. 然后使用格式串 fmt 将参数列表 args 输出到 buf 中.
+	// 返回值 i 等于输出字符串的长度. 再运行参数处理结束函数. 最后调用控制台显示函数并返回显示字符数.
 	va_start(args, fmt);
 	i = vsprintf(buf, fmt, args);
 	va_end(args);

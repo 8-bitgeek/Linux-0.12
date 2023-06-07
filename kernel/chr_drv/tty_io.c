@@ -587,29 +587,29 @@ void tty_init(void)
 			0, 0, 0, NULL, NULL, NULL, NULL
 		};
 	}
-	// 接着初始化控制台终端(console.c).把con_init()放在这里,是因为我们需要根据显示卡类型和显示内存容量来确定系统虚拟控制台的数量
-	// NR_CONSOLES.该值被用于随后的控制tty结构初始化循环中.对于控制台的tty结构,425--430行是tty结构中包含的termios结构字段.其中
-	// 输入模式标志集被初始化为ICRNL标志;输出模式标志被初始化含有后处理标志OPOST和把NL转换成CRNL的标志ONLCR;本地模式标志集被初始化
-	// 含有IXON,ICAON,ECHO,ECHOCTL和ECHOKE标志;控制字符数组c_cc[]被设置含有初始值INIT_C_CC.
-	// 435行上初始化控制台终端tty结构中的读缓冲,写缓冲和辅助缓冲队列结构,它们分别指向tty缓冲队列结构数组tty_table[]中的相应结构项.
+	// 接着初始化控制台终端(console.c). 把 con_init() 放在这里, 是因为我们需要根据显示卡类型和显示内存容量来确定系统虚拟控制台的数量 NR_CONSOLES.
+	// 该值被用于随后的控制 tty 结构初始化循环中. 对于控制台的 tty 结构, tty结构中包含的 termios 结构字段中输入模式标志集被初始化为 ICRNL 标志;
+	// 输出模式标志被初始化含有后处理标志 OPOST 和把 NL 转换成 CRNL 的标志 ONLCR; 
+	// 本地模式标志集被初始化含有 IXON, ICAON, ECHO,ECHOCTL 和 ECHOKE 标志; 控制字符数组 c_cc[] 被设置含有初始值 INIT_C_CC.
+	// 最后是初始化控制台终端 tty 结构中的读缓冲, 写缓冲和辅助缓冲队列结构, 它们分别指向 tty 缓冲队列结构数组 tty_table[] 中的相应结构项.
 	con_init();
 	for (i = 0 ; i < NR_CONSOLES ; i++) {
 		con_table[i] = (struct tty_struct) {
-		 	{ICRNL,													/* change incoming CR to NL */	/* CR转NL */
-			OPOST | ONLCR,											/* change outgoing NL to CRNL */	/* NL转CRNL */
+		 	{ICRNL,													/* change incoming CR to NL */		/* CR 转 NL */
+			OPOST | ONLCR,											/* change outgoing NL to CRNL */	/* NL 转 CRNL */
 			0,														// 控制模式标志集
 			IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,			// 本地标志集
 			0,														/* console termio */	// 线路规程,0 -- TTY
-			INIT_C_CC},												// 控制字符数组c_cc[]
-			0,														/* initial pgrp */	// 所属初始进程组pgrp
+			INIT_C_CC},												// 控制字符数组 c_cc[]
+			0,														/* initial pgrp */		// 所属初始进程组pgrp
 			0,														/* initial session */	// 初始会话级session
 			0,														/* initial stopped */	// 初始停止标志stopped
 			con_write,
 			con_queues + 0 + i * 3, con_queues + 1 + i * 3, con_queues + 2 + i * 3
 		};
 	}
-	// 然后初始化串行终端的tty结构各字段。450行初始化串行终端tty结构中的读/写和辅助缓冲队列结构，它们分别指向tty缓冲队列
-	// 结构数组tty_table[]中相应结构项。
+	// 然后初始化串行终端的 tty 结构各字段。初始化串行终端tty结构中的读/写和辅助缓冲队列结构，它们分别指向 tty 缓冲队列
+	// 结构数组 tty_table[] 中相应结构项。
 	for (i = 0 ; i < NR_SERIALS ; i++) {
 		rs_table[i] = (struct tty_struct) {
 			{0, 													/* no translation */        // 输入模式标志集。0,无须转换。
@@ -625,8 +625,8 @@ void tty_init(void)
 			rs_queues + 0 + i * 3, rs_queues + 1 + i * 3, rs_queues + 2 + i * 3
 		};
 	}
-	// 然后再初始化伪终端使用的tty结构。伪终端是配对使用的，即一个主（master）伪终端配有一个从（slave）伪终端。因此对它们
-	// 都要进行初始化设置。在循环中，我们首先初始化每个主伪终端的tty结构，然后再初始化其对应的从伪终端的tty结构。
+	// 然后再初始化伪终端使用的 tty 结构。伪终端是配对使用的，即一个主（master）伪终端配有一个从（slave）伪终端。
+	// 因此对它们都要进行初始化设置。在循环中，我们首先初始化每个主伪终端的 tty 结构，然后再初始化其对应的从伪终端的 tty 结构。
 	for (i = 0 ; i < NR_PTYS ; i++) {
 		mpty_table[i] = (struct tty_struct) {
 			{0, 													/* no translation */        // 输入模式标志集。0,无须转换。

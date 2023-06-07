@@ -82,13 +82,13 @@ union task_union {
 // 设置初始任务的数据.初始数据在include/kernel/sched.h中.
 static union task_union init_task = {INIT_TASK, };
 
-// 从开机开始算起的滴答数时间值全局变量(10ms/滴答).系统时钟中断每发生一次即一个滴答.前面的限定符volatile,英文解释是易改变的,不稳定的意思.
-// 这个限定词的含义是向编译器指明变量的内容可能会由于被其他程序修改面变化.通常在程序中声明一个变量时,编译器会尽量把它存放在通用寄存器中, 例如
-// ebx,以提高访问效率.当CPU把其值放到ebx中后一般就不会再关心该变量对应内存位置中的内容.若此时其他程序(例如内核程序或一个中断过程)修改了内存中
-// 该变量的值,ebx中的值并不会随之更新.为了解决这种情况就创建了volatile限定符,让代码在引用该变量时一定要从指定内存位置中取得其值.这里即是要求
-// gcc不要对jiffies进行优化处理,也不要挪动位置,并且需要从内存中取其值.因为时钟中断处理过程等程序会修改它的值.
+// 从开机开始算起的滴答数时间值全局变量(10ms/滴答). 系统时钟中断每发生一次即一个滴答. 前面的限定符 volatile, 英文解释是易改变的, 不稳定的意思.
+// 这个限定词的含义是向编译器指明变量的内容可能会由于被其他程序修改面变化. 通常在程序中声明一个变量时, 编译器会尽量把它存放在通用寄存器中, 例如
+// ebx 以提高访问效率. 当 CPU 把其值放到 ebx 中后一般就不会再关心该变量对应内存位置中的内容. 若此时其他程序(例如内核程序或一个中断过程)修改了内存中
+// 该变量的值, ebx 中的值并不会随之更新. 为了解决这种情况就创建了 volatile 限定符, 让代码在引用该变量时一定要从指定内存位置中取得其值. 这里即是要求
+// gcc 不要对 jiffies 进行优化处理, 也不要挪动位置, 并且需要从内存中取其值. 因为时钟中断处理过程等程序会修改它的值.
 unsigned long volatile jiffies = 0;
-unsigned long startup_time = 0;						// 开机时间.从1970:0:0:0:0开始计时的秒数.
+unsigned long startup_time = 0;						// 开机时间. 从 1970:0:0:0:0 开始计时的秒数.
 // 这个变量用于累计需要调整的时间滴答数.
 int jiffies_offset = 0;								/* # clock ticks to add to get "true
 													   time".  Should always be less than
@@ -96,10 +96,9 @@ int jiffies_offset = 0;								/* # clock ticks to add to get "true
 													   who like to syncronize their machines
 													   to WWV :-) */
 /*
- * 为调整时钟而需要增加的时钟滴答,以获得"精确时间".这些调整用滴答数的总和不应该超过1秒.这样做是为了那些对时间精确度要求苛刻的人,他们培养喜欢
- * 自己的机器时间与WWV同步:-
+ * 为调整时钟而需要增加的时钟滴答,以获得"精确时间". 这些调整用滴答数的总和不应该超过 1 秒. 
+ * 这样做是为了那些对时间精确度要求苛刻的人, 他们培养喜欢自己的机器时间与WWV同步:-
  */
-
 struct task_struct *current = &(init_task.task);	// 当前任务指针(初始化指向任务0)
 struct task_struct *last_task_used_math = NULL;		// 使用过协处理器任务的指针.
 
@@ -578,9 +577,9 @@ void sched_init(void)
 	int i;
 	struct desc_struct * p;										// 描述符表结构指针
 
-	// Linux系统开发之初,内核不成熟.内核代码会被经常修改.Linus怕无意中修改了这些关键性的数据结构,造成与POSIX标准的不兼容.这里加入下面这个判断
-	// 语句并无必要,纯粹是为了提醒自己以及其他修改内核代码的人.
-	if (sizeof(struct sigaction) != 16)							// sigaction是存放有关信号状态的结构.
+	// Linux系统开发之初, 内核不成熟. 内核代码会被经常修改. Linus 怕无意中修改了这些关键性的数据结构, 造成与 POSIX 标准的不兼容. 
+	// 这里加入下面这个判断语句并无必要, 纯粹是为了提醒自己以及其他修改内核代码的人.
+	if (sizeof(struct sigaction) != 16)							// sigaction 是存放有关信号状态的结构.
 		panic("Struct sigaction MUST be 16 bytes");
 	// 在全局描述符表中设置初始任务(任务0)的任务状态段描述符和局部数据表描述符.
 	// FIRST_TSS_ENTRY和FIRST_LDT_ENTRY的值分别是4和5,定义在include/linux/sched.h中.gdt是一个描述符表数组(include/linux/head.h),

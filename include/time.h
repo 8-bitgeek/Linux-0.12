@@ -3,7 +3,7 @@
 
 #ifndef _TIME_T
 #define _TIME_T
-typedef long time_t;			// 从ＧMT1970年1月1日午夜0时起开始计的时间(秒).
+typedef long time_t;			// 从 ＧMT1970 年 1 月 1 日午夜 0 时起开始计的时间(秒).
 #endif
 
 #ifndef _SIZE_T
@@ -20,15 +20,15 @@ typedef unsigned int size_t;
 typedef long clock_t;			// 从进程开始执行计起的系统经过的时钟滴答数.
 
 struct tm {
-	int tm_sec;		// 秒数[0,59]
-	int tm_min;		// 分钟数 [0,59]
-	int tm_hour;		// 小时数[0,11]
-	int tm_mday;		// 1个月的天数 [0,31].
-	int tm_mon;		// 1年中月份 [0,11]
-	int tm_year;		// 从1900年开始的年数
-	int tm_wday;		// 1星期中的某天 [0,6](星期天=0)
-	int tm_yday;		// 1年中的天 [0,365]
-	int tm_isdst;		// 夏今时标志.正数 - 使用;0 - 没有使用;负数 - 无效.
+	int tm_sec;			// 秒数 [0, 59]
+	int tm_min;			// 分钟数 [0, 59]
+	int tm_hour;		// 小时数 [0, 11]
+	int tm_mday;		// 1 个月的天数 [0, 31]
+	int tm_mon;			// 1 年中月份 [0, 11]
+	int tm_year;		// 从 1900 年开始的年数
+	int tm_wday;		// 1 星期中的某天 [0, 6](星期天 = 0)
+	int tm_yday;		// 1 年中的天 [0, 365]
+	int tm_isdst;		// 夏今时标志. 正数 - 使用; 0 - 没有使用; 负数 - 无效.
 };
 
 // 判断是否为闰年的宏.

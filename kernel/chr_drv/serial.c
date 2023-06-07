@@ -49,13 +49,13 @@ static void init(int port)
 // 中断描述符表IDT中的门描述符设置宏set_intr_gate()在include/asm/system.h中实现。
 void rs_init(void)
 {
-	// 下面两句用于设置两个串行口的中断门描述符。rs1_interrupt是口串1的中断处理过程指针。
-	// 串口1使用的中断是int 0x24，串口2的是int 0x23。
-	set_intr_gate(0x24, rs1_interrupt);      					// 设置串行口1的中断向量（IRQ4信号）。
-	set_intr_gate(0x23, rs2_interrupt);      					// 设置串行口2的中断向量（IRQ3信号）。
-	init(tty_table[64].read_q->data);       					// 初始化串行口1（.data是端口基地址）。
-	init(tty_table[65].read_q->data);       					// 初始化串行口2.
-	outb(inb_p(0x21) & 0xE7, 0x21);            					// 允许主8259A响应IRQ3、IRQ4中断请求。
+	// 下面两句用于设置两个串行口的中断门描述符。rs1_interrupt 是串口 1 的中断处理过程指针。
+	// 串口 1 使用的中断是 int 0x24，串口 2 的是 int 0x23。
+	set_intr_gate(0x24, rs1_interrupt);      					// 设置串行口 1 的中断向量（IRQ4 信号）。
+	set_intr_gate(0x23, rs2_interrupt);      					// 设置串行口 2 的中断向量（IRQ3 信号）。
+	init(tty_table[64].read_q->data);       					// 初始化串行口 1（.data 是端口基地址）。
+	init(tty_table[65].read_q->data);       					// 初始化串行口 2.
+	outb(inb_p(0x21) & 0xE7, 0x21);            					// 允许主 8259A 响应 IRQ3、IRQ4 中断请求。
 }
 
 /*
