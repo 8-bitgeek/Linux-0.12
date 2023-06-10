@@ -1,32 +1,32 @@
-// mm.h是内存管理头文件.其中主要定义了内存页面的大小和几个页面释放函数原型.
+// mm.h 是内存管理头文件. 其中主要定义了内存页面的大小和几个页面释放函数原型.
 #ifndef _MM_H
 #define _MM_H
 
-#define PAGE_SIZE 4096		                    // 定义1页内存页面字节数.注意高速缓冲块长度是1024字节.
+#define PAGE_SIZE 4096		                    // 定义 1 页内存页面字节数. 注意高速缓冲块长度是 1024 字节.
 
 #include <linux/kernel.h>
 #include <signal.h>
 
-extern int SWAP_DEV;		                   // 内存页面交换设备号.定义在mm/swap.c文件中.
+extern int SWAP_DEV;		                   // 内存页面交换设备号. 定义在 mm/swap.c 文件中.
 
-// 从交换设备读入和写出被交换内存页面.ll_rw_page()定义在blk_drv/ll_rw_block.c文件中.
-// 参数nr是主内存区中页面号;buffer是读/写缓冲区.
+// 从交换设备读入和写出被交换内存页面. ll_rw_page() 定义在 blk_drv/ll_rw_block.c 文件中.
+// 参数 nr 是主内存区中页面号; buffer 是读/写缓冲区.
 #define read_swap_page(nr, buffer)   ll_rw_page(READ, SWAP_DEV, (nr), (buffer));
 #define write_swap_page(nr, buffer)  ll_rw_page(WRITE, SWAP_DEV, (nr), (buffer));
 
-extern unsigned long get_free_page(void);                                           // 在主内存区中取空闲物理页面.如果已经没有可有内存了,则返回0
-extern unsigned long put_dirty_page(unsigned long page,unsigned long address);      // 把一内容已修改过的物理内存页面映射到线性地址空间处。与put_page()几乎完全一样。
-extern void free_page(unsigned long addr);                                          // 释放物理地址addr开始的1页面内存。
+extern unsigned long get_free_page(void);                                           // 在主内存区中取空闲物理页面. 如果已经没有可有内存了, 则返回 0
+extern unsigned long put_dirty_page(unsigned long page,unsigned long address);      // 把一内容已修改过的物理内存页面映射到线性地址空间处. 与 put_page() 几乎完全一样。
+extern void free_page(unsigned long addr);                                          // 释放物理地址 addr 开始的 1 页面内存。
 extern void init_swapping(void);                                                    // 内存交换初始化
-void swap_free(int page_nr);                                                        // 释放编号page_nr的1页面交换页面
-void swap_in(unsigned long *table_ptr);                                             // 把页表项是table_ptr的一页物理内存换出到交换空间
+void swap_free(int page_nr);                                                        // 释放编号 page_nr 的 1 页面交换页面
+void swap_in(unsigned long *table_ptr);                                             // 把页表项是 table_ptr 的一页物理内存换出到交换空间
 
-// 下面函数名前关键字volatile用于告诉编译器gcc该函数不会返回.这样可让gcc产生更好的代码,更重要的是使用这个关键字可以避免产生某些(未
-//　初始化变量的)假警告信息.
+// 下面函数名前关键字 volatile 用于告诉编译器 gcc 该函数不会返回. 这样可让 gcc 产生更好的代码, 
+// 更重要的是使用这个关键字可以避免产生某些(未初始化变量的)假警告信息.
 static inline void oom(void)
 {
 	printk("out of memory\n\r");
-    //　do_exit()应该使用退出代码,这里用了信息值SIGSEGV(11).相同值的出错码含义是"资源暂不可用",正好同义.
+    //　do_exit() 应该使用退出代码, 这里用了信息值 SIGSEGV(11). 相同值的出错码含义是 "资源暂不可用",正好同义.
 	do_exit(SIGSEGV);
 }
 
