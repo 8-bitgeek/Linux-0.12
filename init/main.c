@@ -237,7 +237,7 @@ int main(void)										/* This really IS void, no error here. */
 		buffer_memory_end = 1 * 1024 * 1024;						// 否则则设置缓冲区末端 = 1MB
 	// 根据高速缓冲区的末端大小设置主内存区的起始地址
 	main_memory_start = buffer_memory_end;							// 主内存起始位置 = 缓冲区末端
-	// 如果在 Makefile 文件中定义了内存虚拟盘符号 RAMDISK, 则初始化虚拟盘. 此时主优点将减少.
+	// 如果在 Makefile 文件中定义了内存虚拟盘符号 RAMDISK, 则初始化虚拟盘. 此时主内存将减少.
 	// 参见 kernel/blk_drv/ramdisk.c.
 #ifdef RAMDISK
 	main_memory_start += rd_init(main_memory_start, RAMDISK * 1024);
@@ -281,7 +281,7 @@ int main(void)										/* This really IS void, no error here. */
 
 // 下面函数产生格式化信息并输出到标准输出设备 stdout(1), 这里是指屏幕上显示. 参数 '*fmt' 指定输出将采用的格式, 参见标准 C 语言书籍.
 // 该子程序正好是 vsprintf 如何使用的一个简单例子. 该程序使用 vsprintf() 将格式化的字符串放入 printbuf 缓冲区, 
-// 然后用 write() 将缓冲区的内容输出到标准设备(1--stdout). vsprintf() 函数的实现见 kernel/vsprintf.c.
+// 然后用 write() 将缓冲区的内容输出到标准设备(1 -- stdout). vsprintf() 函数的实现见 kernel/vsprintf.c.
 int printf(const char *fmt, ...)
 {
 	va_list args;
@@ -302,7 +302,7 @@ void init(void)
 	// 该函数用 25 行上的宏定义, 对就函数是 sys_setup(), 在块设备子目录 kernel/blk_drv/hd.c.
 	setup((void *) &drive_info);
 	// 下面以读写访问方式打开设备 "/dev/tty0", 它对应终端控制台. 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0.
-	// 该句柄是UNIX类操作系统默认的控制台标准输入句柄 stdin. 这里再把它以读和写的方式分别打开是为了复制产生标准输出(写)句柄 stdout 和标准出错输出句柄 stderr.
+	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 这里再把它以读和写的方式分别打开是为了复制产生标准输出(写)句柄 stdout 和标准出错输出句柄 stderr.
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
 	(void) open("/dev/tty1", O_RDWR, 0);
 	(void) dup(0);													// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备.
@@ -314,7 +314,7 @@ void init(void)
 			NR_BUFFERS * BLOCK_SIZE);
 	printf("<<<<< Free mem: %d bytes >>>>>\n\r", memory_end - main_memory_start);
 	// 下面 fork() 用于创建一个子进程(任务 2). 对于被创建的子进程, fork() 将返回 0 值, 对于原进程(父进程)则返回子进程的进程号 pid. 
-	// 所以第202--206行是子进程执行的内容. 该子进程关闭了句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 
+	// 所以第 202--206 行是子进程执行的内容. 该子进程关闭了句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 
 	// 并使用 execve() 函数将进程自身替换成 /bin/sh 程序(即 shell 程序), 然后执行 /bin/sh 程序. 所携带的参数和环境变量分别由 argv_rc 和 envp_rc 数组给出. 
 	// 关闭句柄 0 并立刻打开 /etc/rc 文件的作用是把标准输入 stdin 重定向到 /etc/rc/ 文件. 
 	// 这样 shell 程序 /bin/sh 就可以运行 rc 文件中设置的命令. 由于这里 sh 的运行方式是非交互式的, 因此在执行完 rc 文件中的命令后就会立刻退出, 进程 2 也随之结束. 

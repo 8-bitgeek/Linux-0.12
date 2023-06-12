@@ -516,8 +516,8 @@ struct buffer_head * breada(int dev, int first, ...)
 // 该函数从缓冲区开始位置 start_buffer 处和缓冲区末端 buffer_end 处分别同时设置(初始化)缓冲块头结构和对应的数据块. 直到缓冲区中所有内存被分配完毕.
 void buffer_init(long buffer_end)
 {
-	struct buffer_head * h = start_buffer;
-	void * b;
+	struct buffer_head * h = start_buffer; 			// 缓冲区开始位置，即系统内核代码结束地址，这个地址由编译器生成(&end)
+	void * b; 										// 指向缓冲区末端
 	int i;
 
 	// 首先根据参数提供的缓冲区高端位置确定实际缓冲区高端位置 b. 如果缓冲区高端等于 1MB, 则因为从 640KB-1MB 被显示内存和 BIOS 占用,
@@ -529,7 +529,7 @@ void buffer_init(long buffer_end)
 	// 这段代码用于初始化缓冲区, 建立空闲缓冲块循环链表, 并获取系统中缓冲块数目. 操作的过程是从缓冲区高端开始划分 1KB 大小的缓冲块, 
 	// 与此同时在缓冲区低端建立描述该缓冲块的结构 buffer_head, 并将这些 buffer_head 组成双向链表.
 	// h 是指向缓冲头结构的指针, 而 h+1 是指向内存地址连续的下一个缓冲头地址, 也可以说是指向 h 缓冲有头的末端外. 
-	// 为了保证有足够长度的内存来存储一个缓冲头结构, 需要 b 所指向的内存块地址 >=h 缓冲头的末端, 即要求 >=h+1.
+	// 为了保证有足够长度的内存来存储一个缓冲头结构, 需要 b 所指向的内存块地址 >= h 缓冲头的末端, 即要求 >= h+1.
 	while ( (b -= BLOCK_SIZE) >= ((void *) (h + 1)) ) {
 		h->b_dev = 0;								// 使用该缓冲块的设备号.
 		h->b_dirt = 0;								// 脏标志, 即缓冲块修改标志.
@@ -539,19 +539,19 @@ void buffer_init(long buffer_end)
 		h->b_wait = NULL;							// 指向等待该缓冲块解锁的进程.
 		h->b_next = NULL;							// 指向具有相同 hash 值的下一个缓冲头.
 		h->b_prev = NULL;							// 指向具有相同 hash 值的前一个缓冲头.
-		h->b_data = (char *) b;						// 指向对应缓冲块数据块(1024 字节).
+		h->b_data = (char *) b;						// 指向对应缓冲数据块(1024 字节).
 		h->b_prev_free = h - 1;						// 指向链表中前一项.
 		h->b_next_free = h + 1;						// 指向链表中下一项.
-		h++;										// h 指向下一新缓冲头位置.
+		h++;										// h 指向下一个缓冲头位置.
 		NR_BUFFERS++;								// 缓冲区块数累加.
-		if (b == (void *) 0x100000)					// 若 b 递减到等于 1MB, 则跳过 384KB
+		if (b == (void *) 0x100000)					// 若 b 递减到等于 1MB, 则跳过 0xA0000 - 0x100000 这块内存区域(共 384KB)
 			b = (void *) 0xA0000;					// 让 b 指向地址 0xA0000(640KB) 处.
 	}
 	h--;											// 让 h 指向最后一个有效缓冲块头.
 	free_list = start_buffer;						// 让空闲链表头指向头一个缓冲块.
 	free_list->b_prev_free = h;     				// 链表头的 b_prev_free 指向前一项(即最后一项).
-	h->b_next_free = free_list;     				// h 的下一项指针指向第一项, 形成一个环链.
-	// 最后初始化 hash 表(哈希表、散列表), 置表中所有指针为 NULL.
+	h->b_next_free = free_list;     				// h 的下一项指针指向第一项, 形成一个闭环链表.
+	// 最后初始化 hash 表, 置表中所有指针为 NULL.
 	for (i = 0; i < NR_HASH; i++)
 		hash_table[i] = NULL;
 }
