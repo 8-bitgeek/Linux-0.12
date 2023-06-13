@@ -4,7 +4,7 @@
  * a ques).
  */
 /*
- * 本文件含有一些AT硬盘控制器的定义.来自各种资料.请查证某些定义(带有问号的注释).
+ * 本文件含有一些 AT 硬盘控制器的定义. 来自各种资料. 请查证某些定义(带有问号的注释).
  */
 #ifndef _HDREG_H
 #define _HDREG_H
@@ -28,7 +28,7 @@
 /* 硬盘状态寄存器各位的定义(HD_STATUS) */
 #define ERR_STAT	0x01			// 命令执行错误.
 #define INDEX_STAT	0x02			// 收到索引.
-#define ECC_STAT	0x04			/* Corrected error */	// ECC校验错.
+#define ECC_STAT	0x04			/* Corrected error */	// ECC 校验错.
 #define DRQ_STAT	0x08			// 请求服务.
 #define SEEK_STAT	0x10			// 寻道结束.
 #define WRERR_STAT	0x20			// 驱动器故障.
@@ -49,17 +49,17 @@
 
 /* Bits for HD_ERROR */
 /* 错误寄存器各位的含义(HD_ERROR) */
-// 执行控制器诊断时含义与其他命令时的不同.下面分别列出:
+// 执行控制器诊断时含义与其他命令时的不同. 下面分别列出:
 // ============================================================
 //        诊断命令时                其他命令时
 // ------------------------------------------------------------
 // 0x01     无错误                数据标志丢失
 // 0x02     控制器出错             磁道0错
 // 0x03     扇区缓冲区错
-// 0x04     ECC部件错             命令放弃
+// 0x04     ECC 部件错            命令放弃
 // 0x05     控制处理器错
-// 0x10                          ID未找到
-// 0x40                          ECC错误
+// 0x10                          ID 未找到
+// 0x40                          ECC 错误
 // 0x80                          坏扇区
 // ------------------------------------------------------------
 #define MARK_ERR	0x01	/* Bad address mark ? */
@@ -72,9 +72,9 @@
 // 硬盘分区表结构.
 struct partition {
 	unsigned char boot_ind;		/* 0x80 - active (unused) */
-	unsigned char head;		/* ? */
+	unsigned char head;			/* ? */
 	unsigned char sector;		/* ? */
-	unsigned char cyl;		/* ? */
+	unsigned char cyl;			/* ? */
 	unsigned char sys_ind;		/* ? */
 	unsigned char end_head;		/* ? */
 	unsigned char end_sector;	/* ? */

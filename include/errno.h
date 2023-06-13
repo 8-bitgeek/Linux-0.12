@@ -14,19 +14,20 @@
  * NOTE! Remember to change strerror() if you change this file!
  */
 /*
- * OK,由于我没有得到任何其他有关出错号的资料,我只能使用与minix系统相同的出错号了.
- * 希望这些是POSIX兼容的或者在一定程度上是这样的,我不知道(而且POSIX没有告诉我 - 要获得他们的标准需要出钱).
+ * OK, 由于我没有得到任何其他有关出错号的资料, 我只能使用与 minix 系统相同的出错号了.
+ * 希望这些是 POSIX 兼容的或者在一定程度上是这样的, 我不知道(而且 POSIX 没有告诉我 - 要获得他们的标准需要出钱).
  *
- * 我们没有使用minix那样的_SIGN簇,所以内核的返回值必须自己辨别正负号.
+ * 我们没有使用 minix 那样的 _SIGN 簇, 所以内核的返回值必须自己辨别正负号.
  *
- * 注意!如果你改变该文件的话,记着也要修改strerror()函数.
+ * 注意! 如果你改变该文件的话, 记着也要修改 strerror() 函数.
  */
 
-// 系统调用以及很多库函数返回一个特殊的值以表示操作失败或出错.这个值通常选择-1或者其他一些特定的值来表示.但是这个返回值仅说明错误发生了
-// 如果需要知道出错的类型,就需要查看表示系统出错号的变量errno.该变量即在errno.h文件中声明.在程序开始执行时该变量值被初始化为0.
+// 系统调用以及很多库函数返回一个特殊的值以表示操作失败或出错. 这个值通常选择 -1 或者其他一些特定的值来表示. 
+// 但是这个返回值仅说明错误发生了如果需要知道出错的类型, 就需要查看表示系统出错号的变量 errno. 
+// 该变量即在 errno.h 文件中声明. 在程序开始执行时该变量值被初始化为 0.
 extern int errno;
 
-// 在出错时，系统调用会把出错号放在变量erron中（负值），然后返回-1.因此程序若需要知道具体错误号，就需要查看erron的值。
+// 在出错时, 系统调用会把出错号放在变量 erron 中(负值), 然后返回 -1. 因此程序若需要知道具体错误号, 就需要查看 erron 的值.
 #define ERROR		    99           // 一般错误
 #define EPERM		     1	         // 操作没有许可.
 #define ENOENT		     2	         // 文件或目录不存在.
@@ -52,15 +53,15 @@ extern int errno;
 #define EINVAL		    22           // 参数无效
 #define ENFILE		    23           // 系统打开文件数太多
 #define EMFILE		    24	         // 打开文件数太多.
-#define ENOTTY		    25           // 不恰当的IO控制操作（没有tty终端）
+#define ENOTTY		    25           // 不恰当的 IO 控制操作(没有 tty 终端)
 #define ETXTBSY		    26           // 不再使用
 #define EFBIG		    27           // 文件太大
-#define ENOSPC		    28           // 设备已满（设备已经没有空间）
+#define ENOSPC		    28           // 设备已满(设备已经没有空间)
 #define ESPIPE		    29           // 无效的文件指针重定位
 #define EROFS		    30           // 文件系统只读
 #define EMLINK		    31           // 连接太多
 #define EPIPE		    32           // 管道错
-#define EDOM		    33           // 域（domain）出错
+#define EDOM		    33           // 域(domain)出错
 #define ERANGE		    34           // 结果太大
 #define EDEADLK		    35           // 避免资源死锁
 #define ENAMETOOLONG	36           // 文件名太长
@@ -70,6 +71,6 @@ extern int errno;
 
 /* Should never be seen by user programs */
 #define ERESTARTSYS	    512         // 重新执行系统调用
-#define ERESTARTNOINTR	513         // 重新执行系统调用，无中断
+#define ERESTARTNOINTR	513         // 重新执行系统调用, 无中断
 
 #endif
