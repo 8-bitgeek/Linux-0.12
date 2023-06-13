@@ -36,7 +36,7 @@
  */
 struct request {
 	int dev;							/* -1 if no request */		// 发请求的设备号
-	int cmd;							/* READ or WRITE */			// READ或WRITE命令.
+	int cmd;							/* READ or WRITE */			// READ 或 WRITE 命令.
 	int errors;             			// 操作时产生的错误次数.
 	unsigned long sector;   			// 起始扇区. (1 块 = 2 扇区)
 	unsigned long nr_sectors;			// 读/写扇区数.
@@ -65,7 +65,7 @@ struct request {
 
 // 块设备处理结构.
 struct blk_dev_struct {
-	void (*request_fn)(void);							// 请求处理函数指针
+	void (*request_fn)(void);							// 请求处理函数指针, 执行真正的读取、写入等操作
 	struct request * current_request;					// 当前处理的请求结构.
 };
 

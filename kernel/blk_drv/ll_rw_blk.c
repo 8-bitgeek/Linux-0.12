@@ -38,8 +38,8 @@ struct task_struct * wait_for_request = NULL;
  */
 /*
  * blk_dev_struct 块设备结构是: (参见文件 kernel/blk_drv/blk.h)
- * do_request-address		// 对应主设备号的请求处理程序指针.
- * current-request		// 该设备的下一个请求.
+ * do_request-address					// 对应主设备号的请求处理程序指针.
+ * current-request						// 该设备的下一个请求.
  */
 // 块设备数组. 该数组使用主设备号作为索引. 实际内容将在各块设备驱动程序初始化时填入.
 // 例如, 硬盘驱动程序初始化时(hd.c), 第一条语句即用于设备 blk_dev[3] 的内容.
@@ -61,7 +61,7 @@ struct blk_dev_struct blk_dev[NR_BLK_DEV] = {
  * if (!blk_size[MAJOR]) then no minor size checking is done.
  */
 /*
- * blk_size数组含有所有块设备的大小(块总数):
+ * blk_size 数组含有所有块设备的大小(块总数):
  * blk_size[MAJOR][MINOR]
  * 如果(!blk_size[MAJOR]), 则不必检测子设备的块总数.
  */
