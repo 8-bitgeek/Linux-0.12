@@ -3,98 +3,98 @@
 
 #include <sys/types.h>
 
-#define TTY_BUF_SIZE 1024               // tty中的缓冲区长度。
+#define TTY_BUF_SIZE 1024               // tty中的缓冲区长度. 
 
 /* 0x54 is just a magic number to make these relatively uniqe ('T') */
-/* 0x54 只是一个魔数，目的是为了使这些常数唯一（'T'）*/
+/* 0x54 只是一个魔数, 目的是为了使这些常数唯一('T')*/
 
-// tty设备的ioctl调用命令集。ioctl将命令编码在低位字中。
-// 下面名称TC[*]的含义是tty控制命令。
-// 取相应终端termios结构中的信息（参见tcgetattr()）。
+// tty 设备的 ioctl 调用命令集. ioctl 将命令编码在低位字中. 
+// 下面名称 TC[*] 的含义是 tty 控制命令. 
+// 取相应终端 termios 结构中的信息(参见 tcgetattr()). 
 #define TCGETS		0x5401
-// 设置相应终端termios结构中的信息（参见tcsetattr()，TCSANOW）。
+// 设置相应终端 termios 结构中的信息(参见 tcsetattr(), TCSANOW). 
 #define TCSETS		0x5402
-// 在设置相应终端termios的信息之前，需要先等待输出队列中所有数据处理完（耗尽）。对于修改参数会影响输出的情况，
-// 就需要使用这种形式（参见tcsetattr()，TCSADRAIN选项）。
+// 在设置相应终端 termios 的信息之前, 需要先等待输出队列中所有数据处理完(耗尽). 对于修改参数会影响输出的情况, 
+// 就需要使用这种形式(参见 tcsetattr(), TCSADRAIN 选项). 
 #define TCSETSW		0x5403
-// 在设置termios的信息之前，需要先等待输出队列中所有数据处理完，并且刷新（清空）输入队列，再设置（参见
-// tcsetattr()，TCSAFLUSH选项）。
+// 在设置 termios 的信息之前, 需要先等待输出队列中所有数据处理完, 并且刷新(清空)输入队列, 
+// 再设置(参见 tcsetattr(), TCSAFLUSH 选项). 
 #define TCSETSF		0x5404
-// 取相应终端termio结构听信息（参见tcgetattr()）。
+// 取相应终端termio结构听信息(参见tcgetattr()). 
 #define TCGETA		0x5405
-// 设置相应终端termio结构中的信息（参见tcsetattr()，TCSANOW选项）。
+// 设置相应终端termio结构中的信息(参见tcsetattr(), TCSANOW选项). 
 #define TCSETA		0x5406
-// 在设置终端termio的信息之前，需要先等待输出队列中所有数据处理完（耗尽）。对于修改参数会影响输出的情况，就需要
-// 使用这种形式（参见tcsetattr()，TCSADRAIN选项）。
+// 在设置终端termio的信息之前, 需要先等待输出队列中所有数据处理完(耗尽). 对于修改参数会影响输出的情况, 就需要
+// 使用这种形式(参见tcsetattr(), TCSADRAIN选项). 
 #define TCSETAW		0x5407
-// 在设置termio的信息之前，需要先等待输出队列中所有数据处理完，并且刷新（清空）输入队列，再设置（参见tcsetattr(),
-// TCSAFLUSH选项）。
+// 在设置termio的信息之前, 需要先等待输出队列中所有数据处理完, 并且刷新(清空)输入队列, 再设置(参见tcsetattr(),
+// TCSAFLUSH选项). 
 #define TCSETAF		0x5408
-// 等待输出队列处理完毕（空），若参数值是0,则发送一个break（参见tcsendbreak()，tcdrain()）。
+// 等待输出队列处理完毕(空), 若参数值是0,则发送一个break(参见tcsendbreak(), tcdrain()). 
 #define TCSBRK		0x5409
-// 开始/停止控制。如果参数值是0,则挂起输出；如果是1,则重新开启挂起的输出；如果是2,则挂起输入；如果是3,则重新开启挂
-// 起的输入（参见tcflow()）。
+// 开始/停止控制. 如果参数值是0,则挂起输出；如果是1,则重新开启挂起的输出；如果是2,则挂起输入；如果是3,则重新开启挂
+// 起的输入(参见tcflow()). 
 #define TCXONC		0x540A
-// 刷新已写输出但还没发送或已收但还没有读数据。如果参数是0,则刷新（清空）输入队列；如果是1,则刷新输出队列；如果是2,
-// 则刷新输入和输出队列（参见tcflush()）。
+// 刷新已写输出但还没发送或已收但还没有读数据. 如果参数是0,则刷新(清空)输入队列；如果是1,则刷新输出队列；如果是2,
+// 则刷新输入和输出队列(参见tcflush()). 
 #define TCFLSH		0x540B
-// 下面名称TIOC[*]的含义是tty输入输出控制命令。
-// 设置终端串行线路专用模式。
+// 下面名称TIOC[*]的含义是tty输入输出控制命令. 
+// 设置终端串行线路专用模式. 
 #define TIOCEXCL	0x540C
-// 复位终端串行线路专用模式。
+// 复位终端串行线路专用模式. 
 #define TIOCNXCL	0x540D
-// 设置tty为控制终端。（TIOCNOTTY - 禁止tty为控制终端）。
+// 设置tty为控制终端. (TIOCNOTTY - 禁止tty为控制终端). 
 #define TIOCSCTTY	0x540E
-// 读取指定终端设备的组id，参见tcgetpgrp()。该常数符号名称是“Terminal IO Control Get PGRP”的缩写。读取前台进程
-// 组ID。
+// 读取指定终端设备的组id, 参见tcgetpgrp(). 该常数符号名称是“Terminal IO Control Get PGRP”的缩写. 读取前台进程
+// 组ID. 
 #define TIOCGPGRP	0x540F
-// 设置指定终端设备进程的组id（参见tcsetpgrp()）。
+// 设置指定终端设备进程的组id(参见tcsetpgrp()). 
 #define TIOCSPGRP	0x5410
-// 返回输出队列中还未送出的字符数。
+// 返回输出队列中还未送出的字符数. 
 #define TIOCOUTQ	0x5411
-// 模拟终端输入。该命令以一个指向字符的指针作为参数，并假装该字符是在终端上键入的。用户必须在该控制终端上具有超级用户权限
-// 或具有读许可权限。
+// 模拟终端输入. 该命令以一个指向字符的指针作为参数, 并假装该字符是在终端上键入的. 用户必须在该控制终端上具有超级用户权限
+// 或具有读许可权限. 
 #define TIOCSTI		0x5412
-// 读取终端设备窗口大小信息（参见winsize结构）。
+// 读取终端设备窗口大小信息(参见winsize结构). 
 #define TIOCGWINSZ	0x5413
-// 设置终端设备窗口大小信息（参见winsize结构）。
+// 设置终端设备窗口大小信息(参见winsize结构). 
 #define TIOCSWINSZ	0x5414
-// 返回modem状态控制引线的当前状态比特位标志集。
+// 返回modem状态控制引线的当前状态比特位标志集. 
 #define TIOCMGET	0x5415
-// 设置单个modem状态控制引线的状态（true或false）（Individual control line Set）。
+// 设置单个modem状态控制引线的状态(true或false)(Individual control line Set). 
 #define TIOCMBIS	0x5416
-// 复位单个modem状态控制引线的状态（Individual control line clear）。
+// 复位单个modem状态控制引线的状态(Individual control line clear). 
 #define TIOCMBIC	0x5417
-// 设置modem状态引线的状态。如果某一比特位置位，则modem对应的状态引线将置为有效。
+// 设置modem状态引线的状态. 如果某一比特位置位, 则modem对应的状态引线将置为有效. 
 #define TIOCMSET	0x5418
-// 读取软件载波检测标志（1 - 开启；0 - 关闭）。
-// 对于本地连接的终端或其他设置，软件载波标志是开启的，对于使用modem线路的终端或设备则是关闭的。为了能使用这两个ioctl调用，
-// tty线路应该是以O_NDELAY方式打开的，这样open()就不会等待载波。
+// 读取软件载波检测标志(1 - 开启；0 - 关闭). 
+// 对于本地连接的终端或其他设置, 软件载波标志是开启的, 对于使用modem线路的终端或设备则是关闭的. 为了能使用这两个ioctl调用, 
+// tty线路应该是以O_NDELAY方式打开的, 这样open()就不会等待载波. 
 #define TIOCGSOFTCAR	0x5419
-// 设置软件载波检测标志（1 - 开启；0 - 关闭）。
+// 设置软件载波检测标志(1 - 开启；0 - 关闭). 
 #define TIOCSSOFTCAR	0x541A
-// 返回输入队列中还未取走字符的数目。
+// 返回输入队列中还未取走字符的数目. 
 #define FIONREAD	0x541B
 #define TIOCINQ		FIONREAD
 
-// 窗口大小（Window size）属性结构。在窗口环境中可用于基于屏幕的应用程序。
-// ioctls中的TIOCGWINSZ和TIOCSWINSZ可用来读取或设置这些信息。
+// 窗口大小(Window size)属性结构. 在窗口环境中可用于基于屏幕的应用程序. 
+// ioctls中的TIOCGWINSZ和TIOCSWINSZ可用来读取或设置这些信息. 
 struct winsize {
-	unsigned short ws_row;          // 窗口字符行数。
-	unsigned short ws_col;          // 窗口字符列数。
-	unsigned short ws_xpixel;       // 窗口宽度，像素值。
-	unsigned short ws_ypixel;       // 窗口高度，像素值。
+	unsigned short ws_row;          // 窗口字符行数. 
+	unsigned short ws_col;          // 窗口字符列数. 
+	unsigned short ws_xpixel;       // 窗口宽度, 像素值. 
+	unsigned short ws_ypixel;       // 窗口高度, 像素值. 
 };
 
-// AT&T系统V的termio结构。
-#define NCC 8                           // termio结构中控制字符数组的长度。
+// AT&T系统V的termio结构. 
+#define NCC 8                           // termio结构中控制字符数组的长度. 
 struct termio {
-	unsigned short c_iflag;		/* input mode flags */   // 输入模式标志。
-	unsigned short c_oflag;		/* output mode flags */  // 输出模式标志。
-	unsigned short c_cflag;		/* control mode flags */ // 控制模式标志。
-	unsigned short c_lflag;		/* local mode flags */   // 本地模式标志。
-	unsigned char c_line;		/* line discipline */    // 线路规程（速率）。
-	unsigned char c_cc[NCC];	/* control characters */ // 控制字符数组。
+	unsigned short c_iflag;		/* input mode flags */   // 输入模式标志. 
+	unsigned short c_oflag;		/* output mode flags */  // 输出模式标志. 
+	unsigned short c_cflag;		/* control mode flags */ // 控制模式标志. 
+	unsigned short c_lflag;		/* local mode flags */   // 本地模式标志. 
+	unsigned char c_line;		/* line discipline */    // 线路规程(速率). 
+	unsigned char c_cc[NCC];	/* control characters */ // 控制字符数组. 
 };
 
 // POSIX的termios结构
@@ -234,56 +234,56 @@ struct termios {
 #define IEXTEN	0100000		// 开启实现时定义的输入处理
 
 /* modem lines */       /* modem线路信号符号常数 */
-#define TIOCM_LE	0x001           // 线路允许（Line Enable）。
-#define TIOCM_DTR	0x002           // 数据终端就绪（Data erminal ready）。
-#define TIOCM_RTS	0x004           // 请求发送（Request to Send）。
-#define TIOCM_ST	0x008           // 串行数据发送（Serial transfer）。
-#define TIOCM_SR	0x010           // 串行数据接收（Serial Receive）。
-#define TIOCM_CTS	0x020           // 清除发送（Clear To Send）。
-#define TIOCM_CAR	0x040           // 载波监测（Carrier Detect）。
-#define TIOCM_RNG	0x080           // 响铃指示（Ring indicate）。
-#define TIOCM_DSR	0x100           // 数据设备就绪（Data Set Ready）。
+#define TIOCM_LE	0x001           // 线路允许(Line Enable). 
+#define TIOCM_DTR	0x002           // 数据终端就绪(Data erminal ready). 
+#define TIOCM_RTS	0x004           // 请求发送(Request to Send). 
+#define TIOCM_ST	0x008           // 串行数据发送(Serial transfer). 
+#define TIOCM_SR	0x010           // 串行数据接收(Serial Receive). 
+#define TIOCM_CTS	0x020           // 清除发送(Clear To Send). 
+#define TIOCM_CAR	0x040           // 载波监测(Carrier Detect). 
+#define TIOCM_RNG	0x080           // 响铃指示(Ring indicate). 
+#define TIOCM_DSR	0x100           // 数据设备就绪(Data Set Ready). 
 #define TIOCM_CD	TIOCM_CAR
 #define TIOCM_RI	TIOCM_RNG
 
 /* tcflow() and TCXONC use these */     /* tcflow()和TCXONC使用这些符号 */
-#define	TCOOFF		0       // 挂起输出（是“Terminal Control Output OFF”的缩写）。
-#define	TCOON		1       // 重启被挂起的输出。
-#define	TCIOFF		2       // 系统传输一个STOP字符，使设备停止向系统传输数据。
-#define	TCION		3       // 系统传输一个START字符，使设备开始高系统传输数据。
+#define	TCOOFF		0       // 挂起输出(是“Terminal Control Output OFF”的缩写). 
+#define	TCOON		1       // 重启被挂起的输出. 
+#define	TCIOFF		2       // 系统传输一个STOP字符, 使设备停止向系统传输数据. 
+#define	TCION		3       // 系统传输一个START字符, 使设备开始高系统传输数据. 
 
 /* tcflush() and TCFLSH use these */    /* tcflush()和TCFLSH使用这些符号常数 */
-#define	TCIFLUSH	0       // 清接收到的数据但不读。
-#define	TCOFLUSH	1       // 清已写的数据但不传送。
-#define	TCIOFLUSH	2       // 清接收到的数据但不读。清已写的数据但不传送。
+#define	TCIFLUSH	0       // 清接收到的数据但不读. 
+#define	TCOFLUSH	1       // 清已写的数据但不传送. 
+#define	TCIOFLUSH	2       // 清接收到的数据但不读. 清已写的数据但不传送. 
 
 /* tcsetattr uses these */      /* tcsetattr()使用这些符号常数 */
-#define	TCSANOW		0       // 改变立即发生。
-#define	TCSADRAIN	1       // 改变在所有已写的输出被传输之后发生。
+#define	TCSANOW		0       // 改变立即发生. 
+#define	TCSADRAIN	1       // 改变在所有已写的输出被传输之后发生. 
 #define	TCSAFLUSH	2       // 改变在所有已写的输出被传输之后并且在所有接收到但还没有读取的数据
-                                // 被丢弃之后发生。
+                                // 被丢弃之后发生. 
 
-// 以下这些函数在编译环境的函数库libc.a中实现，内核中没有。在函数库实现中，这些函数通过调用系统调用ioctl()来实现。有关
-// ioctl()系统调用，请参见fs/ioctl.c程序。
-// 返回termios_p所指termios结构中的接收波特率。
+// 以下这些函数在编译环境的函数库libc.a中实现, 内核中没有. 在函数库实现中, 这些函数通过调用系统调用ioctl()来实现. 有关
+// ioctl()系统调用, 请参见fs/ioctl.c程序. 
+// 返回termios_p所指termios结构中的接收波特率. 
 extern speed_t cfgetispeed(struct termios *termios_p);
-// 返回termios_p所指termios结构中的发送波特率。
+// 返回termios_p所指termios结构中的发送波特率. 
 extern speed_t cfgetospeed(struct termios *termios_p);
-// 将termios_p所指termios结构中的接收波特率设置为speed。
+// 将termios_p所指termios结构中的接收波特率设置为speed. 
 extern int cfsetispeed(struct termios *termios_p, speed_t speed);
-// 将termios_p所指termios结构中的发送波特率设置为speed。
+// 将termios_p所指termios结构中的发送波特率设置为speed. 
 extern int cfsetospeed(struct termios *termios_p, speed_t speed);
-// 等待fildes所指对象已写输出数据被传送出去。
+// 等待fildes所指对象已写输出数据被传送出去. 
 extern int tcdrain(int fildes);
-// 挂起/重启fildes所指对象数据的接收和发送。
+// 挂起/重启fildes所指对象数据的接收和发送. 
 extern int tcflow(int fildes, int action);
-// 丢弃fildes指定对象所有已写但还没传送以及所有已收到但还没有读取的数据。
+// 丢弃fildes指定对象所有已写但还没传送以及所有已收到但还没有读取的数据. 
 extern int tcflush(int fildes, int queue_selector);
-// 获取与句柄fildes对应对象的参数，并将其保存在termios_p所指地地方。
+// 获取与句柄fildes对应对象的参数, 并将其保存在termios_p所指地地方. 
 extern int tcgetattr(int fildes, struct termios *termios_p);
-// 如果终端使用异步串行数据传输，则在一定时间内连续传输一系列0值比特位。
+// 如果终端使用异步串行数据传输, 则在一定时间内连续传输一系列0值比特位. 
 extern int tcsendbreak(int fildes, int duration);
-// 使用termios结构指针termios_p所指的数据，设置与终端相关的参数。
+// 使用termios结构指针termios_p所指的数据, 设置与终端相关的参数. 
 extern int tcsetattr(int fildes, int optional_actions,
 	struct termios *termios_p);
 
