@@ -9,12 +9,12 @@
  * the real work is done in mm.c
  */
 /*
- * page.s程序包含底层页异常处理代码.实际工作在memory.c中完成.
+ * page.s 程序包含底层页异常处理代码. 实际工作在 memory.c 中完成.
  */
-.globl page_fault					# 声明为全局变量.将在traps.c中用于设置页异常描述符.
+.globl page_fault					# 声明为全局变量. 将在 traps.c 中用于设置页异常描述符.
 
 page_fault:
-	xchgl %eax, (%esp)				# 取出错码到eax
+	xchgl %eax, (%esp)				# 取出错码到 eax
 	pushl %ecx
 	pushl %edx
 	push %ds
@@ -25,14 +25,14 @@ page_fault:
 	mov %dx, %es
 	mov %dx, %fs
 	movl %cr2, %edx					# 取引起页面异常的线性地址.
-	pushl %edx						# 将该线性地址和出错码压入栈中,作为将调用函数的参数.
+	pushl %edx						# 将该线性地址和出错码压入栈中, 作为将调用函数的参数.
 	pushl %eax
-	testl $1, %eax					# 测试页存在标志P(位0),如果不是缺页引起的异常则跳转.
+	testl $1, %eax					# 测试页存在标志 P(位 0), 如果不是缺页引起的异常则跳转.
 	jne 1f
 	call do_no_page					# 调用缺页处理函数(mm/memory.c)
 	jmp 2f
 1:	call do_wp_page					# 调用写保护处理函数(mm/memory.c)
-2:	addl $8, %esp					# 丢弃压入栈的两个参数,弹出栈中寄存器并退出中断.
+2:	addl $8, %esp					# 丢弃压入栈的两个参数, 弹出栈中寄存器并退出中断.
 	pop %fs
 	pop %es
 	pop %ds
