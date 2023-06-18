@@ -36,26 +36,26 @@ struct tm {
   ((year) % 4 == 0 && ((year) % 100 != 0 || (year) % 1000 == 0))
   
 // 以下是有关时间操作的函数原型.
-// 确定处理器使用时间.返回程序所有处理器时间(滴答数)的近似值.
+// 确定处理器使用时间. 返回程序所有处理器时间(滴答数)的近似值.
 clock_t clock(void);
-// 取时间(秒数).返回从1970.1.1:0:0:0开始的秒数(称为日历时间).
+// 取时间(秒数). 返回从 1970.1.1:0:0:0 开始的秒数(称为日历时间).
 time_t time(time_t * tp);
-// 计算时间差.返回时间time2与time1之间经过的秒数.
+// 计算时间差. 返回时间 time2 与 time1 之间经过的秒数.
 double difftime(time_t time2, time_t time1);
-// 将tm结构表示的时间转换成日历时间.
+// 将 tm 结构表示的时间转换成日历时间.
 time_t mktime(struct tm * tp);
 
-// 将tm结构表示的时间转换成一个字符串.返回指向该串的指针.
+// 将 tm 结构表示的时间转换成一个字符串. 返回指向该串的指针.
 char * asctime(const struct tm * tp);
-// 将日历时间转换成一个字符串形式,如"Wed Jun 30 21:49:08:1993\n".
+// 将日历时间转换成一个字符串形式, 如 "Wed Jun 30 21:49:08:1993\n".
 char * ctime(const time_t * tp);
-// 将日历时间转换成tm结构表示的UTC时间(UTC-世界时间代码Universal Time Code).
+// 将日历时间转换成 tm 结构表示的 UTC 时间(UTC - 世界时间代码 Universal Time Code).
 struct tm * gmtime(const time_t *tp);
-// 将日历时间转换成tm结构表示的指定时区(Time Zone)的时间.
+// 将日历时间转换成 tm 结构表示的指定时区(Time Zone)的时间.
 struct tm *localtime(const time_t * tp);
-// 将tm结构表示的时间利用格式字符串fmt转换成最大长度为smax的字符串并将结果存储在s中.
+// 将 tm 结构表示的时间利用格式字符串 fmt 转换成最大长度为 smax 的字符串并将结果存储在 s 中.
 size_t strftime(char * s, size_t smax, const char * fmt, const struct tm * tp);
-// 初始化时间转换信息,使用环境变量TZ,对zname变量进行初始化.
+// 初始化时间转换信息, 使用环境变量 TZ, 对 zname 变量进行初始化.
 // 在与时区相关的时间转换函数中将自动调用该函数.
 void tzset(void);
 
