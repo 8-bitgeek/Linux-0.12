@@ -8,7 +8,7 @@
  * super.c contains code to handle the super-block tables.
  */
 /*
- * super.c 程序中含有处理超级块表的代码。
+ * super.c 程序中含有处理超级块表的代码. 
  */
 //#include <linux/config.h>
 #include <linux/sched.h>
@@ -26,8 +26,10 @@ void wait_for_keypress(void);           					// 等待击键(kernel/chr_drv/tty_
 // 测试指定位偏移处位的值, 并返回该原位值(应该取名为 test_bit() 更妥帖).
 // 嵌入式汇编宏. 参数 bitnr 是位偏移值, addr 是测试位操作的起始地址.
 // %0 - ax(__res), %1 - 0, %2 - bitnr, %3 - addr
-// 第 23 行定义了一个局部寄存器变量. 该变量将被保存在 eax 寄存器中, 以便于高效访问和操作. 第 24 行上指令 bt 用于对位进行测试(Bit Test). 
-// 它会把地址 addr(%3) 和位偏移量 bitnr(%2) 指定的位的值放入进位标志 CF 中. 指令 setb 用于根据进位标志 CF 设置操作数 %al. 如果 CF = 1 则 %al = 1, 否则 %al = 0.
+// 第 23 行定义了一个局部寄存器变量. 该变量将被保存在 eax 寄存器中, 以便于高效访问和操作. 
+// 第 24 行上指令 bt 用于对位进行测试(Bit Test). 
+// 它会把地址 addr(%3) 和位偏移量 bitnr(%2) 指定的位的值放入进位标志 CF 中. 
+// 指令 setb 用于根据进位标志 CF 设置操作数 %al. 如果 CF = 1 则 %al = 1, 否则 %al = 0.
 #define set_bit(bitnr, addr) ({ \
 register int __res; \
 __asm__("bt %2, %3; setb %%al":"=a" (__res):"a" (0),"r" (bitnr),"m" (*(addr))); \
@@ -106,7 +108,7 @@ void put_super(int dev)
 	struct super_block * sb;
 	int i;
 
-	// 首先判断参数的有效性和合法性. 如果指定设备是根文件系统设备, 则显示警告信息 “根系统盘改变了, 准备生死决战吧”, 并返回。
+	// 首先判断参数的有效性和合法性. 如果指定设备是根文件系统设备, 则显示警告信息 “根系统盘改变了, 准备生死决战吧”, 并返回. 
 	// 然后在超级块表中寻找指定设备号的文件系统超级块. 如果找不到指定设备超级块, 则返回. 
 	// 另外, 如果该超级块指明该文件系统所安装到的 i 节点还没有被处理过, 则显示警告信息并返回. 
 	// 在文件系统卸载(umount)操作中, s_imount 会先被置成 NULL 以后才会调用本函数.
@@ -240,7 +242,7 @@ int sys_umount(char * dev_name)
 		return -ENOENT;
 	dev = inode->i_zone[0];
 	if (!S_ISBLK(inode->i_mode)) {
-		iput(inode);                    				// fs/inode.c。
+		iput(inode);                    				// fs/inode.c. 
 		return -ENOTBLK;
 	}
 	// OK, 现在上面为了得到设备号而取得的 i 节点已完成了它的使命, 因此这里放回该设备文件的 i 节点. 
