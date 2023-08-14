@@ -586,8 +586,9 @@ void sched_init(void)
 	if (sizeof(struct sigaction) != 16)							// sigaction 是存放有关信号状态的结构.
 		panic("Struct sigaction MUST be 16 bytes");
 	// 在全局描述符表中设置初始任务(任务 0)的任务状态段描述符和局部数据表描述符.
-	// FIRST_TSS_ENTRY 和 FIRST_LDT_ENTRY 的值分别是 4 和 5, 定义在 include/linux/sched.h 中. gdt 是一个描述符表数组(include/linux/head.h),
-	// 实际上对应程序 head.s 中的他已描述符表基址(gdt). 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址
+	// FIRST_TSS_ENTRY 和 FIRST_LDT_ENTRY 的值分别是 4 和 5, 定义在 include/linux/sched.h 中. 
+	// gdt 是一个描述符表数组(include/linux/head.h), 实际上对应程序 head.s 中的他已描述符表基址(gdt). 
+	// 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址.
 	// 参见 include/asm/system.h
 	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss));
 	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt));
