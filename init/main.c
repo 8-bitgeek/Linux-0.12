@@ -126,7 +126,7 @@ static int sprintf(char * str, const char *fmt, ...)
  * 以下这些数据是在内核引导期间由 setup.s 程序设置的.
  */
  // 下面三行分别将指定的线性地址强行转换为给定数据类型的指针, 并获取指针所指内容. 
- // 由于内核代码段被映射到从物理地址零开始的地方, 因此这些纯属地址正好也是对应的物理地址.
+ // 由于内核代码段被映射到从物理地址零开始的地方, 因此这些线性地址正好也是对应的物理地址.
 #define EXT_MEM_K (*(unsigned short *)0x90002)							// 1MB 以后的扩展内存大小(KB).
 #define CON_ROWS ((*(unsigned short *)0x9000e) & 0xff)					// 选定的控制台屏幕行, 列数
 #define CON_COLS (((*(unsigned short *)0x9000e) & 0xff00) >> 8)
@@ -222,7 +222,9 @@ int main(void)										/* This really IS void, no error here. */
     drive_info = DRIVE_INFO;										// 复制内存 0x90080 处的硬盘参数表.
 
 	// 接着根据机器物理内存容量设置高速缓冲区和主内存的位置和范围.
-	// 高速缓存末端地址 -> buffer_memory_end; 机器内存容量 -> memory_end; 主内存开始地址 -> main_memory_start.
+	// buffer_memory_end  	-> 高速缓存末端地址  
+	// memory_end 			-> 机器内存容量 
+	// main_memory_start 	-> 主内存开始地址
 	// 设置物理内存大小
 	memory_end = (1 << 20) + (EXT_MEM_K << 10);						// 内存大小 = 1MB + 扩展内存(k) * 1024字节.
 	memory_end &= 0xfffff000;										// 忽略不到 4KB(1 页)的内存数.
