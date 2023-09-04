@@ -43,7 +43,7 @@ __asm__("movl %%eax,%%cr3"::"a" (0))
 extern unsigned long HIGH_MEMORY;		         // 存放实际物理内存最高端地址.
 #define PAGING_MEMORY (15 * 1024 * 1024)         // 分页内存15MB.主内存区最多15MB.
 #define PAGING_PAGES (PAGING_MEMORY >> 12)	     // 分页后的物理内存页面数(3840).
-#define MAP_NR(addr) (((addr) - LOW_MEM) >> 12)	 // 指定内存地址映射为页面号.
+#define MAP_NR(addr) (((addr) - LOW_MEM) >> 12)	 // 指定内存地址映射为页面号. 2 ^ 12 = 4KB
 #define USED 100				                 // 页面被占用标志.
 
 // 内存映射字节图(1字节代表1页内存).每个页面对应的字节用于标志页面当前被引用(占用)次数.它最大可以映射15MB的内存空间.在初始化函数
