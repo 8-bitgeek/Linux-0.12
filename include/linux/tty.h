@@ -25,7 +25,7 @@ extern int NR_CONSOLES;
 
 #define TTY_BUF_SIZE 1024								// tty 缓冲区(缓冲队列)大小.
 
-// tty 字符缓冲队列数据结构. 用于 tty_struc 结构中的读/写和辅助(规范)缓冲队列.
+// tty 字符缓冲队列数据结构. 用于 tty_struct 结构中的读/写和辅助(规范)缓冲队列.
 struct tty_queue {
 	unsigned long data;									// 队列缓冲区中含有字符行数值(不是当前字符数). 对于串口终端, 则存放串行端口地址.
 	unsigned long head;									// 缓冲区中数据头指针
@@ -73,9 +73,10 @@ struct tty_struct {
 	int session;								// 会话号.
 	int stopped;								// 停止标志.
 	void (*write)(struct tty_struct * tty);		// tty 写函数指针.
-	struct tty_queue *read_q;					// tty 读队列.
-	struct tty_queue *write_q;					// tty 写队列.
+	struct tty_queue *read_q;					// tty 读队列. 用于临时存放从键盘或串行终端输入的原始(raw)字符序列
+	struct tty_queue *write_q;					// tty 写队列. 用于存放写到控制台显示屏或串行终端去的数据
 	struct tty_queue *secondary;				// tty 辅助队列(存放规范模式字符序列). 可称为规范(熟)模式队列.
+												// secondary 用于存放从 read_q 中取出的经过行规则程序处理(过滤)过的数据，或称为熟(cooked)模式数据
 	};
 
 extern struct tty_struct tty_table[];			// tty 结构数组.
