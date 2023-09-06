@@ -21,7 +21,7 @@
 /*
  * 请求结构中含有加载 nr 个扇区数据到内存中去的所有必须的信息.
  */
-// 请求项数组队列. 共有 NR_REQUEST = 32 个请求项.
+// 请求项数组队列. 共有 NR_REQUEST = 32 个请求项. (参见文件 kernel/blk_drv/blk.h)
 struct request request[NR_REQUEST];
 
 /*

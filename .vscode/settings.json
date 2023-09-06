@@ -2,6 +2,7 @@
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
         "kernel.h": "c",
-        "fs.h": "c"
+        "fs.h": "c",
+        "blk.h": "c"
     }
 }

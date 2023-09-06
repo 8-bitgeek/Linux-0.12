@@ -247,7 +247,7 @@ int main(void)										/* This really IS void, no error here. */
 	// 以下是内核进行所有方面的初始化工作.
 	mem_init(main_memory_start, memory_end);		// 主内存区初始化. (mm/memory.c) 初始化 mem_map[]
 	trap_init();                              		// 陷阱门(硬件中断向量)初始化. (kernel/traps.c)
-	blk_dev_init();									// 块设备初始化. (blk_drv/ll_rw_blk.c)
+	blk_dev_init();									// 块设备初始化. (blk_drv/ll_rw_blk.c) 
 	chr_dev_init();									// 字符设备初始化. (chr_drv/tty_io.c)
  	tty_init();										// tty 初始化. (chr_drv/tty_io.c)
 	time_init();									// 设置开机启动时间.

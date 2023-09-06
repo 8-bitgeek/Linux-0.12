@@ -66,7 +66,7 @@ struct tty_queue {
 #define STOP_CHAR(tty) ((tty)->termios.c_cc[VSTOP])     					// 停止符. 停止输出
 #define SUSPEND_CHAR(tty) ((tty)->termios.c_cc[VSUSP])  					// 挂起符. 发挂起信号 SIGTSTP
 
-// tty 数据结构
+// tty 数据结构，每个终端都对应一个 tty_struct 数据结构
 struct tty_struct {
 	struct termios termios;						// 终端 io 属性和控制字符数据结构.
 	int pgrp;									// 所属进程组.
