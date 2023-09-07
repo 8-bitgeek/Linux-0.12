@@ -3,6 +3,7 @@
     "files.associations": {
         "kernel.h": "c",
         "fs.h": "c",
-        "blk.h": "c"
+        "blk.h": "c",
+        "termios.h": "c"
     }
 }

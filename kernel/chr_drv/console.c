@@ -112,14 +112,14 @@ static unsigned long	video_num_lines;	/* Number of test lines		*/		// 屏幕文�
 static unsigned char	video_page;			/* Initial video page		*/		// 初试显示页面.
 static unsigned short	video_port_reg;		/* Video register select port	*/	// 显示控制选择寄存器端口.
 static unsigned short	video_port_val;		/* Video register value port	*/	// 显示控制数据寄存器端口.
-static int can_do_colour = 0;				// 标志: 可使用彩色功能.
+static int 				can_do_colour = 0;										// 标志: 可使用彩色功能.
 
-// 虚拟控制台结构. 其中包含一个虚拟控制台的当前所有信息. 
+// 虚拟控制台结构. 包含一个虚拟控制台的当前所有信息. 
 // 其中 vc_origin 和 vc_scr_end 是当前正在处理的虚拟控制台执行快速滚屏操作时使用的起始行和末行对应的显示内存位置. 
 // vc_video_mem_start 和 vc_video_meme_end 是当前虚拟控制台使用的显示内存区域部分.
 static struct {
 	unsigned short	vc_video_erase_char;										// 擦除字符属性及字符(0x0720)
-	unsigned char	vc_attr;													// 字符属性
+	unsigned char	vc_attr;													// 字符属性(颜色等)
 	unsigned char	vc_def_attr;												// 默认字符属性.
 	int				vc_bold_attr;												// 粗体字符属性.
 	unsigned long	vc_ques;													// 问号字符.
@@ -127,23 +127,24 @@ static struct {
 	unsigned long	vc_restate;													// 处理转义或控制序列的下一状态.
 	unsigned long	vc_checkin;
 	unsigned long	vc_origin;													/* Used for EGA/VGA fast scroll	*/
-	unsigned long	vc_scr_end;													/* Used for EGA/VGA fast scroll	*/
+	unsigned long	vc_scr_end;				// 虚拟控制台起始地址 + 一屏占用的大小	 /* Used for EGA/VGA fast scroll */
 	unsigned long	vc_pos;														// 当前光标对应的显示内存位置.
 	unsigned long	vc_x, vc_y;													// 当前光标列, 行值.
-	unsigned long	vc_top, vc_bottom;											// 滚动时顶行行号;底行行号.
+	unsigned long	vc_top, vc_bottom;											// 滚动时顶行行号; 底行行号.
 	unsigned long	vc_npar, vc_par[NPAR];										// 转义序列参数个数和参数数组.
-	unsigned long	vc_video_mem_start;											/* Start of video RAM		*/
-	unsigned long	vc_video_mem_end;											/* End of video RAM (sort of)	*/
+	unsigned long	vc_video_mem_start;											/* Start of video RAM */ 			// 显存起始位置
+	unsigned long	vc_video_mem_end;											/* End of video RAM (sort of) */ 	// 显存结束位置
 	unsigned int	vc_saved_x;													// 保存的光标列号.
 	unsigned int	vc_saved_y;													// 保存的光标行号.
 	unsigned int	vc_iscolor;													// 彩色显示标志.
 	char *			vc_translate;												// 使用的字符集.
 } vc_cons [MAX_CONSOLES];
 
-// 为人便于引用, 以下定义当前正在处理控制台信息的符号. 含义同上. 其中 currcons 是使用 vc_cons[] 结构的函数参数中的当前虚拟终端号.
+// 为了便于引用, 以下定义当前正在处理控制台信息的符号. 含义同上. 
+// 其中 currcons 是使用 vc_cons[] 结构的函数参数中的当前虚拟终端号.
 #define origin					(vc_cons[currcons].vc_origin)					// 快速滚屏操作起始内存位置.
-#define scr_end					(vc_cons[currcons].vc_scr_end)					// 快速滚屏操作末端内存位置.
-#define pos						(vc_cons[currcons].vc_pos)
+#define scr_end					(vc_cons[currcons].vc_scr_end)					// 快速滚屏操作末端内存位置. 一屏的结尾地址
+#define pos						(vc_cons[currcons].vc_pos) 						// 当前光标所在的显示内存位置.
 #define top						(vc_cons[currcons].vc_top)
 #define bottom					(vc_cons[currcons].vc_bottom)
 #define x						(vc_cons[currcons].vc_x)
@@ -154,13 +155,13 @@ static struct {
 #define npar					(vc_cons[currcons].vc_npar)
 #define par						(vc_cons[currcons].vc_par)
 #define ques					(vc_cons[currcons].vc_ques)
-#define attr					(vc_cons[currcons].vc_attr)
+#define attr					(vc_cons[currcons].vc_attr) 					// 字符属性(颜色等)
 #define saved_x					(vc_cons[currcons].vc_saved_x)
 #define saved_y					(vc_cons[currcons].vc_saved_y)
 #define translate				(vc_cons[currcons].vc_translate)
-#define video_mem_start			(vc_cons[currcons].vc_video_mem_start)			// 使用显存的起始位置.
-#define video_mem_end			(vc_cons[currcons].vc_video_mem_end)			// 使用显存的末端位置.
-#define def_attr				(vc_cons[currcons].vc_def_attr)
+#define video_mem_start			(vc_cons[currcons].vc_video_mem_start)			// 虚拟控制台使用显存的起始位置.
+#define video_mem_end			(vc_cons[currcons].vc_video_mem_end)			// 虚拟控制台使用显存的末端位置.
+#define def_attr				(vc_cons[currcons].vc_def_attr) 				// 默认字符属性
 #define video_erase_char  		(vc_cons[currcons].vc_video_erase_char)
 #define iscolor					(vc_cons[currcons].vc_iscolor)
 
@@ -194,7 +195,7 @@ static char * translations[] = {
 	"\304\304\304\304\307\266\320\322\272\363\362\343\\007\234\007 "
 };
 
-#define NORM_TRANS (translations[0])
+#define NORM_TRANS (translations[0]) 				// 普通 ascii 字符集
 #define GRAF_TRANS (translations[1])
 
 // 跟踪光标当前位置.
@@ -209,8 +210,8 @@ static inline void gotoxy(int currcons, int new_x, unsigned int new_y)
 {
 	if (new_x > video_num_columns || new_y >= video_num_lines)
 		return;
-	x = new_x;
-	y = new_y;
+	x = new_x; 										// 设置当前光标列值
+	y = new_y; 										// 设置当前光标行值
 	pos = origin + y * video_size_row + (x << 1);	// 1 列用 2 个字节表示, 所以 x<<1.
 }
 
@@ -226,8 +227,10 @@ static inline void set_origin(int currcons)
 	if (currcons != fg_console)
 		return;
 	// 然后向显示寄存器选择端口 video_port_reg 输出 12, 即选择显示控制数据寄存器 r12, 接着写入滚屏起始地址高字节. 
-	// 其中向右移动 9 位, 实际上表示向右移动 8 位再除以 2(上 1 个字符用 2 字节表示). 再选择显示控制数据寄存器 r13, 然后写入滚屏起始地址低字节. 
-	// 向右移动 1 位表示除以 2, 同样代表屏幕上 1 个字符用 2 字节表示. 输出值相对于默认显示内存起始位置 video_mem_base 进行操作.
+	// 其中向右移动 9 位, 实际上表示向右移动 8 位再除以 2(上 1 个字符用 2 字节表示). 
+	// 再选择显示控制数据寄存器 r13, 然后写入滚屏起始地址低字节. 
+	// 向右移动 1 位表示除以 2, 同样代表屏幕上 1 个字符用 2 字节表示. 
+	// 输出值相对于默认显示内存起始位置 video_mem_base 进行操作.
 	// 例如对于 EGA/VGA 彩色模式, viedo_mem_base = 物理内存地址 0xb8000.
 	cli();
 	outb_p(12, video_port_reg);											// 选择数据寄存器 r12, 输出滚屏起始位置高字节.
@@ -258,7 +261,8 @@ static void scrup(int currcons)
 			pos += video_size_row;
 			scr_end += video_size_row;
 			// 如果屏幕窗口末端所对应的显示内存指针 scr_end 超出了实际显示内存末端, 
-			// 则将屏幕内容除第一行以外所有行对应的内存数据移动到显示内存的起始位置 video_mem_start 处, 并在整屏窗口向下移动出现的新行上填入空格字符. 
+			// 则将屏幕内容除第一行以外所有行对应的内存数据移动到显示内存的起始位置 video_mem_start 处, 
+			// 并在整屏窗口向下移动出现的新行上填入空格字符. 
 			// 然后根据屏幕内存数据移动后的情况, 重新调整当前屏幕对应内存的起始指针, 光标位置指针和屏幕末端对应内存指针 scr_end.
 			if (scr_end > video_mem_end) {
 				// 这段嵌入汇编程序首先将(屏幕字符行数 - 1)行对应的内存数据移动到显示内存起始位置 video_mem_start 处, 
@@ -266,11 +270,11 @@ static void scrup(int currcons)
 				// %0 - eax(擦除字符 + 属性); %1 - ecx((屏幕字符行数 - 1) * 所对应的字符数 / 2, 以长字移动);
 				// %2 - edi(显示内存起始位置 video_mem_start); %3 - esi(屏幕窗口内存起始位置 origin).
 				// 移动方向: [edi] -> [esi], 移动 ecx 个长字.
-				__asm__("cld\n\t"											// 清方向位
-					"rep\n\t"												// 重复操作, 将当前屏幕内存数据移动到显示内存起始处
+				__asm__("cld\n\t"								// 清方向位
+					"rep\n\t"									// 重复操作, 将当前屏幕内存数据移动到显示内存起始处
 					"movsl\n\t"
 					"movl video_num_columns, %1\n\t"
-					"rep\n\t"												// 在新行上填入空格字符
+					"rep\n\t"									// 在新行上填入空格字符
 					"stosw"
 					::"a" (video_erase_char),
 					"c" ((video_num_lines - 1) * video_num_columns >> 1),
@@ -283,11 +287,12 @@ static void scrup(int currcons)
 				pos -= origin - video_mem_start;
 				// 重新设置快速滚屏的起始位置
 				origin = video_mem_start;
-			// 如果调整后的屏幕末端对应的内存指针 scr_end 没有超出显示内存的末端 video_mem_end, 则只需在新行上填入擦除字符(空格字符).
+			// 如果调整后的屏幕末端对应的内存指针 scr_end 没有超出显示内存的末端 video_mem_end, 
+			// 则只需在新行上填入擦除字符(空格字符).
 			// %0 - eax(擦除字符+属性); %1 - ecx(屏幕行数); %2 - edi(最后 1 行开始处对应内存位置);
 			} else {
 				__asm__("cld\n\t"
-					"rep\n\t"												// 重复操作, 在新出现现上填入擦除字符(空格字符).
+					"rep\n\t"									// 重复操作, 在新出现现上填入擦除字符(空格字符).
 					"stosw"
 					::"a" (video_erase_char),
 					"c" (video_num_columns),
@@ -302,10 +307,10 @@ static void scrup(int currcons)
 		// %2 - edi(top 行所处的内存位置); %3 - esi(top + 1 行所处的内存位置).
 		} else {
 			__asm__("cld\n\t"
-				"rep\n\t"													// 循环操作, 将 top + 1 到 bottom 行所对应的内存块移到 top 行开始处.
+				"rep\n\t"										// 循环操作, 将 top + 1 到 bottom 行所对应的内存块移到 top 行开始处.
 				"movsl\n\t"
 				"movl video_num_columns, %%ecx\n\t"
-				"rep\n\t"													// 在新行上填入擦除字符.
+				"rep\n\t"										// 在新行上填入擦除字符.
 				"stosw"
 				::"a" (video_erase_char),
 				"c" ((bottom - top - 1) * video_num_columns >> 1),
@@ -350,12 +355,12 @@ static void scrdown(int currcons)
 	{
 		// %0 - eax(擦除字符 + 属性); %1 - ecx(top 行到 bottom - 1 行所对应的内存长字数);
 		// %2 - edi(窗口右下角最后一个字长位置); %3 - esi(窗口倒数第 2 行最后一个长字位置).
-		__asm__("std\n\t"										// 置方向位!!
-			"rep\n\t"											// 重复操作, 向下移动从 top 行到 bottom - 1 行对应的内存数据
+		__asm__("std\n\t"							// 置方向位!!
+			"rep\n\t"								// 重复操作, 向下移动从 top 行到 bottom - 1 行对应的内存数据
 			"movsl\n\t"
-			"addl $2, %%edi\n\t"								/* %edi has been decremented by 4 */ /* %edi 已减 4, 因也是反向填擦除字符 */
+			"addl $2, %%edi\n\t"					/* %edi has been decremented by 4 */ /* %edi 已减 4, 因也是反向填擦除字符 */
 			"movl video_num_columns, %%ecx\n\t"
-			"rep\n\t"											// 将擦除字符填入上方新行中.
+			"rep\n\t"								// 将擦除字符填入上方新行中.
 			"stosw"
 			::"a" (video_erase_char),
 			"c" ((bottom - top - 1) * video_num_columns >> 1),
@@ -369,7 +374,7 @@ static void scrdown(int currcons)
 		__asm__("std\n\t"
 			"rep\n\t"
 			"movsl\n\t"
-			"addl $2, %%edi\n\t"									/* %edi has been decremented by 4 */
+			"addl $2, %%edi\n\t"								/* %edi has been decremented by 4 */
 			"movl video_num_columns, %%ecx\n\t"
 			"rep\n\t"
 			"stosw"
@@ -419,7 +424,8 @@ static void cr(int currcons)
 }
 
 // 擦除光标前一字符(用空格替代)(del - delete 删除)
-// 如果光标没有处在 0 列, 则将光标对应内存位置 pos 后退 2 字节(对应屏幕上一个字符), 然后将当前光标变量列值减 1, 并将光标所在位置处字符符擦除
+// 如果光标没有处在 0 列, 则将光标对应内存位置 pos 后退 2 字节(对应屏幕上一个字符), 
+// 然后将当前光标变量列值减 1, 并将光标所在位置处字符符擦除
 static void del(int currcons)
 {
 	if (x) {
@@ -467,7 +473,8 @@ static void csi_J(int currcons, int vpar)
 }
 
 // 删除上一行上与光标位置相关的部分.
-// ANSI 转义字符序列: 'ESC [ Ps K'(Ps = 0 删除到行尾; 1 从开始删除; 2 整行都删除). 本函数根据参数擦除光标所在行的部分或所有字符. 
+// ANSI 转义字符序列: 'ESC [ Ps K'(Ps = 0 删除到行尾; 1 从开始删除; 2 整行都删除). 
+// 本函数根据参数擦除光标所在行的部分或所有字符. 
 // 擦除操作从屏幕上移走字符但不影响其他字符. 擦除的字符被丢弃. 在擦除字符或行时光标位置不变.
 // 参数: par - 对应上面控制序列中 Ps 的值.
 static void csi_K(int currcons, int vpar)
@@ -505,15 +512,19 @@ static void csi_K(int currcons, int vpar)
 }
 
 // 设置显示字符属性
-// ANSI 转义序列: 'ESC [ Ps;PS m'.Ps = 0 - 默认属性; 1 - 粗体并增亮; 4 - 下划线; 5 - 闪烁; 7 - 反显; 22 - 非粗体; 24 - 无下划线;
-// 25 - 无闪烁; 27 - 正显; 30~38 - 设置前景色彩; 39 - 默认前景色(White); 40~48 - 设置背景色彩; 49 - 默认背景色(Black).
-// 该控制序列根据参数设置字符显示属性. 以后所有发送到终端的字符都将使用这里指定的属性, 直到再次执行本控制序列重新设置字符显示的属性.
+// ANSI 转义序列: 'ESC [ Ps;PS m'.Ps = 0 - 默认属性; 1 - 粗体并增亮; 
+// 4 - 下划线; 5 - 闪烁; 7 - 反显; 22 - 非粗体; 24 - 无下划线;
+// 25 - 无闪烁; 27 - 正显; 30~38 - 设置前景色彩; 39 - 默认前景色(White); 
+// 40~48 - 设置背景色彩; 49 - 默认背景色(Black).
+// 该控制序列根据参数设置字符显示属性. 
+// 以后所有发送到终端的字符都将使用这里指定的属性, 直到再次执行本控制序列重新设置字符显示的属性.
 void csi_m(int currcons)
 {
 	int i;
 
 	// 一个序列中可以带有多个不同参数. 参数存储在数组 par[] 中. 下面就根据接收到的参数个数 npar, 循环处理各个参数 Ps.
-	// 如果 Ps = 0, 则把当前虚拟控制台随后显示的字符属性设置为默认属性 def_attr. 初始化时 def_attr 已被设置成 0x07(黑底白字).
+	// 如果 Ps = 0, 则把当前虚拟控制台随后显示的字符属性设置为默认属性 def_attr. 
+	// 初始化时 def_attr 已被设置成 0x07(黑底白字).
 	// 如果 Ps = 1, 则把当前虚拟控制台随后显示的字符属性设置为粗体或增亮显示. 
 	// 如果是彩色显示, 则把字符属性或上 0x08 让字符高亮度显示; 如果是单色显示, 则让人带下划线显示.
 	// 如果 ps = 4, 则对彩色和单色显示进行不同的处理. 若此时不是彩色显示方式, 则让字符带下划线显示. 
@@ -558,14 +569,15 @@ void csi_m(int currcons)
 			case 39: attr = (attr & 0xf0) | (def_attr & 0x0f); break;
 			// 如果 Ps = 49, 则复位随后字符的背景色为默认背景色(黑色).
 			case 49: attr = (attr & 0x0f) | (def_attr & 0xf0); break;
-			// 当 Ps(par[i]) 为其他值时, 则是设置指定的前景色或背景色. 如果 Ps = 30..37, 则是设置前景色; 如果 Ps=40..47, 则是设置背景色.
+			// 当 Ps(par[i]) 为其他值时, 则是设置指定的前景色或背景色. 
+			// 如果 Ps = 30..37, 则是设置前景色; 如果 Ps=40..47, 则是设置背景色.
 			default:
 			  if (!can_do_colour)
 			    break;
 			  iscolor = 1;
-			  if ((par[i] >= 30) && (par[i] <= 38))		 					// 设置前景色.
+			  if ((par[i] >= 30) && (par[i] <= 38))		 			// 设置前景色.
 			    attr = (attr & 0xf0) | (par[i] - 30);
-			  else  														/* Background color */			 // 设置背景色.
+			  else  												/* Background color */	// 设置背景色.
 			    if ((par[i] >= 40) && (par[i] <= 48))
 			      attr = (attr & 0x0f) | ((par[i] - 40) << 4);
 			    else
@@ -582,7 +594,8 @@ static inline void set_cursor(int currcons)
 	blankcount = blankinterval;						// 复位黑屏操作的计数值.
 	if (currcons != fg_console)
 		return;
-	// 然后使用索引寄存器端口选择显示控制数据寄存器 r14(光标当前显示位置高字节), 接着写入光标当前位置高字节(向右移动 9 位表示高字节移到低字节再除以 2),
+	// 然后使用索引寄存器端口选择显示控制数据寄存器 r14(光标当前显示位置高字节), 
+	// 接着写入光标当前位置高字节(向右移动 9 位表示高字节移到低字节再除以 2),
 	// 相对于默认显示内存操作的. 再使用索引寄存器选择 r15, 并将光标当前位置低字节写入其中.
 	cli();
 	outb_p(14, video_port_reg);
@@ -596,7 +609,8 @@ static inline void set_cursor(int currcons)
 // 把光标设置到当前虚拟控制台窗口的末端, 起到隐藏光标的作用. 
 static inline void hide_cursor(int currcons)
 {
-	// 首先使用索引寄存器端口选择控制数据寄存器 r14(光标当前显示位置高字节), 然后写入光标当前位置高字节(向右移动 9 位表示高字节移到低字节再除以 2),
+	// 首先使用索引寄存器端口选择控制数据寄存器 r14(光标当前显示位置高字节), 
+	// 然后写入光标当前位置高字节(向右移动 9 位表示高字节移到低字节再除以 2),
 	// 是相对于默认显示内存操作的. 再使用索引寄存器选择 r15, 并将光标当前位置低字节写入其中. 
 	outb_p(14, video_port_reg);
 	outb_p(0xff & ((scr_end - video_mem_base) >> 9), video_port_val);
@@ -605,7 +619,8 @@ static inline void hide_cursor(int currcons)
 }
 
 // 发送对 VT100 的响应序列.
-// 即为响应主机请求终端向主机发送设备属性(DA). 主机通过发送不带参数或参数是 0 的 DA 控制序列('ESC [ 0c' 或 'ESC Z'] 要求终端发送一个设备属性(DA)控制序列, 
+// 即为响应主机请求终端向主机发送设备属性(DA). 
+// 主机通过发送不带参数或参数是 0 的 DA 控制序列('ESC [ 0c' 或 'ESC Z'] 要求终端发送一个设备属性(DA)控制序列, 
 // 终端则发送第 85 行上定义的应答序列(即 'ESC [?];2c']来主机的序列, 该序列告诉主机本终端是具有高级视频功能的 VT100 兼容终端. 
 // 处理过程是将应答序列放入读缓冲队列中, 并使用 copy_to_cooked() 函数处理后放入辅助队列中.
 static void respond(int currcons, struct tty_struct * tty)
@@ -661,7 +676,8 @@ static void delete_char(int currcons)
 	int i;
 	unsigned short * p = (unsigned short *) pos;
 
-	// 如果光标的当前列位置 x 走出屏幕最右列, 则返回. 否则从光标右一个字符开始到行末所有字符左移一格. 然后在最后一个字符处填入擦除字符.
+	// 如果光标的当前列位置 x 走出屏幕最右列, 则返回. 
+	// 否则从光标右一个字符开始到行末所有字符左移一格. 然后在最后一个字符处填入擦除字符.
 	if (x >= video_num_columns)
 		return;
 	i = x;
@@ -690,7 +706,8 @@ static void delete_line(int currcons)
 }
 
 // 在光标处插入 nr 个字符
-// ANSI 转义字符序列: 'ESC [ Pn @'. 在当前光标处插入 1 个或多个安全空格字符. Pn 是插入的字符数. 默认是 1. 光标将仍然处于第 1 个插入的空格字符处. 
+// ANSI 转义字符序列: 'ESC [ Pn @'. 在当前光标处插入 1 个或多个安全空格字符. 
+// Pn 是插入的字符数. 默认是 1. 光标将仍然处于第 1 个插入的空格字符处. 
 // 在光标与右边界的字符将右移. 超过右边界的字符将被丢失.
 // 参数 nr = 转义字符序列中的参数 Pn.
 static void csi_at(int currcons, unsigned int nr)
@@ -720,12 +737,13 @@ static void csi_L(int currcons, unsigned int nr)
 }
 
 // 删除光标处的 nr 个字符.
-// ANSI 转义序列: 'ESC [ Pn P'. 该控制序列从光标处删除 Pn 个字符. 当一个字符被删除时, 光标右所有字符都左移, 这会在右边界处产生一个空字符. 
+// ANSI 转义序列: 'ESC [ Pn P'. 该控制序列从光标处删除 Pn 个字符. 
+// 当一个字符被删除时, 光标右所有字符都左移, 这会在右边界处产生一个空字符. 
 // 其属性应该与最后一个左移字符相同, 但这里作了简化处理, 仅使用字符的默认属性(黑底白字空格 0x0720)来设置空字符.
 // 参数: nr = 转义字符序列中的参数 Pn.
 static void csi_P(int currcons, unsigned int nr)
 {
-	// 如果删除的字符数大于一行字符数,则截为一行字符数;若删除字符数nr为0,则删除1个字符.然后循环删除光标处指定字符数nr.
+	// 如果删除的字符数大于一行字符数, 则截为一行字符数; 若删除字符数 nr 为 0, 则删除 1 个字符. 然后循环删除光标处指定字符数 nr.
 	if (nr > video_num_columns)
 		nr = video_num_columns;
 	else if (!nr)
@@ -1126,8 +1144,6 @@ void con_write(struct tty_struct * tty)
  * type and sets everything accordingly.
  */
 /*
- * void con_init(void);
- *
  * 这个子程序初始化控制台中断, 其他什么都不做. 如果你想让屏幕干净的话, 就使用适当的转义字符序列调用 tty_write() 函数.
  * 读取 setup.s 程序保存的信息, 用以确定当前显示器类型, 并且设置所有相关参数.
  */
@@ -1183,11 +1199,12 @@ void con_init(void)
 			display_desc = "*MDA";				// 设置显示描述字符串.
 		}
 	}
-	// 如果显示方式不为 7, 说明是彩色显示卡. 此时文本方式下所用显示内存起始地址为 0xb8000; 显示控制索引寄存器端口地址为 0x3d4; 数据寄存器端口地址为 0x3d5.
+	// 如果显示方式不为 7, 说明是彩色显示卡. 此时文本方式下所用显示内存起始地址为 0xb8000; 
+	// 显示控制索引寄存器端口地址为 0x3d4; 数据寄存器端口地址为 0x3d5.
 	else										/* If not, it is color. */
 	{
-		can_do_colour = 1;						// 设置彩色显示标志.
-		video_mem_base = 0xb8000;				// 显示内存起始地址.
+		can_do_colour 	= 1;					// 设置彩色显示标志.
+		video_mem_base 	= 0xb8000;				// 显示内存起始地址.
 		video_port_reg	= 0x3d4;				// 设置彩色显示索引寄存器端口.
 		video_port_val	= 0x3d5;				// 设置彩色显示数据寄存器端口.
 		// 再判断显示卡类别. 如果 BX 不等于 0x10, 则说明是 EGA 显示卡, 此时共有 32KB 显示内存可用(0xb8000~0xc0000).
@@ -1205,7 +1222,8 @@ void con_init(void)
 			display_desc = "*CGA";				// 设置显示描述字符串.
 		}
 	}
-	// 现在来计算当前显示卡内存上可以开设的虚拟控制台数量. 硬件允许的虚拟控制台数量等于总显示内存量 video_memory 除以每个虚拟控制台占用的字节数. 
+	// 现在来计算当前显示卡内存上可以开设的虚拟控制台数量. 
+	// 硬件允许的虚拟控制台数量等于总显示内存量 video_memory 除以每个虚拟控制台占用的字节数. 
 	// 每个虚拟控制台占用的显示内存数等于屏幕显示数 video_num_lines 乘上每行字符占有的字节数 video_size_row.
 	// 如果硬件允许开设的虚拟控制台数量大于系统既定的数量 MAX_CONSOLES, 就把虚拟控制台数量设置为 MAX_CONSOLES. 
 	// 若这样计算出的虚拟控制台数量为 0, 则设置为 1.
@@ -1236,12 +1254,14 @@ void con_init(void)
 	/* Initialize the variables used for scrolling (mostly EGA/VGA)	*/
 	/* 初始化用于滚屏的变量(主要用于 EGA/VGA) */
 
-	// 注意, 此时当前虚拟控制台号 curcons 已经被初始化 0. 因此下面实际上是初始化 0 号虚拟控制台的结构 vc_cons[0] 中的所有字段值. 
-	// 下面首先设置 0 号控制台的默认滚屏开始位置 video_mem_start 和默认滚屏末行内存位置, 实际上它们也就是 0 号控制台占用的部分显示内存区域. 
+	// 注意, 此时当前虚拟控制台号 curcons 已经被初始化 0. 
+	// 因此下面实际上是初始化 0 号虚拟控制台的结构 vc_cons[0] 中的所有字段值. 
+	// 下面首先设置 0 号控制台的默认滚屏开始位置 video_mem_start 和默认滚屏末行内存位置, 
+	// 实际上它们也就是 0 号控制台占用的部分显示内存区域. 
 	// 然后初始化设置 0 号虚拟控制台的其它属性和标志值.
 	base = origin = video_mem_start = video_mem_base;						// 默认滚屏开始内存位置.
 	term = video_mem_end = base + video_memory;								// 0 号屏幕内存末端位置.
-	scr_end	= video_mem_start + video_num_lines * video_size_row;			// 滚屏末端位置.
+	scr_end	= video_mem_start + video_num_lines * video_size_row;			// 滚屏末端位置.(一屏的结尾)
 	top	= 0;																// 初始设置滚动时顶行行号.
 	bottom	= video_num_lines;												// 初始设置滚动时底行行号.
 	attr = 0x07;															// 初始设置显示字符属性(黑底白字).
@@ -1255,16 +1275,18 @@ void con_init(void)
 
 	// 在设置了 0 号控制台当前光标所有位置和光标对应的内存位置 pos 后, 循环设置其余的几个虚拟控制台结构的参数值. 
 	// 除了各自占用的显示内存开始和结束位置不同, 它们的初始值基本上都与 0 号控制台相同.
-	gotoxy(currcons, ORIG_X, ORIG_Y);
+	gotoxy(currcons, ORIG_X, ORIG_Y); 										// 设置光标当前所在显示内存的位置
   	for (currcons = 1; currcons < NR_CONSOLES; currcons++) {
 		vc_cons[currcons] = vc_cons[0];         							// 复制 0 号结构的参数.
 		origin = video_mem_start = (base += video_memory);
 		scr_end = origin + video_num_lines * video_size_row;
 		video_mem_end = (term += video_memory);
-		gotoxy(currcons, 0, 0);                           					// 光标都初始化在屏幕左上角位置.
+		gotoxy(currcons, 0, 0);                           					// 光标都初始化在屏幕左上角位置(0, 0).
 	}
-	// 最后设置当前前台控制台的屏幕原点(左上角)位置和显示控制器中光标显示位置, 并设置键盘中断 0x21 陷阱门描述符(&keyboard_inierrupt 是键盘中断处理过程地址). 
-	// 然后取消中断控制芯片 8259A 中对键盘中断的屏蔽, 允许响应键盘发出的 IRQ1 请求信号. 最后复位键盘控制器以允许键盘开始正常工作.
+	// 最后设置当前前台控制台的屏幕原点(左上角)位置和显示控制器中光标显示位置, 
+	// 并设置键盘中断 0x21 陷阱门描述符(&keyboard_inierrupt 是键盘中断处理过程地址). 
+	// 然后取消中断控制芯片 8259A 中对键盘中断的屏蔽, 允许响应键盘发出的 IRQ1 请求信号. 
+	// 最后复位键盘控制器以允许键盘开始正常工作.
 	update_screen();														// 更新前台原点来设置光标位置.
 	set_trap_gate(0x21, &keyboard_interrupt);								// 参见 system.h, 设置键盘的系统中断门
 	outb_p(inb_p(0x21) & 0xfd, 0x21);										// 取消对键盘中断的屏蔽, 允许 IRQ1.

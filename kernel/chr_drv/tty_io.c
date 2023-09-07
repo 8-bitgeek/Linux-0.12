@@ -75,14 +75,14 @@ int is_orphaned_pgrp(int pgrp);                 		// 判断是否孤儿进程
 // 每个 tty 终端使用 3 个 tty 缓冲队列, 它们分别是用于缓冲键盘或串行输入的读队列 read_queue, 
 // 用于缓冲屏幕或串行输出的写队列 write_queue, 以及用于保存规范模式字符的辅助缓冲队列 secondary.
 #define QUEUES	(3 * (MAX_CONSOLES + NR_SERIALS + 2 * NR_PTYS))		// 共 54 项.
-static struct tty_queue tty_queues[QUEUES];							// tty 缓冲队列数组.
+static struct tty_queue tty_queues[QUEUES];			// tty 缓冲队列数组.
 struct tty_struct tty_table[256];					// tty 表结构数组. 用于保存每个终端设备的信息，每项对应系统的一个终端设备
 
 // 下面设定各种类型的 tty 终端所使用缓冲队列结构在 tty_queues[] 数组中的起始项位置.
 // 8 个虚拟控制台终端占用 tty_queues[] 数组开头 24 项(3 * MAX_CONSOLES)(0 -- 23)
-// 2 个串行终端占用随后的 6 项(3 * NR_SERIALS)(24 -- 29)
-// 4 个主伪终端占用随后的 12项(3 * NR_PTYS)(30 -- 41)
-// 4 个从伪终端占用随后的 12 项(3 * NR_PTYS)(42 -- 53)
+// 2 个串行终端(rs_queues)占用随后的 6 项(3 * NR_SERIALS)(24 -- 29)
+// 4 个主伪终端(mpty_queues)占用随后的 12项(3 * NR_PTYS)(30 -- 41)
+// 4 个从伪终端(spty_queues)占用随后的 12 项(3 * NR_PTYS)(42 -- 53)
 #define con_queues tty_queues
 #define rs_queues ((3 * MAX_CONSOLES) + tty_queues)
 #define mpty_queues ((3 * (MAX_CONSOLES + NR_SERIALS)) + tty_queues)
@@ -585,7 +585,8 @@ void tty_init(void)
 {
 	int i;
 
-	// 首先初始化所有终端的缓冲队列结构, 设置初值. 对于串行终端的读/写缓冲队列, 将它们的 data 字段设置为串行端口基地址值. 
+	// 首先初始化所有终端的缓冲队列结构, 设置初值. 
+	// 对于串行终端(rs_queues)的读/写缓冲队列, 将它们的 data 字段设置为串行端口基地址值. 
 	// 串口 1 是 0x3f8, 串口 2 是 0x2f8. 然后先初步设置所有终端的 tty 结构.
 	// 其中特殊字符数组 c_cc[] 设置的初值定义在 include/linux/tty.h 文件中.
 	for (i = 0 ; i < QUEUES ; i++)
@@ -600,11 +601,15 @@ void tty_init(void)
 			0, 0, 0, NULL, NULL, NULL, NULL
 		};
 	}
-	// 接着初始化控制台终端(console.c). 把 con_init() 放在这里, 是因为我们需要根据显示卡类型和显示内存容量来确定系统虚拟控制台的数量 NR_CONSOLES.
-	// 该值被用于随后的控制 tty 结构初始化循环中. 对于控制台的 tty 结构, tty 结构中包含的 termios 结构字段中输入模式标志集被初始化为 ICRNL 标志;
+	// 接着初始化控制台终端(console.c). 
+	// 把 con_init() 放在这里, 是因为我们需要根据显示卡类型和显示内存容量来确定系统虚拟控制台的数量 NR_CONSOLES.
+	// 该值被用于随后的控制 tty 结构初始化循环中. 
+	// 对于控制台的 tty 结构, tty 结构中包含的 termios 结构字段中输入模式标志集被初始化为 ICRNL 标志;
 	// 输出模式标志被初始化含有后处理标志 OPOST 和把 NL 转换成 CRNL 的标志 ONLCR; 
-	// 本地模式标志集被初始化含有 IXON, ICAON, ECHO,ECHOCTL 和 ECHOKE 标志; 控制字符数组 c_cc[] 被设置含有初始值 INIT_C_CC.
-	// 最后是初始化控制台终端 tty 结构中的读缓冲, 写缓冲和辅助缓冲队列结构, 它们分别指向 tty 缓冲队列结构数组 tty_table[] 中的相应结构项.
+	// 本地模式标志集被初始化含有 IXON, ICAON, ECHO,ECHOCTL 和 ECHOKE 标志; 
+	// 控制字符数组 c_cc[] 被设置含有初始值 INIT_C_CC.
+	// 最后是初始化控制台终端 tty 结构中的读缓冲, 写缓冲和辅助缓冲队列结构, 
+	// 它们分别指向 tty 缓冲队列结构数组 tty_table[] 中的相应结构项.
 	con_init();
 	for (i = 0 ; i < NR_CONSOLES ; i++) {
 		con_table[i] = (struct tty_struct) {

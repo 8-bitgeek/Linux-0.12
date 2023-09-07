@@ -98,7 +98,7 @@ struct termio {
 };
 
 // POSIX 的 termios 结构
-#define NCCS 17		// termios 结构中控制字符数组长度.
+#define NCCS 17				// termios 结构中控制字符数组长度.
 struct termios {
 	tcflag_t c_iflag;		/* input mode flags */		// 输入模式标志
 	tcflag_t c_oflag;		/* output mode flags */		// 输出模式标志
