@@ -158,7 +158,7 @@ static void time_init(void)
 	// CMOS 的访问速度很慢. 为了减小时间误差, 在读取了下面循环中所有数值后, 若此时 CMOS 中秒值了变化, 那么就重新读取所有值. 
 	// 这样内核就能把与 CMOS 时间误差控制在 1 秒之内.
 	do {
-		time.tm_sec = CMOS_READ(0);				// 当前时间秒值(均是 BCD 码值)
+		time.tm_sec = CMOS_READ(0);				// 当前时间秒值(均是 BCD 码值): bcd 值也是逢 10 进 1, 4 位二进制表示一个十进制位
 		time.tm_min = CMOS_READ(2);				// 当前分钟值.
 		time.tm_hour = CMOS_READ(4);			// 当前小时值.
 		time.tm_mday = CMOS_READ(7);			// 一月中的当天日期.
@@ -183,7 +183,7 @@ static char term[32];							// 终端设置字符串(环境参数).
 
 // 读取并执行 /etc/rc 文件时所使用的命令行参数和环境参数.
 static char * argv_rc[] = { "/bin/sh", NULL };		// 调用执行程序时参数的字符串数组.
-static char * envp_rc[] = { "HOME=/", NULL ,NULL };	// 调用执行程序时的环境字符串数组.
+static char * envp_rc[] = { "HOME=/", NULL, NULL };	// 调用执行程序时的环境字符串数组.
 
 // 运行登录 shell 时所使用的命令行参数和环境参数.
 static char * argv[] = { "-/bin/sh",NULL };			// 字符 "-" 是传递给 shell 程序 sh 的一个标志. 通过识别该标志, 

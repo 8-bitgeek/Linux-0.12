@@ -16,7 +16,7 @@ _v; \
 
 // 带延迟的硬件端口字节输出函数. 使用两条跳转语句来延迟一会儿.
 // 参数: value - 欲输出字节; port - 端口.
-#define outb_p(value,port) \
+#define outb_p(value, port) \
 __asm__ ("outb %%al,%%dx\n" \
 		"\tjmp 1f\n" \
 		"1:\tjmp 1f\n" \

@@ -88,7 +88,7 @@ static union task_union init_task = {INIT_TASK, };
 // 该变量的值, ebx 中的值并不会随之更新. 为了解决这种情况就创建了 volatile 限定符, 让代码在引用该变量时一定要从指定内存位置中取得其值. 这里即是要求
 // gcc 不要对 jiffies 进行优化处理, 也不要挪动位置, 并且需要从内存中取其值. 因为时钟中断处理过程等程序会修改它的值.
 unsigned long volatile jiffies = 0;
-unsigned long startup_time = 0;						// 开机时间. 从 1970:0:0:0:0 开始计时的秒数.
+unsigned long startup_time = 0;						// 开机时间. 从 1970:0:0:0:0 开始计时的秒数.(kernel/sched.c)
 // 这个变量用于累计需要调整的时间滴答数.
 int jiffies_offset = 0;								/* # clock ticks to add to get "true
 													   time".  Should always be less than

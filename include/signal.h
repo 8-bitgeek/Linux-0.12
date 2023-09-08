@@ -65,25 +65,29 @@ typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号�
 // sa_restorer 	是恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈. 参见 signal.c. 
 // 另外, 引起触发信号处理的信号也将被阻塞, 除非使用了 SA_NOMASK 标志. 
 struct sigaction {
-	void (*sa_handler)(int);            	// 对应某信号指定要采取的行动. 可以用上面的 SIG_DEL 或 SIG_IGN 来忽略该信号, 也可以是指向处理该信号函数的一个指针
-	sigset_t sa_mask;                       // 对信号的屏蔽码, 在信号程序执行时将阻塞对这些信号的处理. 
-	int sa_flags;                           // 改变信号处理过程的信号集. 它是由 37-40 行的位标志定义的. 
-	void (*sa_restorer)(void);              // 恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈
+	void (*sa_handler)(int);     // 对应某信号指定要采取的行动. 可以用上面的 SIG_DEL 或 SIG_IGN 来忽略该信号, 也可以是指向处理该信号函数的一个指针
+	sigset_t sa_mask;            // 对信号的屏蔽码, 在信号程序执行时将阻塞对这些信号的处理. 
+	int sa_flags;                // 改变信号处理过程的信号集. 它是由 37-40 行的位标志定义的. 
+	void (*sa_restorer)(void);   // 恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈
 };
 
-// 下面 signal 函数用于是为信号 _sig 安装一新的信号处理程序（信号句柄）, 与 sigaction() 类似. 该函数含有两个参数：指定需要捕获的信号_sig；
-// 具有一个参数且无返回值的函数指针 _func. 该函数返回值也是具有一个 int 参数(最后一个(int))且无返回值的函数指针, 它是处理该信号的原处理句柄. 
+// 下面 signal 函数用于是为信号 _sig 安装一新的信号处理程序（信号句柄）, 与 sigaction() 类似. 
+// 该函数含有两个参数：指定需要捕获的信号_sig; 具有一个参数且无返回值的函数指针 _func. 
+// 该函数返回值也是具有一个 int 参数(最后一个(int))且无返回值的函数指针, 它是处理该信号的原处理句柄. 
 void (*signal(int _sig, void (*_func)(int)))(int);
 // 下面两函数用于发送信号. kill() 用于向任何进程或进程组发送信号. raise() 用于向当前进程自身发送信号. 
 // 其作用等价于 kill(getpid(), sig). 参见kernel/exit.c. 
 int raise(int sig);
 int kill(pid_t pid, int sig);
-// 在进程任务结构中, 除有一个以比特位表示当前进程待处理的 32 位信号字段 signal 以外, 还有一个同样以比特位表示的用于屏蔽进程当前
-// 阻塞信号集（屏蔽信号集）的字段 blocked, 也是 32 位, 每个比特代表一个对应的阻塞信号. 修改进程的屏蔽信号集可以阻塞或解除阻塞所指定的信号. 
+// 在进程任务结构中, 除有一个以比特位表示当前进程待处理的 32 位信号字段 signal 以外, 
+// 还有一个同样以比特位表示的用于屏蔽进程当前阻塞信号集（屏蔽信号集）的字段 blocked, 也是 32 位, 每个比特代表一个对应的阻塞信号. 
+// 修改进程的屏蔽信号集可以阻塞或解除阻塞所指定的信号. 
 // 以下五个函数就是用于操作进程屏蔽信号集, 虽然实现起来很简单, 但本版本内核中还未实现. 
-// 函数 sigaddset() 和 sigdelset() 用于对信号集中的信号进行增、删修改. sigaddset() 用于向 mask 指向的信号集中增加指定信号 signo. 
-// sigdelset 则反之. 函数 sigemptyset() 和 sigfillset() 用于初始化进程屏蔽信号集. 每个程序在使用信号集前, 都需要使用这两个函数
-// 之一对屏蔽信号集进行初始化. sigemptyset() 用于清空屏蔽的所有信号, 也即响应所有的信号. 
+// 函数 sigaddset() 和 sigdelset() 用于对信号集中的信号进行增、删修改. 
+// sigaddset() 用于向 mask 指向的信号集中增加指定信号 signo. 
+// sigdelset 则反之. 函数 sigemptyset() 和 sigfillset() 用于初始化进程屏蔽信号集. 
+// 每个程序在使用信号集前, 都需要使用这两个函数之一对屏蔽信号集进行初始化. 
+// sigemptyset() 用于清空屏蔽的所有信号, 也即响应所有的信号. 
 // sigfillset() 向信号集中置入所有信号, 也即屏蔽所有信号. 当前 SIGINT 和 SIGSTOP 是不能被屏蔽的. 
 // sigismember() 用于测试一个指定信号是否在信号集中(1 - 是, 0 - 不是, -1 - 出错). 
 int sigaddset(sigset_t *mask, int signo);
