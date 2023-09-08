@@ -850,7 +850,7 @@ void con_write(struct tty_struct * tty)
 						pos -= video_size_row; 						// 这里减去的下面 lf 函数里还会加回来
 						lf(currcons); 								// 换行或滚屏操作
 					}
-					__asm__("movb %2, %%ah\n\t"						// 写字符
+					__asm__("movb %2, %%ah\n\t"						// 写字符到显示终端
 						"movw %%ax, %1\n\t"
 						::"a" (translate[c - 32]),
 						"m" (*(short *)pos),

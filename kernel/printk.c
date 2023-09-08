@@ -10,16 +10,17 @@
  * all is well.
  */
 /*
- * 当处于内核模式时,我们不能使用printf,因为寄存器fs指向其他不感兴趣的地方.自己编制一个printf并在使用前保存fs,一切就解决了.
+ * 当处于内核模式时, 我们不能使用 printf, 因为寄存器 fs 指向其他不感兴趣的地方. 
+ * 自己编制一个 printf 并在使用前保存 fs, 一切就解决了.
  */
-// 标准参数头文件.以宏的形式定义变量参数列表.主要说明了一个类型(va_list)和三个宏va_start、va_arg和va_end,
-// 用于vsprintf,vprintf,vfprintf函数。
+// 标准参数头文件. 以宏的形式定义变量参数列表. 主要说明了一个类型(va_list)和三个宏 va_start, va_arg 和 va_end,
+// 用于 vsprintf, vprintf, vfprintf 函数.
 #include <stdarg.h>
-#include <stddef.h>             			// 标准定义头文件。定义了NULL，offsetof(TYPE,MEMBER)。
+#include <stddef.h>             			// 标准定义头文件. 定义了NULL, offsetof(TYPE, MEMBER).
 
-#include <linux/kernel.h>       			// 内核头文件。含有一些内核常用函数的原形定义。
+#include <linux/kernel.h>       			// 内核头文件. 含有一些内核常用函数的原形定义.
 
-static char buf[1024];          			// 显示用临时缓冲区。
+static char buf[1024];          			// 显示用临时缓冲区.
 
 // 函数vsprintf()定义在linux/kernel/vsprintf.c中
 extern int vsprintf(char * buf, const char * fmt, va_list args);
@@ -27,7 +28,7 @@ extern int vsprintf(char * buf, const char * fmt, va_list args);
 // 内核使用的显示函数.
 int printk(const char *fmt, ...)
 {
-	va_list args;							// va_list实际上是一个字符指针类型.
+	va_list args;							// va_list 实际上是一个字符指针类型.
 	int i;
 
 	// 运行参数处理开始函数. 然后使用格式串 fmt 将参数列表 args 输出到 buf 中.
