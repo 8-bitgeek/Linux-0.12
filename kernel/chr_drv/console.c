@@ -126,7 +126,7 @@ static struct {
 	unsigned long	vc_state;													// 处理转义或控制序列的当前状态.
 	unsigned long	vc_restate;													// 处理转义或控制序列的下一状态.
 	unsigned long	vc_checkin;
-	unsigned long	vc_origin;													/* Used for EGA/VGA fast scroll	*/
+	unsigned long	vc_origin;				// 滚屏操作时起始的内存地址				/* Used for EGA/VGA fast scroll	*/
 	unsigned long	vc_scr_end;				// 虚拟控制台起始地址 + 一屏占用的大小	 /* Used for EGA/VGA fast scroll */
 	unsigned long	vc_pos;														// 当前光标对应的显示内存位置.
 	unsigned long	vc_x, vc_y;													// 当前光标列, 行值.
@@ -142,11 +142,11 @@ static struct {
 
 // 为了便于引用, 以下定义当前正在处理控制台信息的符号. 含义同上. 
 // 其中 currcons 是使用 vc_cons[] 结构的函数参数中的当前虚拟终端号.
-#define origin					(vc_cons[currcons].vc_origin)					// 快速滚屏操作起始内存位置.
+#define origin					(vc_cons[currcons].vc_origin)					// 快速滚屏操作时的起始内存位置.
 #define scr_end					(vc_cons[currcons].vc_scr_end)					// 快速滚屏操作末端内存位置. 一屏的结尾地址
 #define pos						(vc_cons[currcons].vc_pos) 						// 当前光标所在的显示内存位置.
-#define top						(vc_cons[currcons].vc_top)
-#define bottom					(vc_cons[currcons].vc_bottom)
+#define top						(vc_cons[currcons].vc_top) 						// 滚屏时的顶行行号
+#define bottom					(vc_cons[currcons].vc_bottom) 					// 滚屏时的底行行号
 #define x						(vc_cons[currcons].vc_x)
 #define y						(vc_cons[currcons].vc_y)
 #define state					(vc_cons[currcons].vc_state)
@@ -240,7 +240,7 @@ static inline void set_origin(int currcons)
 	sti(); 																// 开中断
 }
 
-// 向上卷动上行
+// 显示内容向上滚动一行
 // 将屏幕滚动窗口向上移动一行, 并在屏幕滚动区域底出现的新行上添加空格字符. 滚屏区域必须大于 1 行.
 static void scrup(int currcons)
 {
@@ -252,12 +252,12 @@ static void scrup(int currcons)
 		return;
 	if (video_type == VIDEO_TYPE_EGAC || video_type == VIDEO_TYPE_EGAM)
 	{
-		// 如果移动起始行 top = 0, 移动最底行 bottom = video_num_lines = 25, 则表示整屏窗口向下移动, 
+		// 如果移动起始行 top = 0, 移动最底行 bottom = video_num_lines = 25, 则表示整屏窗口向上移动, 
 		// 于是把整个屏幕窗口左上角对应的起始内存位置 origin 调整为向下移动一行对应的内存位置, 
 		// 同时也跟踪调整当前光标对应的内存位置以及屏幕末行末端字符指针 scr_end 的位置. 
 		// 最后把新屏幕窗口内存起始位置值 origin 写入显示控制器中
-		if (!top && bottom == video_num_lines) {
-			origin += video_size_row;
+		if (!top && bottom == video_num_lines) { 		// == 优先级大于 &&
+			origin += video_size_row; 				// 指向下一行
 			pos += video_size_row;
 			scr_end += video_size_row;
 			// 如果屏幕窗口末端所对应的显示内存指针 scr_end 超出了实际显示内存末端, 
@@ -392,7 +392,7 @@ static void scrdown(int currcons)
 // 函数名称 lf(line feed 换行) 是指处理控制字符 LF.
 static void lf(int currcons)
 {
-	if (y + 1 < bottom) {
+	if (y + 1 < bottom) { 								// 如果小于滚动时的底行行号，则直接行号 +1
 		y++;
 		pos += video_size_row;							// 加上屏幕一行占用内存的字节数.
 		return;
@@ -807,7 +807,7 @@ enum { ESnormal, ESesc, ESsquare, ESgetpars, ESgotpars, ESfunckey,
 	ESsetterm, ESsetgraph };
 
 // 控制台写函数
-// 从终端对应的 tty 写缓冲队列中取字符针对每个字符进行分析. 
+// 从终端对应的 tty 写缓冲队列(write_q)中取字符针对每个字符进行分析. 
 // 若是控制字符或转义或控制序列, 则进行光标定位, 字符删除等的控制处理; 对于普通字符就直接在光标处显示.
 // 参数: tty 是当前控制台使用的 tty 结构指针.
 void con_write(struct tty_struct * tty)
@@ -831,7 +831,7 @@ void con_write(struct tty_struct * tty)
 	while (nr--) {
 		if (tty->stopped)
 			break;
-		GETCH(tty->write_q, c);										// 取1字符到 c 中
+		GETCH(tty->write_q, c);										// 取 1 字符到 c 中
 		if (c == 24 || c == 26)										// 控制字符 CAN, SUB - 取消, 替换
 			state = ESnormal;
 		switch(state) {
@@ -847,8 +847,8 @@ void con_write(struct tty_struct * tty)
 				if (c > 31 && c < 127) {							// 是普通显示字符
 					if (x >= video_num_columns) {					// 要换行?
 						x -= video_num_columns;
-						pos -= video_size_row;
-						lf(currcons);
+						pos -= video_size_row; 						// 这里减去的下面 lf 函数里还会加回来
+						lf(currcons); 								// 换行或滚屏操作
 					}
 					__asm__("movb %2, %%ah\n\t"						// 写字符
 						"movw %%ax, %1\n\t"
