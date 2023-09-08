@@ -248,7 +248,7 @@ struct task_struct {
  * INIT_TASK 用于设置第 1 个任务表, 若想修改, 责任自负!
  * 基址 Base = 0, 段长 limit = 0x9ffff(= 640KB).
  */
-// 对应上面任务结构的第1个任务的信息.
+// 对应上面任务结构的第 1 个任务的信息.
 #define INIT_TASK {\
 	/* state etc */ 0, 15, 15, \
 	/* signals */	0, {{},}, 0, \
