@@ -306,18 +306,19 @@ extern int in_group_p(gid_t grp);
  * 4-TSS0, 5-LDT0, 6-TSS1 etc ...
  */
 /*
- * 寻找第 1 个 TSS 在全局表中的入口. 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 3 - 系统段 syscall, 
- * 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
+ * 寻找第 1 个 TSS 在全局表中的入口. 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 
+ * 3 - 系统段 syscall, 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
  */
-// 从英文注释可以猜想到 Linus 当时曾想把系统调用的代码专门放在 GDT 表中第 4 个独立的段中. 但后来并没有那样做, 
-// 于是就一直把 GDT 表中第 4 个描述符项(上面 syscall 项)闲置在一旁.
+// 从英文注释可以猜想到 Linus 当时曾想把系统调用的代码专门放在 GDT 表中第 4 个独立的段中. 
+// 但后来并没有那样做, 于是就一直把 GDT 表中第 4 个描述符项(上面 syscall 项)闲置在一旁.
 // 下面定义宏: 全局表第 1 个任务状态段(TSS)描述符的选择符索引号.
 #define FIRST_TSS_ENTRY 4 							// 第一个任务状态段的索引值
 // 全局表中第 1 个局部描述符表(LDT)描述符的选择符索引号.
 #define FIRST_LDT_ENTRY (FIRST_TSS_ENTRY + 1)
 // 宏定义, 计算在全局表中第 n 个任务的 TSS 段描述符的选择符值(偏移量).
 // 因每个描述符占 8 字节, 因此 FIRST_TSS_ENTRY << 3 表示描述符在 GDT 表中的起始偏移位置.
-// 因为每个任务使用 1 个 TSS 和 1 个 LDT 描述符, 共占用 16 字节, 因此需要 n << 4 来表示对应 TSS 起始位置. 该宏得到的值正好也是该 TSS 的选择符值.
+// 因为每个任务使用 1 个 TSS 和 1 个 LDT 描述符, 共占用 16 字节, 因此需要 n << 4 来表示对应 TSS 起始位置. 
+// 该宏得到的值正好也是该 TSS 的选择符值.
 #define _TSS(n) ((((unsigned long) n) << 4) + (FIRST_TSS_ENTRY << 3))
 // 宏定义, 计算在全局表中第 n 个任务的 LDT 段描述符的选择符值(偏移量)
 #define _LDT(n) ((((unsigned long) n) << 4) + (FIRST_LDT_ENTRY << 3))
