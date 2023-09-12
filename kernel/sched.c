@@ -616,29 +616,31 @@ void sched_init(void)
 		panic("Struct sigaction MUST be 16 bytes");
 	// 在全局描述符表中设置初始任务(任务 0)的任务状态段描述符和局部数据表描述符.
 	// FIRST_TSS_ENTRY 和 FIRST_LDT_ENTRY 的值分别是 4 和 5, 定义在 include/linux/sched.h 中. 
-	// gdt 是一个描述符表数组(include/linux/head.h), 实际上对应程序 head.s 中的他已描述符表基址(gdt). 
+	// gdt 是一个描述符表数组(include/linux/head.h), 实际上对应程序 head.s 中的全局描述符表基址(gdt). 
 	// 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址.
 	// 参见 include/asm/system.h
 	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss));
 	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt));
 	// 清任务数组和描述符表项(注意 i = 1 开始, 所以初始任务的描述符还在). 描述符项结构定义在文件 include/linux/head.h 中.
-	p = gdt + 2 + FIRST_TSS_ENTRY;
-	// 初始化除进程一以外的其他进程指针及描述符表
+	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt+6 -> 指向任务 1 的描述符: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 3 - 系统段 syscall, 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
+	// 初始化除 TASK-1 以外的其他进程指针及描述符表
 	for(i = 1; i < NR_TASKS; i++) {
 		task[i] = NULL;
-		p->a = p->b = 0;
+		p->a = p->b = 0; 			// 初始化 tss_i
 		p++;
-		p->a = p->b = 0;
+		p->a = p->b = 0; 			// 初始化 ldt_i
 		p++;
 	}
 	/* Clear NT, so that we won't have troubles with that later on */
 	/* 清除标志寄存器中的位 NT, 这样以后就不会有麻烦 */
-	// EFLAGS 中的 NT 标志位用于控制任务的嵌套调用. 当 NT 位置位时, 那么当前中断任务执行 IRET 指令时就会引起任务切换. 
+	// EFLAGS 中的 NT 标志位用于控制任务的嵌套调用. 
+	// ** NOTE: 当 NT 位置位时, 那么当前中断任务执行 IRET 指令时就会引起任务切换. **
 	// NT 指出 TSS 中的 back_link 字段是否有效. NT = 0 时无效.
 	__asm__("pushfl ; andl $0xffffbfff,(%esp) ; popfl");
-	// 将任务 0 的 TSS 段选择符加载到任务寄存器 tr. 将局部描述符表段选择符加载到局部描述符表寄存器 ldtr 中. 
+	// 将任务 0 的 TSS 段选择符加载到任务寄存器 tr. 
+	// 将局部描述符表段选择符加载到局部描述符表寄存器 ldtr 中. 
 	// 注意!! 是将 GDT 中相应 LDT 描述符的选择符加载到 ldtr. 
-	// 		 只明确加这一次, 以后新任务 LDT 的加载, 是 CPU 根据 TSS 中的 LDT 项自动加载.
+	// 		 只明确加载这一次, 以后新任务 LDT 的加载, 是 CPU 根据 TSS 中的 LDT 选择符自动加载.
 	ltr(0);								// 定义在 include/linux/sched.h
 	lldt(0);							// 其中参数(0)是任务号.
 	// 下面代码用于初始化 8253 定时器. 通道 0, 选择工作方式 3, 二进制计数方式. 
@@ -647,7 +649,7 @@ void sched_init(void)
 	outb_p(LATCH & 0xff, 0x40);			/* LSB */							// 定时值低字节
 	outb(LATCH >> 8, 0x40);				/* MSB */	 						// 定时值高字节
 	// 设置时钟中断处理程序句柄(设置时钟中断门). 修改中断控制器屏蔽码, 允许时钟中断.
-	// 然后设置系统调用中断门. 这两个设置中断描述衔表 IDT 中描述符的宏定义在文件 include/asm/system.h 中. 
+	// 然后设置系统调用中断门. 这两个设置中断描述符表 IDT 中描述符的宏定义在文件 include/asm/system.h 中. 
 	// 两者的区别参见 system.h 文件开始处的说明.
 	set_intr_gate(0x20, &timer_interrupt);
 	outb(inb_p(0x21) & ~0x01, 0x21);
