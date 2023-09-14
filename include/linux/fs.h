@@ -90,18 +90,18 @@ typedef char buffer_block[BLOCK_SIZE];      // 块缓冲区。
 // 缓冲块头数据结构. (极为重要!!!)
 // 在程序中常用 bh 来表示 buffer_head 类型的缩写.
 struct buffer_head {
-	char * b_data;							/* pointer to data block (1024 bytes) */	// 数据块(1kb)指针
-	unsigned long b_blocknr;				/* block number */							// 块号.
-	unsigned short b_dev;					/* device (0 = free) */						// 数据源的设备号.
-	unsigned char b_uptodate;  				// 更新标志: 表示数据是否已更新.
-	unsigned char b_dirt;					/* 0 - clean, 1 - dirty */					// 修改(脏)标志: 0 未修改, 1 已修改.
-	unsigned char b_count;					/* users using this block */				// 使用用户数.
-	unsigned char b_lock;					/* 0 - ok, 1 - locked */					// 缓冲区是否被锁定.
-	struct task_struct * b_wait;			// 指向等待该缓冲区解锁的任务.
-	struct buffer_head * b_prev;			// hash 队列上前一块(这四个指针用于缓冲区的管理).
-	struct buffer_head * b_next;			// hash 队列上下一块.
-	struct buffer_head * b_prev_free;		// 空闲表上前一块.
-	struct buffer_head * b_next_free;		// 空闲表上后一块.
+	char * b_data;						/* pointer to data block (1024 bytes) */	// 数据块(1kb)指针
+	unsigned long b_blocknr;			/* block number */							// 块号.
+	unsigned short b_dev;				/* device (0 = free) */						// 数据源的设备号.
+	unsigned char b_uptodate;  			// 更新标志: 表示数据是否已更新.
+	unsigned char b_dirt;				/* 0 - clean, 1 - dirty */					// 修改(脏)标志: 0 未修改, 1 已修改.
+	unsigned char b_count;				/* users using this block */				// 使用用户数.
+	unsigned char b_lock;				/* 0 - ok, 1 - locked */					// 缓冲区是否被锁定.
+	struct task_struct * b_wait;		// 指向等待该缓冲区解锁的任务.
+	struct buffer_head * b_prev;		// hash 队列上前一块(这四个指针用于缓冲区的管理).
+	struct buffer_head * b_next;		// hash 队列上下一块.
+	struct buffer_head * b_prev_free;	// 空闲表上前一块.
+	struct buffer_head * b_next_free;	// 空闲表上后一块.
 };
 
 // 磁盘上的索引节点(i 节点)数据结构.
