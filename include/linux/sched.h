@@ -315,9 +315,9 @@ extern int in_group_p(gid_t grp);
 #define FIRST_TSS_ENTRY 4 							// 第一个任务状态段的索引值
 // 全局表中第 1 个局部描述符表(LDT)描述符的选择符索引号.
 #define FIRST_LDT_ENTRY (FIRST_TSS_ENTRY + 1)
-// 宏定义, 计算在全局表中第 n 个任务的 TSS 段描述符的选择符值(偏移量).
-// 因每个描述符占 8 字节, 因此 FIRST_TSS_ENTRY << 3 表示描述符在 GDT 表中的起始偏移位置.
-// 因为每个任务使用 1 个 TSS 和 1 个 LDT 描述符, 共占用 16 字节, 因此需要 n << 4 来表示对应 TSS 起始位置. 
+// 宏定义, 计算在全局表中第 n 个任务的 TSS 段描述符的选择符值(偏移量, 偏移字节数).
+// 因每个描述符占 8 字节, 因此 FIRST_TSS_ENTRY << 3 (*8) 表示描述符在 GDT 表中的起始偏移位置.
+// 因为每个任务使用 1 个 TSS 和 1 个 LDT 描述符, 共占用 16 字节, 因此需要 n << 4 (n*16) 来表示对应 TSS 起始位置. 
 // 该宏得到的值正好也是该 TSS 的选择符值.
 #define _TSS(n) ((((unsigned long) n) << 4) + (FIRST_TSS_ENTRY << 3))
 // 宏定义, 计算在全局表中第 n 个任务的 LDT 段描述符的选择符值(偏移量)

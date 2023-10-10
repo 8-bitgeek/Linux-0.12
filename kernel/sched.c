@@ -614,18 +614,19 @@ void sched_init(void)
 	// 这里加入下面这个判断语句并无必要, 纯粹是为了提醒自己以及其他修改内核代码的人.
 	if (sizeof(struct sigaction) != 16)							// sigaction 是存放有关信号状态的结构.
 		panic("Struct sigaction MUST be 16 bytes");
-	// 在全局描述符表中设置初始任务(任务 0)的任务状态段描述符和局部数据表描述符.
+	// 在全局描述符表中设置初始任务(任务 0)的任务状态段描述符(TSS)和局部数据表描述符(LDT).
 	// FIRST_TSS_ENTRY 和 FIRST_LDT_ENTRY 的值分别是 4 和 5, 定义在 include/linux/sched.h 中. 
 	// gdt 是一个描述符表数组(include/linux/head.h), 实际上对应程序 head.s 中的全局描述符表基址(gdt). 
 	// 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址.
 	// 参见 include/asm/system.h
-	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss));
-	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt));
+	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 任务 0 的任务状态段地址
+	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 任务 0 的 LDT 地址
 	// 清任务数组和描述符表项(注意 i = 1 开始, 所以初始任务的描述符还在). 描述符项结构定义在文件 include/linux/head.h 中.
+	// 此处 p 指向 GDT 中的描述符 6 (即 task1 的 tss, 从 0 开始)
 	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt+6 -> 指向任务 1 的描述符: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 3 - 系统段 syscall, 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
-	// 初始化除 TASK-1 以外的其他进程指针及描述符表
+	// 初始化除 task0 以外的其他进程指针及描述符表
 	for(i = 1; i < NR_TASKS; i++) {
-		task[i] = NULL;
+		task[i] = NULL; 			// task0 已经初始化过了，不需要再初始化，此处从 task1 开始依次初始化 tss 和 ldt
 		p->a = p->b = 0; 			// 初始化 tss_i
 		p++;
 		p->a = p->b = 0; 			// 初始化 ldt_i
@@ -651,7 +652,7 @@ void sched_init(void)
 	// 设置时钟中断处理程序句柄(设置时钟中断门). 修改中断控制器屏蔽码, 允许时钟中断.
 	// 然后设置系统调用中断门. 这两个设置中断描述符表 IDT 中描述符的宏定义在文件 include/asm/system.h 中. 
 	// 两者的区别参见 system.h 文件开始处的说明.
-	set_intr_gate(0x20, &timer_interrupt);
+	set_intr_gate(0x20, &timer_interrupt); 		// timer_interrupt 在 kernel/sys_call.s 中
 	outb(inb_p(0x21) & ~0x01, 0x21);
-	set_system_gate(0x80, &system_call);
+	set_system_gate(0x80, &system_call); 		// system_call 也是 kernel/sys_call.s 中
 }
