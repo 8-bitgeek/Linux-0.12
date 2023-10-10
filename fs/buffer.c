@@ -562,7 +562,7 @@ void buffer_init(long buffer_end)
 			b = (void *) 0xA0000;					// 让 b 指向地址 0xA0000(640KB) 处.
 	}
 	h--;											// 让 h 指向最后一个有效缓冲块头.
-	free_list = start_buffer;						// 让空闲链表头指向头一个缓冲块.
+	free_list = start_buffer;						// 让空闲链表头指向第一个缓冲块.
 	free_list->b_prev_free = h;     				// 链表头的 b_prev_free 指向前一项(即最后一项).
 	h->b_next_free = free_list;     				// h 的下一项指针指向第一项, 形成一个闭环链表.
 	// 最后初始化 hash 表, 置表中所有指针为 NULL.

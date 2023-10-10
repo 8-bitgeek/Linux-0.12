@@ -578,7 +578,7 @@ void do_hd_request(void)
 void hd_init(void)
 {
 	blk_dev[MAJOR_NR].request_fn = DEVICE_REQUEST;				// do_hd_request().
-	set_intr_gate(0x2E, &hd_interrupt);							// 设置中断门中处理函数指针
+	set_intr_gate(0x2E, &hd_interrupt);							// 设置中断门中处理函数指针(kernel/sys_call.s 中)
 	outb_p(inb_p(0x21) & 0xfb, 0x21);							// 复位接联的主 8259A int 2 的屏蔽位
 	outb(inb_p(0xA1) & 0xbf, 0xA1);								// 复位硬盘中断请求屏蔽位(在从片上).
 }

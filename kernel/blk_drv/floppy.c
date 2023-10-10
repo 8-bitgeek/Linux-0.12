@@ -158,7 +158,7 @@ static struct floppy_struct {
 // 注意, 上述磁头加载时间的缩写 HLD 最好写成标准的 HLT(Head Load Time).
 
 // floppy_interrupt() 是 sys_call.s 程序中软驱中断处理过程标号. 这里将在软盘初始化函数 floppy_init() 使用它初始化中断陷阱门描述符.
-extern void floppy_interrupt(void);
+extern void floppy_interrupt(void); 						// (kernel/sys_call.s)
 // 这时 boot/head.s 处定义的临时软盘缓冲区. 如果请求项的缓冲区处于内存 1MB 以上某个地方,
 // 则需要将 DMA 缓冲区设在临时缓冲区域处. 因为 8237A 芯片只能在 1MB 地址范围内寻址.
 extern char tmp_floppy_area[1024];
@@ -684,7 +684,7 @@ void floppy_init(void)
 	// 设置软盘中断门描述符. floppy_interrup(kernel/sys_call.s) 是其中断处理过程. 
 	blk_size[MAJOR_NR] = floppy_sizes;
 	blk_dev[MAJOR_NR].request_fn = DEVICE_REQUEST;  						// = do_fd_request(). 
-	set_trap_gate(0x26, &floppy_interrupt);          						// 设置陷阱门描述符. 
+	set_trap_gate(0x26, &floppy_interrupt);          						// 设置陷阱门描述符. (kernel/sys_call.s)
 	outb(inb_p(0x21) & ~0x40, 0x21);                   						// 复位软盘中断请求屏蔽位. 
 }
 
