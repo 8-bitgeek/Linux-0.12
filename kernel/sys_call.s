@@ -102,6 +102,7 @@ reschedule:
 	jmp schedule					# jmp 和 call 的区别是 jmp 直接跳转到地址处开始执行, 而 call 会先将返回地址入栈然后调到标号处开始执行
 
 # int 0x80 -- Linux 系统调用入口点(调用中断 int 0x80, eax 中是调用号).
+# 中断调用服务列表在 sys_call_table 中(include/linux/sys.h)
 .align 4
 system_call:
 	push %ds						# 保存原段寄存器值.
@@ -169,8 +170,8 @@ ret_from_sys_call:
 # 阻塞不允许的信号位, 取得数值最小的信号值, 再把原信号位图中该信号对应的位复位(置 0), 最后将该信号值作为参数之一调用 do_signal().
 # do_signal() 在(kernel/signal.c)中, 其参数包括 13 个入栈信息. 在 do_signal() 或信号处理函数返回之后, 
 # 若返回值不为 0 则再看看是否需要切换进程或继续处理其他信号.
-	movl signal(%eax), %ebx			# 取信号位图->ebx,每1位代表1种信号,共32个信号.
-	movl blocked(%eax), %ecx		# 取阻塞(屏蔽)信号位图->ecx.
+	movl signal(%eax), %ebx			# 取信号位图 -> ebx, 每 1 位代表 1 种信号, 共 32 个信号.
+	movl blocked(%eax), %ecx		# 取阻塞(屏蔽)信号位图 -> ecx.
 	notl %ecx						# 每位取反.
 	andl %ebx, %ecx					# 获取许可的信号位图.
 	bsfl %ecx, %ecx					# 从低位(位 0)开始扫描位图, 看是否有 1 的位, 若有, 则 ecx 保留该位的偏移值(即地址位 0--31).
