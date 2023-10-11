@@ -300,12 +300,13 @@ sys_execve:
 	ret
 
 # sys_fork() 调用, 用于创建子进程, 是 system_call 功能 2. 原型在 include/linux/sys.h 中.
-# 首先调用 C 函数 find_empty_process(), 取得一个进程号 last_pid. 若返回负数则说明目前任务数组已满. 然后调用 copy_process() 复制进程.
+# 首先调用 C 函数 find_empty_process(), 取得一个进程号 last_pid. 
+# 若返回负数则说明目前任务数组已满. 然后调用 copy_process() 复制进程.
 .align 4
 sys_fork:
 	call find_empty_process			# 为新进程取得进程号 last_pid(kernel/fork.c)
 	testl %eax, %eax				# 在 eax 中返回进程号. 若返回负数则退出.
-	js 1f
+	js 1f 							# 如果为负数, 则直接返回 
 	push %gs
 	pushl %esi
 	pushl %edi
