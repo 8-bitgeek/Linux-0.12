@@ -311,7 +311,7 @@ sys_fork:
 	pushl %esi
 	pushl %edi
 	pushl %ebp
-	pushl %eax
+	pushl %eax 						# eax 中是调用 copy_process 时的第一个参数 nr
 	call copy_process				# 调用 C 函数 copy_process()(kernel/fork.c)
 	addl $20, %esp					# 丢弃这里所有压栈内容.
 1:	ret

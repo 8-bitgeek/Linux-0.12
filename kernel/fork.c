@@ -108,11 +108,13 @@ int copy_mem(int nr, struct task_struct * p)
 // 直到调用本系统调用处理过程和调用本函数前逐步压入进程内核态栈的各寄存器的值.
 // 这些在 sys_call.s 程序中逐步压入内核栈的值(参数)包括:
 // 1. CPU执行中断指令压入的用户栈地址 ss 和 esp, 标志 eflags 和返回地址 cs 和 eip;
+// 		在执行中断处理过程时如果发生特权级变化, int 指令会依次入栈: ss, esp, eflags, cs, eip(图 4-29)
 // 2. 在刚进入 system_call 时入栈的段寄存器 ds, es, fs 和 edx, ecx, ebx;
 // 3. 调用 sys_call_table 中 sys_fork 函数入栈的返回地址(参数 none 表示);
 // 4. 调用 copy_process() 之前入栈的 gs, esi, edi, ebp 和 eax(nr).
 // 其中参数 nr 是调用 find_empty_process() 分配的任务数组项号.
-int copy_process(int nr, long ebp, long edi, long esi, long gs, long none,
+int copy_process(int nr, long ebp, long edi, long esi, long gs, 
+		long none, 
 		long ebx, long ecx, long edx, long orig_eax,
 		long fs, long es, long ds,
 		long eip, long cs, long eflags, long esp, long ss)
