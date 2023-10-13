@@ -758,7 +758,8 @@ void mem_init(long start_mem, long end_mem)
 		mem_map[i] = USED;
 	// 然后计算主内存区起始内存 start_mem 处页面对应内存映射字节数组中项号 i 和主内存区页面数. 
 	// 此时 mem_map[] 数组的第 i 项正对应主内存区中第 1 个页面.
-	// 最后将主内存区中页面对应的数组项清零(表示空闲). 对于具有 16MB 物理内存的系统, mem_map[] 中对应 4MB~16MB 主内存区的项被清零.
+	// 最后将主内存区中页面对应的数组项清零(表示空闲). 
+	// 对于具有 16MB 物理内存的系统, mem_map[] 中对应 4MB~16MB 主内存区的项被清零.
 	i = MAP_NR(start_mem);									// 主内存区起始位置处页面号.
 	end_mem -= start_mem;
 	// 得到主内存区的页面的数量
