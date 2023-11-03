@@ -4,6 +4,8 @@
         "kernel.h": "c",
         "fs.h": "c",
         "blk.h": "c",
-        "termios.h": "c"
+        "termios.h": "c",
+        "times.h": "c",
+        "sched.h": "c"
     }
 }

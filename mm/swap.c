@@ -262,9 +262,9 @@ repeat:
 		"movl %%edx, %%eax							/* 将页面起始地址 -> eax(返回值). */\n\t"
 		"1:\n\t"
 		"cld"
-		:"=a" (__res)
-		:"0" (0), "i" (LOW_MEM), "c" (PAGING_PAGES),
-		"D" (mem_map + PAGING_PAGES - 1)
+		:"=a" (__res) 									/* = 表示这是输出寄存器 eax, %0 */
+		:"0" (0), "i" (LOW_MEM), "c" (PAGING_PAGES), 	/* 输入寄存器列表: %1, %2, %3*/
+		"D" (mem_map + PAGING_PAGES - 1) 				/* %4 */
 		:"dx");
 	if (__res >= HIGH_MEMORY)						// 页面地址大于实际内存容量则重新寻找
 		goto repeat;

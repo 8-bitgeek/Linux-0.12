@@ -130,7 +130,7 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	p = (struct task_struct *) get_free_page();
 	if (!p)
 		return -EAGAIN;
-	task[nr] = p;
+	task[nr] = p; 							// task_struct * task[NR_TASKS] 定义在 sched.c 中
 	*p = *current;	/* NOTE! this doesn't copy the supervisor stack */	/* 注意! 这样不会复制超级用户堆栈(只复制进程结构) */
 	//	memcpy(p, current, sizeof(struct task_struct));
 	// 随后对复制来的进程结构内容进行一些修改, 作为新进程的任务结构. 
