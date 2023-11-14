@@ -1296,9 +1296,9 @@ void con_init(void)
 	gotoxy(currcons, ORIG_X, ORIG_Y); 										// 设置光标当前所在行及列坐标值.
   	for (currcons = 1; currcons < NR_CONSOLES; currcons++) {
 		vc_cons[currcons] = vc_cons[0];         							// 复制 0 号结构的参数.
-		origin = video_mem_start = (base += video_memory);
-		scr_end = origin + video_num_lines * video_size_row;
-		video_mem_end = (term += video_memory);
+		origin = video_mem_start = (base += video_memory); 					// 设置该控制台的显存起始地址及初始的滚屏起始地址.
+		scr_end = origin + video_num_lines * video_size_row; 				// 设置初始的滚屏结束地址.
+		video_mem_end = (term += video_memory); 							// 设置该控制台的显存结束地址.
 		gotoxy(currcons, 0, 0);                           					// 光标都初始化在屏幕左上角位置(0, 0).
 	}
 	// 最后设置当前前台控制台的屏幕原点(左上角)位置和显示控制器中光标显示位置, 

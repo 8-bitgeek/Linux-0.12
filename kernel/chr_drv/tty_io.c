@@ -73,8 +73,10 @@ int is_orphaned_pgrp(int pgrp);                 		// 判断是否孤儿进程
 // tty_struct - tty 终端, tty_queue - tty 缓冲队列
 // 下面定义 tty 终端使用的缓冲队列结构数组 tty_queues 和 tty 终端表结构数组 tty_table.
 // QUEUES 是 tty 终端使用的缓冲队列最大数量. 伪终端分主从两种(master 和 slave). 
-// 每个 tty 终端(tty_struct)使用 3 个 tty 缓冲队列(tty_queue), 它们分别是用于缓冲键盘或串行输入的读队列 read_queue, 
-// 用于缓冲屏幕或串行输出的写队列 write_queue, 以及用于保存规范模式字符的辅助缓冲队列 secondary.
+// 每个 tty 终端(tty_struct)使用 3 个 tty 缓冲队列(tty_queue), 它们分别是:
+// read_queue: 		用于缓冲键盘或串行输入的读队列
+// write_queue: 	用于缓冲屏幕或串行输出的写队列
+// secondary: 		用于保存规范模式字符的辅助缓冲队列
 #define QUEUES	(3 * (MAX_CONSOLES + NR_SERIALS + 2 * NR_PTYS))		// 共 54 项(3 * (8 + 2 + 2 * 4) = 3 * 18 = 54).
 static struct tty_queue tty_queues[QUEUES];							// tty 缓冲队列数组.
 struct tty_struct tty_table[256];									// tty 表结构数组. 用于保存每个终端设备的信息，每项对应系统的一个终端设备
@@ -625,8 +627,9 @@ void tty_init(void)
 			0,														/* initial pgrp */		// 所属初始进程组 pgrp
 			0,														/* initial session */	// 初始会话级 session
 			0,														/* initial stopped */	// 初始停止标志 stopped
-			con_write,
-			con_queues + 0 + i * 3, con_queues + 1 + i * 3, con_queues + 2 + i * 3
+			con_write, 												// 虚拟控制台(console)写函数. 其它的 tty 类型可以对应其它的 write 函数, 
+																	// 比如下面串口终端写函数 rs_write().
+			con_queues + 0 + i * 3, con_queues + 1 + i * 3, con_queues + 2 + i * 3 			// 分别设置 con_tty 读/写/辅助 缓冲队列
 		};
 	}
 	// 然后初始化串行终端的 tty 结构各字段. 初始化串行终端 tty 结构中的读/写和辅助缓冲队列结构, 
@@ -646,7 +649,7 @@ void tty_init(void)
 			rs_queues + 0 + i * 3, rs_queues + 1 + i * 3, rs_queues + 2 + i * 3
 		};
 	}
-	// 然后再初始化伪终端使用的 tty 结构. 伪终端是配对使用的, 即一个主(master)伪终端配有一个从(slave)伪终端. 
+	// 然后再初始化伪终端(pty)使用的 tty 结构. 伪终端是配对使用的, 即一个主(master)伪终端配有一个从(slave)伪终端. 
 	// 因此对它们都要进行初始化设置. 在循环中, 我们首先初始化每个主伪终端的 tty 结构, 然后再初始化其对应的从伪终端的 tty 结构. 
 	for (i = 0 ; i < NR_PTYS ; i++) {
 		mpty_table[i] = (struct tty_struct) {

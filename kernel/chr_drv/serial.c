@@ -46,7 +46,7 @@ static void init(int port)
 	(void)inb(port);											/* read data port to reset things (?) */
 }
 
-// 初始化串行中断程序和串行接口. 
+// 初始化串口中断程序和串行接口. 
 // 中断描述符表 IDT 中的门描述符设置宏 set_intr_gate() 在 include/asm/system.h 中实现. 
 void rs_init(void)
 {
