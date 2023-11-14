@@ -128,7 +128,7 @@ static int sprintf(char * str, const char *fmt, ...)
  */
  // 下面三行分别将指定的线性地址强行转换为给定数据类型的指针, 并获取指针所指内容. 
  // 由于内核代码段被映射到从物理地址零开始的地方, 因此这些线性地址正好也是对应的物理地址.
-#define EXT_MEM_K (*(unsigned short *)0x90002)							// 1MB 以后的扩展内存大小(KB).
+#define EXT_MEM_K (*(unsigned short *)0x90002)							// 获取 0x90002 中保存的 1MB 以后的扩展内存大小(KB).
 #define CON_ROWS ((*(unsigned short *)0x9000e) & 0xff)					// 选定的控制台屏幕行, 列数
 #define CON_COLS (((*(unsigned short *)0x9000e) & 0xff00) >> 8)
 #define DRIVE_INFO (*((struct drive_info *)0x90080))					// 硬盘参数表 32 字节内容.
@@ -180,7 +180,7 @@ static void time_init(void)
 static long memory_end = 0;						// 机器具有的物理内存容量(字节数).
 static long buffer_memory_end = 0;				// 高速缓冲区末端地址.
 static long main_memory_start = 0;				// 主内存(将用于分页)开始的位置.
-static char term[32];							// 终端设置字符串(环境参数).
+static char term[32];							// 终端设置字符串(环境参数). 在当前控制台显存末端处.
 
 // 读取并执行 /etc/rc 文件时所使用的命令行参数和环境参数.
 static char * argv_rc[] = { "/bin/sh", NULL };		// 调用执行程序时参数的字符串数组.
@@ -238,8 +238,8 @@ int main(void)										/* This really IS void, no error here. */
 		buffer_memory_end = 2 * 1024 * 1024;
 	else
 		buffer_memory_end = 1 * 1024 * 1024;						// 否则则设置缓冲区末端 = 1MB
-	// 根据高速缓冲区的末端大小设置主内存区的起始地址，两者相同，即高速缓冲区开端为主内存起始端
-	main_memory_start = buffer_memory_end;							// 主内存起始位置 = 缓冲区末端
+	// 根据高速缓冲区的末端大小设置主内存区的起始地址，两者相同，即高速缓冲区末端为主内存起始端
+	main_memory_start = buffer_memory_end;							// 主内存起始位置 = 高速缓冲区末端
 	// 如果在 Makefile 文件中定义了内存虚拟盘符号 RAMDISK, 则初始化虚拟盘. 此时主内存将减少.
 	// 参见 kernel/blk_drv/ramdisk.c.
 #ifdef RAMDISK
@@ -249,7 +249,7 @@ int main(void)										/* This really IS void, no error here. */
 	mem_init(main_memory_start, memory_end);		// 主内存区初始化. (mm/memory.c) 初始化 mem_map[]
 	trap_init();                              		// 陷阱门(硬件中断向量)初始化. (kernel/traps.c)
 	blk_dev_init();									// 块设备初始化. (blk_drv/ll_rw_blk.c) 
-	chr_dev_init();									// 字符设备初始化. (chr_drv/tty_io.c)
+	chr_dev_init();									// 字符设备初始化. 目前该函数为空. (chr_drv/tty_io.c)
  	tty_init();										// tty 初始化. (chr_drv/tty_io.c)
 	time_init();									// 设置开机启动时间.
  	sched_init();									// 调度程序初始化(加载任务 0 的 tr, ldtr). (kernel/sched.c)

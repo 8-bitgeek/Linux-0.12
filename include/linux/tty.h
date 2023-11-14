@@ -77,9 +77,9 @@ struct tty_struct {
 	struct tty_queue *write_q;					// tty 写队列. 用于存放写到控制台显示屏或串行终端去的数据
 	struct tty_queue *secondary;				// tty 辅助队列(存放规范模式字符序列). 可称为规范(熟)模式队列.
 	// tty_read() 就从 secondary 中读取数据	      // secondary 用于存放从 read_q 中取出的经过行规则程序处理(过滤)过的数据，或称为熟(cooked)模式数据
-	};
+};
 
-extern struct tty_struct tty_table[];			// tty 结构数组.
+extern struct tty_struct tty_table[];			// tty 终端结构数组.
 extern int fg_console;							// 前台控制台号
 
 // 根据终端类型在 tty_table[] 中取对应终端号 nr 的 tty 结构指针. 第 73 行后半部分用于根据子设备号 dev 在 tty_table[] 表中选择对应的 tty 结构.

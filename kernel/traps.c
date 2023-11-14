@@ -208,6 +208,7 @@ void do_reserved(long esp, long error_code)
 // 它们之间的主要区别在于前者设置的特权级为 0, 后者是 3. 
 // 因此断点陷阱中断 int3, 溢出中断 overflow 和边界出错中断 bounds 可以由任何程序调用. 
 // 这两个函数均是嵌入式汇编宏程序, 参见 include/asm/system.h
+// 一个中断描述符(IDT 项)占 8 个字节.
 void trap_init(void)
 {
 	int i;

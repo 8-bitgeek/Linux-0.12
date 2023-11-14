@@ -16,7 +16,7 @@
  * long pauses in reading when heavy writing/syncing is going on)
  */
 /*
- * 下面定义的 NR_REQUEST 是请求队列中所包含的项数.
+ * 下面定义的 NR_REQUEST 是块设备请求队列中所包含的项数.
  * 注意, 写操作仅使用这些项中低端的 2/3 项; 读操作优先处理.
  *
  * 32 项好像是一个合理的数字: 该数已经足够从电梯算法中获得好处, 但当缓冲区在队列中而锁住时又不显得是很大的数. 
@@ -31,11 +31,11 @@
  * read/write completion.
  */
 /*
- * OK, 下面是 request 结构的一个扩展形式, 因而当实现以后我们就可以在分页请求中使用同样的 request 结构.
+ * OK, 下面是块设备请求 request 结构的一个扩展形式, 因而当实现以后我们就可以在分页请求中使用同样的 request 结构.
  * 在分页处理中 'bh' 是 NULL, 而 'waiting' 则用于等待读/写的完成.
  */
 struct request {
-	int dev;							/* -1 if no request */		// 发请求的设备号
+	int dev;							/* -1 if no request */		// 请求的设备号
 	int cmd;							/* READ or WRITE */			// READ 或 WRITE 命令.
 	int errors;             			// 操作时产生的错误次数.
 	unsigned long sector;   			// 起始扇区. (1 块 = 2 扇区)

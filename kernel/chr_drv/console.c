@@ -132,8 +132,8 @@ static struct {
 	unsigned long	vc_x, vc_y;													// 当前光标列, 行值.
 	unsigned long	vc_top, vc_bottom;											// 滚动时顶行行号; 底行行号.
 	unsigned long	vc_npar, vc_par[NPAR];										// 转义序列参数个数和参数数组.
-	unsigned long	vc_video_mem_start;											/* Start of video RAM */ 			// 显存起始位置
-	unsigned long	vc_video_mem_end;											/* End of video RAM (sort of) */ 	// 显存结束位置
+	unsigned long	vc_video_mem_start;		// 显存起始位置						  /* Start of video RAM */ 			
+	unsigned long	vc_video_mem_end;		// 显存结束位置						  /* End of video RAM (sort of) */ 	
 	unsigned int	vc_saved_x;													// 保存的光标列号.
 	unsigned int	vc_saved_y;													// 保存的光标行号.
 	unsigned int	vc_iscolor;													// 彩色显示标志.
@@ -143,12 +143,12 @@ static struct {
 // 为了便于引用, 以下定义当前正在处理控制台信息的符号. 含义同上. 
 // 其中 currcons 是使用 vc_cons[] 结构的函数参数中的当前虚拟终端号.
 #define origin					(vc_cons[currcons].vc_origin)					// 快速滚屏操作时的起始内存位置.
-#define scr_end					(vc_cons[currcons].vc_scr_end)					// 快速滚屏操作末端内存位置. 一屏的结尾地址
+#define scr_end					(vc_cons[currcons].vc_scr_end)					// 快速滚屏操作末端内存位置. 一屏的结尾地址: 当前的 origin + 一屏的字节数(25*160=4000Byte)
 #define pos						(vc_cons[currcons].vc_pos) 						// 当前光标所在的显示内存位置.
 #define top						(vc_cons[currcons].vc_top) 						// 滚屏时的顶行行号
 #define bottom					(vc_cons[currcons].vc_bottom) 					// 滚屏时的底行行号
-#define x						(vc_cons[currcons].vc_x)
-#define y						(vc_cons[currcons].vc_y)
+#define x						(vc_cons[currcons].vc_x) 						// 当前光标所在列值
+#define y						(vc_cons[currcons].vc_y) 						// 当前光标所在行值
 #define state					(vc_cons[currcons].vc_state)
 #define restate					(vc_cons[currcons].vc_restate)
 #define checkin					(vc_cons[currcons].vc_checkin)
@@ -1170,13 +1170,13 @@ void con_init(void)
 	register unsigned char a;
 	char *display_desc = "????";
 	char *display_ptr;
-	int currcons = 0;								// 当前虚拟控制台号.
+	int currcons = 0;								// 当前虚拟控制台号, 当前是初始化, 所以为 0 号控制台.
 	long base, term;
 	long video_memory;
 
 	// 初始化屏幕的列数
 	video_num_columns = ORIG_VIDEO_COLS;
-	// 屏幕每行的字节数等于屏幕列数乘以 2, 因为一个显示字节需要一个控制字节
+	// 屏幕每行的字节数等于屏幕列数乘以 2, 因为一个显示字符需要一个字符值和一个控制字节值共两个字节
 	video_size_row = video_num_columns * 2;
 	// 初始化屏幕的行数
 	video_num_lines = ORIG_VIDEO_LINES;
@@ -1222,15 +1222,15 @@ void con_init(void)
 	else										/* If not, it is color. */
 	{
 		can_do_colour 	= 1;					// 设置彩色显示标志.
-		video_mem_base 	= 0xb8000;				// 显示内存起始地址.
+		video_mem_base 	= 0xb8000;				// 显示内存起始地址(736KB).
 		video_port_reg	= 0x3d4;				// 设置彩色显示索引寄存器端口.
 		video_port_val	= 0x3d5;				// 设置彩色显示数据寄存器端口.
-		// 再判断显示卡类别. 如果 BX 不等于 0x10, 则说明是 EGA 显示卡, 此时共有 32KB 显示内存可用(0xb8000~0xc0000).
+		// 再判断显示卡类别. 如果 BX 不等于 0x10, 则说明是 EGA 显示卡, 此时共有 32KB 显示内存可用(0xb8000~0xc0000, 即 736KB-768KB).
 		// 否则说明是 CGA 显示卡, 只能使用 8KB 显示内存(0xb8000~0xba000).
 		if ((ORIG_VIDEO_EGA_BX & 0xff) != 0x10)
 		{
 			video_type = VIDEO_TYPE_EGAC;		// 设置显示类型(EGA 彩色).
-			video_mem_term = 0xc0000;			// 设置显示内存末端地址.
+			video_mem_term = 0xc0000;			// 设置显示内存末端地址(768KB).
 			display_desc = "EGAc";				// 设置显示描述字符串.
 		}
 		else
@@ -1246,23 +1246,23 @@ void con_init(void)
 	// 如果硬件允许开设的虚拟控制台数量大于系统既定的数量 MAX_CONSOLES, 就把虚拟控制台数量设置为 MAX_CONSOLES. 
 	// 若这样计算出的虚拟控制台数量为 0, 则设置为 1.
 	// 最后用显示内存数除以判断出的虚拟控制台数即得到每个虚拟控制台占用显示内存字节数.
-	video_memory = video_mem_term - video_mem_base;
-	// 根据实际的显示内存的大小计算显示控制终端的实际数量
-	NR_CONSOLES = video_memory / (video_num_lines * video_size_row);
+	video_memory = video_mem_term - video_mem_base; 	// 32KB
+	// 根据实际的显示内存的大小计算显示控制终端的实际数量((32*1024)/(25*160) ≈ 8)
+	NR_CONSOLES = video_memory / (video_num_lines * video_size_row); 	// video_num_lines * video_size_row = 25 * 160 = 4000Byte
 	// 显示终端的最大数量是 MAX_CONSOLES, 设置在 tty.h 头文件中
 	if (NR_CONSOLES > MAX_CONSOLES)
 		NR_CONSOLES = MAX_CONSOLES;
 	// 如果计算出来的显示终端数量为 0, 则将显示终端数量设置为 1
 	if (!NR_CONSOLES)
 		NR_CONSOLES = 1;
-	video_memory /= NR_CONSOLES;				// 每个虚拟控制台占用显示内存字节数.
+	video_memory /= NR_CONSOLES;				// 每个虚拟控制台占用显示内存字节数(32*1024/8 = 4096Byte = 4KB).
 
 	/* Let the user known what kind of display driver we are using */
 
 	// 然后我们在屏幕的右上角显示描述字符串. 采用的方法是直接将字符串写到显示内存的相应位置处. 
 	// 首先将显示指针 display_ptr 指到屏幕第 1 行右端差 4 个字符处(每个字符需 2 个字节, 因此减 8), 
 	// 然后循环复制字符串的字符, 并且每复制 1 个字符都空开 1 个属性字节.
-	display_ptr = ((char *)video_mem_base) + video_size_row - 8;
+	display_ptr = ((char *)video_mem_base) + video_size_row - 8; 	// 在右上角打印描述字符的起始显存地址
 	while (*display_desc)
 	{
 		*display_ptr++ = *display_desc++;
@@ -1277,23 +1277,23 @@ void con_init(void)
 	// 下面首先设置 0 号控制台的默认滚屏开始位置 video_mem_start 和默认滚屏末行内存位置, 
 	// 实际上它们也就是 0 号控制台占用的部分显示内存区域. 
 	// 然后初始化设置 0 号虚拟控制台的其它属性和标志值.
-	base = origin = video_mem_start = video_mem_base;						// 默认滚屏开始内存位置.
-	term = video_mem_end = base + video_memory;								// 0 号屏幕内存末端位置.
-	scr_end	= video_mem_start + video_num_lines * video_size_row;			// 滚屏末端位置.(一屏的结尾)
-	top	= 0;																// 初始设置滚动时顶行行号.
-	bottom	= video_num_lines;												// 初始设置滚动时底行行号.
+	base = origin = video_mem_start = video_mem_base;						// 默认滚屏开始内存位置. 736KB 处
+	term = video_mem_end = base + video_memory;								// 0 号屏幕内存末端位置. 740KB 处
+	scr_end	= video_mem_start + video_num_lines * video_size_row;			// 滚屏末端位置.(一屏的结尾: orgin + 4000)
+	top	= 0;																// 初始设置滚动时顶行行号. 初始值是 0.
+	bottom	= video_num_lines;												// 初始设置滚动时底行行号. 初始值是 25.
 	attr = 0x07;															// 初始设置显示字符属性(黑底白字).
-	def_attr = 0x07;														// 设置默认显示字符属性.
-	restate = state = ESnormal;												// 初始化转义序列操作的前和下一状态.
+	def_attr = 0x07;														// 设置默认显示字符属性(也是颜色, 只不过是默认的).
+	restate = state = ESnormal;												// 初始化转义序列操作的前和下一状态(当前是初始正常状态).
 	checkin = 0;
 	ques = 0;																// 收到问号字符标志.
 	iscolor = 0;															// 彩色显示标志.
-	translate = NORM_TRANS;													// 使用的字符集(普通 ASCII 码表).
+	translate = NORM_TRANS;													// 使用的字符集(普通 7bit ASCII 码表).
 	vc_cons[0].vc_bold_attr = -1;											// 粗体字符属性标志(-1 表示不用).
 
 	// 在设置了 0 号控制台当前光标所有位置和光标对应的内存位置 pos 后, 循环设置其余的几个虚拟控制台结构的参数值. 
 	// 除了各自占用的显示内存开始和结束位置不同, 它们的初始值基本上都与 0 号控制台相同.
-	gotoxy(currcons, ORIG_X, ORIG_Y); 										// 设置光标当前所在显示内存的位置
+	gotoxy(currcons, ORIG_X, ORIG_Y); 										// 设置光标当前所在行及列坐标值.
   	for (currcons = 1; currcons < NR_CONSOLES; currcons++) {
 		vc_cons[currcons] = vc_cons[0];         							// 复制 0 号结构的参数.
 		origin = video_mem_start = (base += video_memory);

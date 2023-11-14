@@ -70,13 +70,14 @@ int is_orphaned_pgrp(int pgrp);                 		// 判断是否孤儿进程
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+// tty_struct - tty 终端, tty_queue - tty 缓冲队列
 // 下面定义 tty 终端使用的缓冲队列结构数组 tty_queues 和 tty 终端表结构数组 tty_table.
 // QUEUES 是 tty 终端使用的缓冲队列最大数量. 伪终端分主从两种(master 和 slave). 
-// 每个 tty 终端使用 3 个 tty 缓冲队列, 它们分别是用于缓冲键盘或串行输入的读队列 read_queue, 
+// 每个 tty 终端(tty_struct)使用 3 个 tty 缓冲队列(tty_queue), 它们分别是用于缓冲键盘或串行输入的读队列 read_queue, 
 // 用于缓冲屏幕或串行输出的写队列 write_queue, 以及用于保存规范模式字符的辅助缓冲队列 secondary.
-#define QUEUES	(3 * (MAX_CONSOLES + NR_SERIALS + 2 * NR_PTYS))		// 共 54 项.
-static struct tty_queue tty_queues[QUEUES];			// tty 缓冲队列数组.
-struct tty_struct tty_table[256];					// tty 表结构数组. 用于保存每个终端设备的信息，每项对应系统的一个终端设备
+#define QUEUES	(3 * (MAX_CONSOLES + NR_SERIALS + 2 * NR_PTYS))		// 共 54 项(3 * (8 + 2 + 2 * 4) = 3 * 18 = 54).
+static struct tty_queue tty_queues[QUEUES];							// tty 缓冲队列数组.
+struct tty_struct tty_table[256];									// tty 表结构数组. 用于保存每个终端设备的信息，每项对应系统的一个终端设备
 
 // 下面设定各种类型的 tty 终端所使用缓冲队列结构在 tty_queues[] 数组中的起始项位置.
 // 8 个虚拟控制台终端占用 tty_queues[] 数组开头 24 项(3 * MAX_CONSOLES)(0 -- 23)
@@ -585,20 +586,22 @@ void tty_init(void)
 {
 	int i;
 
-	// 首先初始化所有终端的缓冲队列结构, 设置初值. 
+	// 首先初始化所有终端的缓冲队列结构(tty_queue), 设置初值. 
 	// 对于串行终端(rs_queues)的读/写缓冲队列, 将它们的 data 字段设置为串行端口基地址值. 
 	// 串口 1 是 0x3f8, 串口 2 是 0x2f8. 然后先初步设置所有终端的 tty 结构.
 	// 其中特殊字符数组 c_cc[] 设置的初值定义在 include/linux/tty.h 文件中.
-	for (i = 0 ; i < QUEUES ; i++)
+	for (i = 0 ; i < QUEUES ; i++) 								// QUEUES = 54
 		tty_queues[i] = (struct tty_queue) {0, 0, 0, 0, ""};
 	rs_queues[0] = (struct tty_queue) {0x3f8, 0, 0, 0, ""};
 	rs_queues[1] = (struct tty_queue) {0x3f8, 0, 0, 0, ""};
 	rs_queues[3] = (struct tty_queue) {0x2f8, 0, 0, 0, ""};
 	rs_queues[4] = (struct tty_queue) {0x2f8, 0, 0, 0, ""};
+	// 初步设置所有终端的 tty 结构体
 	for (i = 0 ; i < 256 ; i++) {
 		tty_table[i] =  (struct tty_struct) {
-		 	{0, 0, 0, 0, 0, INIT_C_CC},
-			0, 0, 0, NULL, NULL, NULL, NULL
+		 	{0, 0, 0, 0, 0, INIT_C_CC}, 						// termios: 终端 io 属性和控制字符数据结构
+			0, 0, 0, 											// pgrp(所属进程组), session(会话号), stopped(结束标志), 
+			NULL, NULL, NULL, NULL  							// *write(写函数), read_q(读缓冲队列), write_q(写缓冲队列), secondary(辅助缓冲队列)
 		};
 	}
 	// 接着初始化控制台终端(console.c). 
