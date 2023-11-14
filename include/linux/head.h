@@ -2,12 +2,13 @@
 #define _HEAD_H
 
 // 定义了段描述符的数据结构. 该结构仅说明每个描述符是由 8 个字节构成, 每个描述符表共有 256 项.
+// 使用 typedef 省略了 struct 及数组长度: desc_table idt ===> struct desc_struct idt[256];
 typedef struct desc_struct {
 	unsigned long a, b;
 } desc_table[256];
 
 extern unsigned long pg_dir[1024];	// 内存页目录数组. 每个目录项为 4 字节. 从物理地址 0 开始.
-extern desc_table idt, gdt;		    // 中断描述符表, 全局描述符表.
+extern desc_table idt, gdt;		    // 中断描述符表, 全局描述符表. 
 
 #define GDT_NUL 0			// 全局描述符表的第 0 项, 不用
 #define GDT_CODE 1			// 第 1 项, 是内核代码段描述符项.
