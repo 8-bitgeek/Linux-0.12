@@ -253,7 +253,7 @@ int main(void)										/* This really IS void, no error here. */
  	tty_init();										// tty 初始化. (chr_drv/tty_io.c)
 	time_init();									// 设置开机启动时间.
  	sched_init();									// 调度程序初始化(加载任务 0 的 tr, ldtr). (kernel/sched.c)
-	buffer_init(buffer_memory_end);					// 缓冲管理初始化, 建内存链表等. (fs/buffer.c)
+	buffer_init(buffer_memory_end);					// 缓冲管理初始化, 建内存缓冲区链表等. (fs/buffer.c)
 	hd_init();										// 硬盘初始化. (blk_drv/hd.c)
 	floppy_init();									// 软驱初始化. (blk_drv/floppy.c)
 	sti();											// 所有初始化工作都完了, 于是开启中断.

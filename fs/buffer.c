@@ -526,7 +526,7 @@ struct buffer_head * breada(int dev, int first, ...)
 // 对于具有 16M 内存的系统, 缓冲区末端被设置为 4MB. 对于有 8MB 内存的系统, 缓冲区末端被设置 2MB. 
 // 该函数从缓冲区开始位置 start_buffer 处和缓冲区末端 buffer_end 处分别同时设置(初始化)缓冲块头结构和对应的数据块. 
 // 直到缓冲区中所有内存被分配完毕.
-void buffer_init(long buffer_end)
+void buffer_init(long buffer_end) 					// buffer_end = 4MB.
 {
 	struct buffer_head * h = start_buffer; 			// 缓冲区开始位置，即系统内核代码结束地址，这个地址由编译器生成(&end)
 	void * b; 										// 指向缓冲区末端
@@ -544,6 +544,7 @@ void buffer_init(long buffer_end)
 	// 与此同时在缓冲区起始端建立描述该缓冲块的结构 buffer_head, 并将这些 buffer_head 组成双向链表.
 	// h 是指向缓冲头结构的指针, 而 h+1 是指向内存地址连续的下一个缓冲头地址, 也可以说是指向 h 缓冲有头的末端外. 
 	// 为了保证有足够长度的内存来存储一个缓冲头结构, 需要 b 所指向的内存块地址 >= h 缓冲头的末端, 即要求 >= h+1.
+	// 注意: 缓冲头的第一项指向缓冲区的末端.
 	while ( (b -= BLOCK_SIZE) >= ((void *) (h + 1)) ) {
 		h->b_dev = 0;								// 使用该缓冲块的设备号.
 		h->b_dirt = 0;								// 脏标志, 即缓冲块修改标志.
@@ -562,9 +563,9 @@ void buffer_init(long buffer_end)
 			b = (void *) 0xA0000;					// 让 b 指向地址 0xA0000(640KB) 处.
 	}
 	h--;											// 让 h 指向最后一个有效缓冲块头.
-	free_list = start_buffer;						// 让空闲链表头指向第一个缓冲块.
+	free_list = start_buffer;						// 让空闲缓冲块链表头指针指向第一个缓冲块.
 	free_list->b_prev_free = h;     				// 链表头的 b_prev_free 指向前一项(即最后一项).
-	h->b_next_free = free_list;     				// h 的下一项指针指向第一项, 形成一个闭环链表.
+	h->b_next_free = free_list;     				// 缓冲块头的最后一项的下一项指针指向第一项, 形成一个闭环链表.
 	// 最后初始化 hash 表, 置表中所有指针为 NULL.
 	for (i = 0; i < NR_HASH; i++)
 		hash_table[i] = NULL;

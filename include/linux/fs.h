@@ -62,7 +62,7 @@ void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 #define NR_SUPER 		8								// 系统所含超级块个数(超级块数组项数).
 #define NR_HASH 		307								// 缓冲区 Hash 表数组项数值.
 #define NR_BUFFERS 		nr_buffers						// 系统所含缓冲个数. 初始化后不再改变.
-#define BLOCK_SIZE 		1024							// 数据块长度(字节值)
+#define BLOCK_SIZE 		1024							// 缓冲数据块长度(字节值)
 #define BLOCK_SIZE_BITS 10								// 数据块长度所占比特位数.
 #ifndef NULL
 #define NULL ((void *) 0)
