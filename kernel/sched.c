@@ -619,17 +619,18 @@ void sched_init(void)
 	// gdt 是一个描述符表数组(include/linux/head.h), 实际上对应程序 head.s 中的全局描述符表基址(gdt). 
 	// 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址.
 	// 参见 include/asm/system.h
-	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 任务 0 的任务状态段地址
-	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 任务 0 的局部描述符表(LDT)地址
+	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 设置任务 0 的任务状态段(TSS)地址
+	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 设置任务 0 的局部描述符表(LDT)地址
 	// 清任务数组和描述符表项(注意 i = 1 开始, 所以初始任务的描述符还在). 描述符项结构定义在文件 include/linux/head.h 中.
 	// 此处 p 指向 GDT 中的描述符 6 (即 task1 的 tss, 从 0 开始)
-	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt+6 -> 指向任务 1 的描述符: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 3 - 系统段 syscall, 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
+	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt+6 -> 指向任务 1 的描述符: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 
+									// 3 - 系统段 syscall, 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
 	// 初始化除 task0 以外的其他进程指针及描述符表
 	for(i = 1; i < NR_TASKS; i++) {
-		task[i] = NULL; 			// task0 已经初始化过了，不需要再初始化，此处从 task1 开始依次初始化 tss 和 ldt
-		p->a = p->b = 0; 			// 初始化 tss_i
+		task[i] = NULL; 			// task0 已经初始化过了, 不需要再初始化, 此处从 task1 开始依次初始化每个任务的 tss 和 ldt
+		p->a = p->b = 0; 			// 初始化 tss_i. tss_i 中的 i 表示任务号.
 		p++;
-		p->a = p->b = 0; 			// 初始化 ldt_i
+		p->a = p->b = 0; 			// 初始化 ldt_i. i 表示任务号.
 		p++;
 	}
 	/* Clear NT, so that we won't have troubles with that later on */
@@ -642,8 +643,8 @@ void sched_init(void)
 	// 将局部描述符表段选择符加载到局部描述符表寄存器 ldtr 中. 
 	// 注意!! 是将 GDT 中相应 LDT 描述符的选择符加载到 ldtr. 
 	// 		 只明确加载这一次, 以后新任务 LDT 的加载, 是 CPU 根据 TSS 中的 LDT 选择符自动加载.
-	ltr(0);								// 定义在 include/linux/sched.h
-	lldt(0);							// 其中参数(0)是任务号.
+	ltr(0);								// 将任务 0 的 tss 段选择符加载到任务寄存器 tr 中. (include/linux/sched.h)
+	lldt(0);							// 将任务 0 的 LDT 段选择符加载到局部描述符表寄存器 LDTR 中. 其中参数(0)是任务号.
 	// 下面代码用于初始化 8253 定时器. 通道 0, 选择工作方式 3, 二进制计数方式. 
 	// 通道 0 的输出引脚接在中断控制主芯片的 IRQ0 上, 它每 10 毫秒发出一个 IRQ0 请求. LATCH 是初始定时计数值.
 	outb_p(0x36, 0x43);					/* binary, mode 3, LSB/MSB, ch 0 */
