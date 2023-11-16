@@ -87,18 +87,20 @@ struct i387_struct {
 };                              /* 8 个 10 字节的协处理器累加器。 */
 
 // 任务状态段数据结构.
+// 分为静态字段和动态字段, 静态字段的值是在任务被创建时设置的, 通过不会改变它们. 
+// 动态字段在当任务切换而被挂起时，处理器会动态更新动态字段的内容.
 struct tss_struct {
-	long	back_link;			/* 16 high bits zero */
-	long	esp0;
-	long	ss0;				/* 16 high bits zero */
-	long	esp1;
-	long	ss1;				/* 16 high bits zero */
-	long	esp2;
-	long	ss2;				/* 16 high bits zero */
-	long	cr3;
-	long	eip;
-	long	eflags;
-	long	eax;
+	long	back_link;			/* 16 high bits zero */ // 前一任务链接(TSS 选择符).
+	long	esp0; 										// 特权级 0 (内核态)使用的堆栈指针. 			[静态字段]
+	long	ss0;				/* 16 high bits zero */ // 特权级 0 (内核态)使用的堆栈选择符. 			[静态字段]
+	long	esp1; 										// 特权级 1 (内核态)使用的堆栈指针. 			[静态字段]
+	long	ss1;				/* 16 high bits zero */ // 特权级 1 (内核态)使用的堆栈选择符. 			[静态字段]
+	long	esp2; 										// 特权级 2 (内核态)使用的堆栈指针. 		    [静态字段]
+	long	ss2;				/* 16 high bits zero */ // 特权级 2 (内核态)使用的堆栈选择符. 			[静态字段]
+	long	cr3; 										// 控制寄存器, 含有任务使用的页目录物理基地址. 	  [静态字段]
+	long	eip; 										// 指令指针, 在切换之前保存 eip 寄存器的内容. 	 [动态字段]
+	long	eflags; 									// 标志寄存器, 在切换之前保存 EFLAGS 中的内容.   [动态字段]
+	long	eax; 										// 以下字段用于保存通用寄存器的值, 都是[动态字段].
 	long	ecx;
 	long	edx;
 	long	ebx;
@@ -106,13 +108,13 @@ struct tss_struct {
 	long	ebp;
 	long	esi;
 	long	edi;
-	long	es;					/* 16 high bits zero */
-	long	cs;					/* 16 high bits zero */
-	long	ss;					/* 16 high bits zero */
-	long	ds;					/* 16 high bits zero */
-	long	fs;					/* 16 high bits zero */
-	long	gs;					/* 16 high bits zero */
-	long	ldt;				/* 16 high bits zero */
+	long	es;					/* 16 high bits zero */ // 段选择符字段, 保存段寄存器的中的内容(可见部分, 见p96 图4-12).	[动态字段]
+	long	cs;					/* 16 high bits zero */ // 代码段选择符字段, 保存当前任务的代码段选择符.  					[动态字段]
+	long	ss;					/* 16 high bits zero */ // 堆栈段选择符字段, 保存当前任务的堆栈段选择符. 					[动态字段]
+	long	ds;					/* 16 high bits zero */ // 数据段选择符字段, 保存当前任务的数据段选择符. 					[动态字段]
+	long	fs;					/* 16 high bits zero */ // 段选择符字段, 保存段寄存器的中的内容(可见部分, 见p96 图4-12). 	[动态字段]
+	long	gs;					/* 16 high bits zero */ // 段选择符字段, 保存段寄存器的中的内容(可见部分, 见p96 图4-12). 	[动态字段]
+	long	ldt;				/* 16 high bits zero */ // LDT 段选择符, 含有当前任务的 LDT 段的选择符.					  [静态字段]
 	long	trace_bitmap;		/* bits: trace 0, bitmap 16-31 */
 	struct i387_struct i387;
 };
