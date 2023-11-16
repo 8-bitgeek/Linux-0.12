@@ -96,11 +96,11 @@ __asm__ (\
 	_set_gate(&idt[n], 15, 0, addr)
 
 // 设置系统陷阱门函数.
-// 上面 set_trap_gate() 设置的描述符的特权级为 0, 而这里是 3. 
+// 上面 set_trap_gate() 设置的描述符的特权级(DPL)为 0, 而这里是 3. 
 // 因此 set_system_gate() 设置的中断处理过程能够被所有程序执行. 
 // 例如单步调试, 溢出出错和边界超出出错处理.
 // 参数: n - 中断号. addr - 中断程序偏移直.
-// &idt[n] 是中断描述符表中中断号 n 对应项的偏移值; 中断描述符的类型是 15, 特权级是 3.
+// &idt[n] 是中断描述符表中中断号 n 对应项的偏移值; 中断描述符的类型是 15, 特权级是 **3**.
 #define set_system_gate(n, addr) \
 	_set_gate(&idt[n], 15, 3, addr)
 
@@ -129,7 +129,7 @@ __asm__ (\
 	"movw %%ax, %2\n\t"							/* 将基地址的低字放入描述符第 2-3 字节 */\
 	"rorl $16, %%eax\n\t"						/* 将基地址高字右循环移入 ax 中(低字则进入高字处) */\
 	"movb %%al, %3\n\t"  						/* 将基地址高中低字节移入描述符第 4 字节 */\
-	"movb $" type ", %4\n\t"  					/* 将标志类型字节移入描述符第 5 字节 */\
+	"movb $" type ", %4\n\t"  					/* 将标志类型字节(DPL/TYPE 等)移入描述符第 5(从 0 开始) 字节 */\
 	"movb $0x00, %5\n\t"  						/* 描述符第 6 字节置 0 */\
 	"movb %%ah, %6\n\t"  						/* 将基地址高字中高字节移入描述符第 7 字节 */\
 	"rorl $16, %%eax"  							/* 再右循环 16 比特, eax 恢复原值. */\
@@ -138,8 +138,8 @@ __asm__ (\
 	)
 
 // 在全局表中设置任务状态段描述符.
-// n - 是该描述符的指针; addr - 是描述符项中段的基地址值. 任务状态段描述符的类型是 0x89
-#define set_tss_desc(n, addr) _set_tssldt_desc(((char *) (n)), addr, "0x89")
+// n - 是该描述符的指针; addr - 是描述符项中段的基地址值. // 任务状态段的 DPL 是 0.
+#define set_tss_desc(n, addr) _set_tssldt_desc(((char *) (n)), addr, "0x89") 			// 0x89 - 0b-1000-1001
 // 在全局表中设置局部表描述符.
-// n - 是该描述符的指针; addr - 是描述符项中段的基地址值. 局部表段描述符的类型是 0x82
-#define set_ldt_desc(n, addr) _set_tssldt_desc(((char *) (n)), addr, "0x82")
+// n - 是该描述符的指针; addr - 是描述符项中段的基地址值. 局部表段描述符的类型是 0x82 // DPL 是 0
+#define set_ldt_desc(n, addr) _set_tssldt_desc(((char *) (n)), addr, "0x82") 			// 0x82 - 0b-1000-0010

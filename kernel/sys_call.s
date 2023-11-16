@@ -101,11 +101,18 @@ reschedule:
 	pushl $ret_from_sys_call		# 将 ret_from_sys_call 的地址入栈.
 	jmp schedule					# jmp 和 call 的区别是 jmp 直接跳转到地址处开始执行, 而 call 会先将返回地址入栈然后调到标号处开始执行
 
+# CPL(Current Privilege Level): 当前特权级, 当前程序或任务的特权级, 存放在 cs 和 ss 寄存器的位 0/1 上.
+# DPL(Descriptor Privilege Level): 描述符特权级, 一个段或门的特权级, 存放在段或门描述符的 DPL 字段中.
+# RPL(Request Privilege Level): 请求特权级, 存放在选择符的位 0/1 上.
+# RPL 和 CPL 会与 DPL 进行对比, 如果大于(特权级低)则不允许调用.
+
 # int 0x80 -- Linux 系统调用入口点(调用中断 int 0x80, eax 中是调用号).
 # 中断调用服务列表在 sys_call_table 中(include/linux/sys.h)
+# system_call 的在 IDT 中的特权级(DPL)是 3, 即所有特权级的代码都可以调用.
+# 用户态下的任务调用该中断时, 不会进行堆栈切换.
 .align 4
 system_call:
-	push %ds						# 保存原段寄存器值.
+	push %ds						# 保存原(调用方)段寄存器值.
 	push %es
 	push %fs
 	pushl %eax						# save the orig_eax		# 保存 eax 原值.

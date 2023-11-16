@@ -98,9 +98,9 @@ extern long kernel_mktime(struct tm * tm);			// 计算系统开机启动时间(�
 static inline long fork_for_process0() {
 	long __res;
 	__asm__ volatile (
-		"int $0x80\n\t"  							/* 调用系统中断 0x80 */
-		: "=a" (__res)  							/* 返回值 -> eax(__res) */
-		: "0" (2));  								/* 输入为系统中断调用号 __NR_name(2) */
+		"int $0x80\n\t"  							/* 调用系统中断 0x80: system_call(kernel/sys_call.s) */
+		: "=a" (__res)  							/* 返回值 -> eax(__res) */  	// 返回值放入 __res 中
+		: "0" (2));  								/* 输入为系统中断调用号 __NR_name(2) */ 	// 输入寄存器为 eax(%0) = 2, 
 													/* 即调用 sys_call_table[2] 中的 sys_fork (kernel/sys_call.s) */
 	if (__res >= 0)  								/* 如果返回值 >=0, 则直接返回该值 */
 		return __res;
