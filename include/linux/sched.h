@@ -90,7 +90,7 @@ struct i387_struct {
 // 分为静态字段和动态字段, 静态字段的值是在任务被创建时设置的, 通过不会改变它们. 
 // 动态字段在当任务切换而被挂起时，处理器会动态更新动态字段的内容.
 struct tss_struct {
-	long	back_link;			/* 16 high bits zero */ // 前一任务链接(TSS 选择符).
+	long	back_link;			/* 16 high bits zero */ // 前一任务链接(TSS 选择符). 在任务切换时更新. 该字段允许任务使用 iret 指令切换到前一个任务. [动态字段]
 	long	esp0; 										// 特权级 0 (内核态)使用的堆栈指针. 			[静态字段]
 	long	ss0;				/* 16 high bits zero */ // 特权级 0 (内核态)使用的堆栈选择符. 			[静态字段]
 	long	esp1; 										// 特权级 1 (内核态)使用的堆栈指针. 			[静态字段]
