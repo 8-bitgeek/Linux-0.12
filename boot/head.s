@@ -377,7 +377,8 @@ idt:	.fill 256, 8, 0					# idt is uninitialized	# 256 项, 每项 8 字节, 填 
  # (0-nul, 1-cs, 2-ds, 3-syscall, 4-TSS0, 5-LDT0, 6-TSS1, 7-LDT1, 8-TSS2 etc...)
 gdt:
 	.quad 0x0000000000000000			/* NULL descriptor */
-	.quad 0x00c09a0000000fff			/* 16Mb */		# 0x08, 内核代码段最大长度 16MB.
-	.quad 0x00c0920000000fff			/* 16Mb */		# 0x10, 内核数据段最大长度 16MB.
+    # 一致性标志 C = 0, 非一致性代码段, 内核态要想访问该代码段只能通过调用门(比如陷阱门 int 0x80)
+	.quad 0x00c09a0000000fff			/* 16Mb */		# 0x08, 内核代码段最大长度 16MB. DPL = 0x9 = 0b-1-00-1, 即 DPL = 00.
+	.quad 0x00c0920000000fff			/* 16Mb */		# 0x10, 内核数据段最大长度 16MB. DPL = 0x9 = 0b-1-00-1, 即 DPL = 00.
 	.quad 0x0000000000000000			/* TEMPORARY - don't use */
 	.fill 252, 8, 0						/* space for LDT's and TSS's etc */		# 预留空间.

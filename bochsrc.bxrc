@@ -12,8 +12,9 @@ cpu: ips=1000000
 mouse: enabled=0
 fullscreen: enabled=0
 screenmode: name="sample"
-# display_library: x, options="gui_debug" 
-gdbstub: enabled=1, port=1234, text_base=0, data_base=0, bss_base=0
+# display_library: sdl2, options="gui_debug" 
+display_library: x, options="gui_debug" 
+# gdbstub: enabled=1, port=1234, text_base=0, data_base=0, bss_base=0
 log: bochsout.txt
 info: action=report
 magic_break: enabled=1

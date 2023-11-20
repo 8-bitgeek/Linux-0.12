@@ -653,7 +653,11 @@ void sched_init(void)
 	// 设置时钟中断处理程序句柄(设置时钟中断门). 修改中断控制器屏蔽码, 允许时钟中断.
 	// 然后设置系统调用中断门. 这两个设置中断描述符表 IDT 中描述符的宏定义在文件 include/asm/system.h 中. 
 	// 两者的区别参见 system.h 文件开始处的说明.
-	set_intr_gate(0x20, &timer_interrupt); 		// timer_interrupt 在 kernel/sys_call.s 中
+	set_intr_gate(0x20, &timer_interrupt); 		// timer_interrupt 在 kernel/sys_call.s 中.
 	outb(inb_p(0x21) & ~0x01, 0x21);
-	set_system_gate(0x80, &system_call); 		// system_call 也是 kernel/sys_call.s 中
+    // int 0x80 中断是陷阱门, 陷阱门属于调用门, 描述符中含有中断/异常处理程序的段选择符, 该选择符的 RPL = 0.
+    // 用户代码调用中断时(int 0x80)时, 
+    // 会通过这个选择符来定位到中断/异常处理程序(同时得到目标代码段[中断处理程序]的 DPL).
+    // 重点看 Chapter 4.5.33
+	set_system_gate(0x80, &system_call); 		// (系统陷阱门 DPL = 3) system_call 也在 kernel/sys_call.s 中.
 }

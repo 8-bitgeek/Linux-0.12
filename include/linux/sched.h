@@ -283,6 +283,7 @@ struct task_struct {
 }
 // 上面 tss 中的第二个 0x17 表示 cs 的段选择符, 0x17 = 0b-0001-0111 表示 LDT 中的第 1 个(从 0 开始)段描述符. RPL = 3.
 // 至于 DPL 要去对应的 LDT 中看, 即上面的 ldt 字段中的 0x9f,0xc0fa00 = 0xc0fa009f 对应的 DPL = 0xf = 0b1-11-1  对应的 DPL = 11 = 3, 即 DPL 为 3.
+// tss 结构中的第二项为 esp0 = PAGE_SIZE+(long)&init_task, ss0 = 0x10.
 
 extern struct task_struct *task[NR_TASKS];								//　任务指针数组.
 extern struct task_struct *last_task_used_math;							// 上一个使用过协处理器的进程

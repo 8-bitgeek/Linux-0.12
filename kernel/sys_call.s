@@ -106,6 +106,9 @@ reschedule:
 # RPL(Request Privilege Level): 请求特权级, 存放在选择符的位 0/1 上.
 # RPL 和 CPL 会与 DPL 进行对比, 如果大于(特权级低)则不允许调用.
 
+# 在 TASK0 调用该中断创建 TASK1 时, task0 的 CPL = 3, 用户态代码通过陷阱门(调用门)来调用该中断代码.
+# 该中断的 DPL = 0, 需要进行特权级切换, 中断和任务不共用同一个堆栈.
+
 # int 0x80 -- Linux 系统调用入口点(调用中断 int 0x80, eax 中是调用号).
 # 中断调用服务列表在 sys_call_table 中(include/linux/sys.h)
 # system_call 的在 IDT 中的特权级(DPL)是 3, 即所有特权级的代码都可以调用.
@@ -124,13 +127,13 @@ system_call:
 	pushl %ebx						# to the system call
 	# 在保存过段寄存器之后, 让 ds, es 指向内核数据段, 而 fs 指向当前局部数据段, 即指向执行本次系统调用的用户程序的数据段. 
 	# 注意, 在 Linux0.12 中内核给任务分配的代码和数据内存段是重叠的, 它们的段基址和段限长相同.
-	movl $0x10, %edx				# set up ds, es to kernel space
-	mov %dx, %ds
+	movl $0x10, %edx				# set up ds, es to kernel space.  	// 选择符 0x10 的 RPL = 0
+	mov %dx, %ds 					# 指向内核数据段.
 	mov %dx, %es
 	movl $0x17, %edx				# fs points to local data space
-	mov %dx, %fs
-	cmpl NR_syscalls, %eax			# 调用号如果超出范围的话就跳转.
-	jae bad_sys_call
+	mov %dx, %fs 					# 指向局部数据段.
+	cmpl NR_syscalls, %eax			
+	jae bad_sys_call 				# 调用号如果超出范围的话就跳转.
 
     mov sys_call_table(, %eax, 4), %ebx
     cmpl $0, %ebx
