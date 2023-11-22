@@ -69,7 +69,7 @@ __asm__("pushl %%edi; pushl %%esi; cld ; rep ; movsl; popl %%esi; popl %%edi"::"
 
 // 内存映射字节图(1 字节代表 1 页内存). 每个页面对应的字节用于标志页面当前被引用(占用)次数. 
 // 它最大可以映射 15MB 的内存空间. 
-// 在初始化函数 mem_init() 中, 对于不能用作主内存区页面的位置均都参选被设置成 USED(100).
+// 在初始化函数 mem_init() 中, 对于不能用作主内存区页面的位置均被设置成 USED(100).
 unsigned char mem_map [ PAGING_PAGES ] = {0, };
 
 /*

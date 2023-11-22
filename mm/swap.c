@@ -234,7 +234,7 @@ int swap_out(void)
 // 		%3(cx = PAGING_PAGES); %4(edi = mem_map + PAGING_PAGES - 1).
 // 输出: 返回 %0(ax = 物理页面起始地址). 函数返回新页面的物理地址.
 // 上面 %4 寄存器实际指向 mem_map[] 内存字节位图的最后一个字节. 
-// 本函数从位图末端开始向前扫描所有页面标志(页面总数为 PAGING_AGES), 
+// 本函数从位图末端开始向前扫描所有页面标志(页面总数为 PAGING_PAGES), 
 // 若有页面空闲(内存位图字节为 0)则返回页面地址. 
 // 注意! 本函数只是指出在主内存区的一页空闲物理页面, 但并没有映射到某个进程的地址空间中去. 
 // 后面的 put_page() 函数即用于把指定页面映射到某个进程的地址空间中. 
@@ -244,15 +244,15 @@ unsigned long get_free_page(void)
 {
 register unsigned long __res;
 
-// 首先在内存映射字节位图中查找址为 0 的字节项, 然后把对应物理内存页面清零. 
+// 首先在内存映射字节位图(mem_map[])中查找址为 0 的字节项, 然后把对应物理内存页面清零. 
 // 如果得到的页面地址大于实际物理内存容量则重新寻找. 
 // 如果没有找到空闲页面则去调用执行交换处理, 并重新查找. 最后返回空闲物理页面地址.
-// repne; scasb 用于搜索与 eax 中相同的数据
+// repne; scasb 用于搜索 edi 指向的内存(mem_map + PAGEING_PAGES - 1)[mem_map[] 中最后一项开始]中与 eax 中相同的数据(0).
 repeat:
 	__asm__(
 		"std ; repne ; scasb						/* 置方向位, al(0) 与对应每个页面的(di)内容比较, */\n\t"
 		"jne 1f										/* 如果没有等于 0 的字节, 则跳转结束(返回0). */\n\t"
-		"movb $1, 1(%%edi)							/* 1 =>[1 + edi], 将对应页面内存映像比特位置 1. */\n\t"
+		"movb $1, 1(%%edi)							/* $1 =>[1 + edi], 将对应页面内存映像字节(mem_map[i])置 1. */\n\t"
 		"sall $12, %%ecx							/* 页面数 * 4K = 相对页面起始地址. */\n\t"
 		"addl %2, %%ecx								/* 再加上低端内存地址, 得页面实际物理起始地址. */\n\t"
 		"movl %%ecx, %%edx							/* 将页面实际起始地址 -> edx 寄存器. */\n\t"
@@ -262,9 +262,9 @@ repeat:
 		"movl %%edx, %%eax							/* 将页面起始地址 -> eax(返回值). */\n\t"
 		"1:\n\t"
 		"cld"
-		:"=a" (__res) 									/* = 表示这是输出寄存器 eax, %0 */
-		:"0" (0), "i" (LOW_MEM), "c" (PAGING_PAGES), 	/* 输入寄存器列表: %1, %2, %3*/
-		"D" (mem_map + PAGING_PAGES - 1) 				/* %4 */
+		:"=a" (__res) 									/* =a 表示这是输出寄存器 %0(eax) */
+		:"0" (0), "i" (LOW_MEM), "c" (PAGING_PAGES), 	/* 输入寄存器列表: %1(=%0=eax), %2, %3(ecx)*/
+		"D" (mem_map + PAGING_PAGES - 1) 				/* %4(edi) */
 		:"dx");
 	if (__res >= HIGH_MEMORY)						// 页面地址大于实际内存容量则重新寻找
 		goto repeat;

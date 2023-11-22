@@ -110,14 +110,14 @@ int copy_mem(int nr, struct task_struct * p)
 // 1. CPU执行中断指令压入的用户栈地址 ss 和 esp, 标志 eflags 和返回地址 cs 和 eip;
 // 		在执行中断处理过程时如果发生特权级变化, int 指令会依次入栈: ss, esp, eflags, cs, eip(图 4-29)
 // 2. 在刚进入 system_call 时入栈的段寄存器 ds, es, fs 和 edx, ecx, ebx;
-// 3. 调用 sys_call_table 中 sys_fork 函数入栈的返回地址(参数 none 表示);
+// 3. 调用 sys_call_table 中 sys_fork 函数入栈的返回地址(参数 none 表示); system_call 中的 call *%ebx 入栈了该数据.
 // 4. 调用 copy_process() 之前入栈的 gs, esi, edi, ebp 和 eax(nr).
 // 其中参数 nr 是调用 find_empty_process() 分配的任务数组项号.
 int copy_process(int nr, long ebp, long edi, long esi, long gs, 
-		long none, 
-		long ebx, long ecx, long edx, long orig_eax,
-		long fs, long es, long ds,
-		long eip, long cs, long eflags, long esp, long ss)
+		long none, 														// system_call 中的 `call *%ebx` 指令入栈了该数据(下一行代码 `push %eax` 的地址).
+		long ebx, long ecx, long edx, long orig_eax, 					// system-call 中入栈的数据
+		long fs, long es, long ds, 										// system_call 压入的段寄存器及通用寄存器
+		long eip, long cs, long eflags, long esp, long ss) 				// 用户态任务的 ss, esp, eflags, cs, eip
 {
 	struct task_struct *p;
 	int i;
@@ -229,24 +229,27 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	return last_pid;        			// 返回新进程号
 }
 
-// 为新进程取得不重复的进程号 last_pid(并不需要返回这个 last_pid, 因为它是全局变量, 而是只返回任务号) 
+// 为新进程取得不重复的进程号 last_pid(并不需要返回这个 last_pid, 因为它是全局变量, 而是只返回任务号).
 // 函数返回在任务数组中的任务号(数组项). 注意: last_pid != 任务号.
+// last_pid 是进程号, 全局变量，每次调用该函数都**记录**一个未被占用的进程号(last_pid), 
+// 并返回一个空闲的任务项号(task[i] 中的 i).
 int find_empty_process(void)
 {
 	int i;
 
-	// 首先获取新的进程号. 如果 last_pid 增 1 后超出进程号的正数表示范围, 则重新从 1 开始使用 pid 号. 
+	// 首先获取新的进程号. 如果 last_pid 增加 1 后超出进程号的正数表示范围, 则重新从 1 开始使用 pid 号. 
 	// 然后在任务数组中搜索刚设置的 pid 号是否已经被某个任务使用. 
-	// 如果是则跳转到函数开始处理重新获得一个 pid 号. 接着在任务数组中为新任务寻找一个空闲项, 并返回项号. 
+	// 如果是则跳转到函数开始处理重新获得一个 pid 号. 
+	// 如果找到一个没被占用的 pid 号, 则接着在任务数组中为新任务寻找一个空闲项, 并返回项号. 
 	// last_pid 是一个全局变量, 不用返回. 如果此时任务数组中 64 个项已经被全部占用, 则返回出错码.
 	repeat:
 		if ((++last_pid) < 0) last_pid = 1;
 		for(i = 0 ; i < NR_TASKS ; i++)
-			if (task[i] && ((task[i]->pid == last_pid) ||
-				        (task[i]->pgrp == last_pid)))
+			if (task[i] && 
+					((task[i]->pid == last_pid) || (task[i]->pgrp == last_pid))) 	// 如果这个 pid(last_pid) 已经被占用, 则重新生成 last_pid
 				goto repeat;
 	for(i = 1 ; i < NR_TASKS ; i++)
 		if (!task[i]) 					// 找到空闲的任务项
-			return i;
+			return i; 					// 返回空闲的任务项号
 	return -EAGAIN;
 }

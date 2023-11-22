@@ -26,13 +26,14 @@ void swap_in(unsigned long *table_ptr);                                         
 static inline void oom(void)
 {
 	printk("out of memory\n\r");
-    //　do_exit() 应该使用退出代码, 这里用了信息值 SIGSEGV(11). 相同值的出错码含义是 "资源暂不可用",正好同义.
+    //　do_exit() 应该使用退出代码, 这里用了信息值 SIGSEGV(11). 相同值的出错码含义是 "资源暂不可用", 正好同义.
 	do_exit(SIGSEGV);
 }
 
 // 刷新页变换高速缓冲宏函数.
-// 为了提高地址转换的效率,CPU将最近使用的页表数据存放在芯片中高速缓冲中.在修改过页表信息之后,就需要刷新该缓冲区.这里使用重新加载页
-// 目录重新加载页目录基址寄存器cr3的方法来进行刷新.下面eax = 0,是页目录的基址.
+// 为了提高地址转换的效率, CPU 将最近使用的页表数据存放在芯片中高速缓冲中. 
+// 在修改过页表信息之后, 就需要刷新该缓冲区. 
+// 这里使用重新加载页目录重新加载页目录基址寄存器 cr3 的方法来进行刷新. 下面 eax = 0 是页目录的基址.
 #define invalidate() \
 __asm__("movl %%eax,%%cr3"::"a" (0))
 
@@ -41,7 +42,7 @@ __asm__("movl %%eax,%%cr3"::"a" (0))
 // Linux0.12内核默认支持的最大内存容量是16MB,可以修改这些定义以适合更多的内存.
 #define LOW_MEM 0x100000			             // 机器物理内存低端(1MB)
 extern unsigned long HIGH_MEMORY;		         // 存放实际物理内存最高端地址.
-#define PAGING_MEMORY (15 * 1024 * 1024)         // 分页内存15MB.主内存区最多15MB.
+#define PAGING_MEMORY (15 * 1024 * 1024)         // 分页内存15MB. 主内存区最多15MB.
 #define PAGING_PAGES (PAGING_MEMORY >> 12)	     // 分页后的物理内存页面数(3840).
 #define MAP_NR(addr) (((addr) - LOW_MEM) >> 12)	 // 指定内存地址映射为页面号. 2 ^ 12 = 4KB
 #define USED 100				                 // 页面被占用标志.
@@ -51,10 +52,10 @@ extern unsigned long HIGH_MEMORY;		         // 存放实际物理内存最高端
 extern unsigned char mem_map [ PAGING_PAGES ];
 
 // 下面定义的符号常量对应页目录表项和页表(二级页表)项中的一些标志位.
-#define PAGE_DIRTY	         0x40	            // 位6,页面脏(已修改)
-#define PAGE_ACCESSED	     0x20	            // 位5,页面被访问过.
-#define PAGE_USER	         0x04	            // 位2,页面属于:1 - 用户;0 - 超级用户.
-#define PAGE_RW		         0x02	            // 位1,读写权:1 - 写;0 - 读.
-#define PAGE_PRESENT	     0x01	            // 位0,页面存在:1 - 存在;0 - 不存在.
+#define PAGE_DIRTY	         0x40	            // 位 6, 页面脏(已修改)
+#define PAGE_ACCESSED	     0x20	            // 位 5, 页面被访问过.
+#define PAGE_USER	         0x04	            // 位 2, 页面属于: 1 - 用户; 0 - 超级用户.
+#define PAGE_RW		         0x02	            // 位 1, 读写权: 1 - 写; 0 - 读.
+#define PAGE_PRESENT	     0x01	            // 位 0, 页面存在: 1 - 存在; 0 - 不存在.
 
 #endif

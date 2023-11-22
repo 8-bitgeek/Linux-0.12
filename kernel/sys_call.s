@@ -113,7 +113,7 @@ reschedule:
 # 中断调用服务列表在 sys_call_table 中(include/linux/sys.h)
 # system_call 陷阱门在 GDT 中的特权级(DPL)是 3, 即所有特权级的代码都可以调用.
 .align 4
-system_call:
+system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	push %ds						# 保存原(调用方)段寄存器值.
 	push %es
 	push %fs
@@ -126,23 +126,23 @@ system_call:
 	pushl %ebx						# to the system call
 	# 在保存过段寄存器之后, 让 ds, es 指向内核数据段, 而 fs 指向当前局部数据段, 即指向执行本次系统调用的用户程序的数据段. 
 	# 注意, 在 Linux0.12 中内核给任务分配的代码和数据内存段是重叠的, 它们的段基址和段限长相同.
-	movl $0x10, %edx				# set up ds, es to kernel space.  	// 选择符 0x10 的 RPL = 0
-	mov %dx, %ds 					# 指向内核数据段.
+	movl $0x10, %edx				# set up ds, es to kernel space.  	// 当前的 CPL = 0, 选择符 0x10 的 RPL = 0
+	mov %dx, %ds 					# ds/es 指向内核数据段.
 	mov %dx, %es
-	movl $0x17, %edx				# fs points to local data space
-	mov %dx, %fs 					# 指向局部数据段.
-	cmpl NR_syscalls, %eax			
+	movl $0x17, %edx				# fs points to local data space.
+	mov %dx, %fs 					# fs 指向局部数据段.
+	cmpl NR_syscalls, %eax
 	jae bad_sys_call 				# 调用号如果超出范围的话就跳转.
 
-    mov sys_call_table(, %eax, 4), %ebx
-    cmpl $0, %ebx
+    mov sys_call_table(, %eax, 4), %ebx 		# 把 sys_call_table[4 * %eax] 确定的内存地址处的内容(系统调用程序的地址)放入 ebx 中
+    cmpl $0, %ebx 								# 如果地址不为 0 则进行系统调用.
     jne sys_call
 	#	pushl %eax
     call sys_default
-	# 下面这句操作数的含义是: 调用地址 = [sys_call_table + %eax * 4].
+	# 下面这句操作数的含义是: 调用地址 = (sys_call_table + %eax * 4).
 	# sys_call_table[] 是一个指针数组, 定义在 include/linux/sys.h 中, 该数组中设置了内核所有 82 个系统调用 C 处理函数的地址.
 sys_call:
-	call *%ebx
+	call *%ebx 							# ebx 中含有被调用函数的地址. 调用 eax 中对应的系统调用函数.
 	# call *sys_call_table(, %eax, 4)	# 间接调用指定功能 C 函数.
 	pushl %eax							# 把系统调用返回值入栈.
 
@@ -309,7 +309,7 @@ sys_execve:
 	ret
 
 # sys_fork() 调用, 用于创建子进程, 是 system_call 功能 2. 原型在 include/linux/sys.h 中.
-# 首先调用 C 函数 find_empty_process(), 取得一个进程号 last_pid. 
+# 首先调用 C 函数 find_empty_process(), 取得一个进程号 last_pid 及任务项号 task[i]. 
 # 若返回负数则说明目前任务数组已满. 然后调用 copy_process() 复制进程.
 .align 4
 sys_fork:
