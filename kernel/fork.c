@@ -140,15 +140,15 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	// 还设置进程开始运行的系统时间 start_time.
 	p->state = TASK_UNINTERRUPTIBLE;
 	p->pid = last_pid;						// 新进程号. 也由 find_empty_process() 得到.
-	p->counter = p->priority;				// 运行时间片值(嘀嗒数).
+	p->counter = p->priority;				// 运行时间片值(单位: 嘀嗒数)(越大运行时间越长).
 	p->signal = 0;							// 信号位图.
 	p->alarm = 0;							// 报警定时值(嘀嗒数).
 	p->leader = 0;							/* process leadership doesn't inherit */	/* 进程的领导权是不能继承的 */
-	p->utime = p->stime = 0;				// 用户态时间和核心态运行时间.
+	p->utime = p->stime = 0;				// 用户态总运行时间和核心态总运行时间.
 	p->cutime = p->cstime = 0;				// 子进程用户态和核心态运行时间.
-	p->start_time = jiffies;				// 进程开始运行时间(当前时间滴答数).
+	p->start_time = jiffies;				// 进程开始运行时间(当前开机时间的滴答数 [每 10ms/滴答]).
 	// 再修改任务状态段 TSS 数据. 由于系统给任务结构 p 分配了 1 页新内存, 
-	// 所以(PAGE_SIZE + (long) p)让 esp0 正好指向该页顶端. 
+	// 所以(PAGE_SIZE + (long) p)让 esp0 正好指向该页末端. 
 	// ss0:esp0 用作程序在内核态执行时的栈. 
 	// 另外, 在第 3 章中我们已经知道, 每个任务在 GDT 表中都有两个段描述符, 
 	// 一个是任务的 TSS 段描述符, 另一个是任务的 LDT 表段描述符.

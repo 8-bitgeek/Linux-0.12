@@ -174,7 +174,7 @@ struct task_struct {
 	/* these are hardcoded - don't touch */
 	// 下面这几个字段是硬编码字段
 	long state;							// 任务的运行状态(-1 不可运行, 0 可运行(就绪), >0 已停止)
-	long counter;						// 任务运行时间计数(递减)(滴答数), 运行时间片
+	long counter;						// 任务运行时间计数(递减)(滴答数), 运行时间片, 越大运行时间越长
 	long priority;						// 优先级. 任务开始运行时 counter = priority, 越大运行越长
 	long signal;						// 信号位图, 每个比特位代表一种信号, 信号值 = 位偏移值 + 1
 	struct sigaction sigaction[32];		// 信号执行属性结构, 对应信号将要执行的操作和标志信息
@@ -208,9 +208,9 @@ struct task_struct {
 	unsigned short egid;				// 有效级 id
 	unsigned short sgid;				// 保存的组 id
 	unsigned long timeout;				// 内核定时超时值
-	unsigned long alarm;				// 报警定时值(滴答数)
-	long utime;							// 用户态运行时间(滴答数)
-	long stime;							// 系统态运行时间(滴答数)
+	unsigned long alarm;				// 报警定时值(单位: 滴答数)
+	long utime;							// 当前进程用户态总运行时间(滴答数)
+	long stime;							// 当前进程系统态总运行时间(滴答数)
 	long cutime;						// 子进程用户态运行时间
 	long cstime;						// 子进程系统态运行时间
 	long start_time;					// 进程开始运行时刻.
