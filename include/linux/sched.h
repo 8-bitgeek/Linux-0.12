@@ -8,11 +8,11 @@
 #define LIBRARY_SIZE	0x00400000				// 动态加载库长度(4MB).
 
 #if (TASK_SIZE & 0x3fffff)
-#error "TASK_SIZE must be multiple of 4M"		// 任务长度必须是4MB的倍数.
+#error "TASK_SIZE must be multiple of 4M"		// 任务长度必须是 4MB 的倍数.
 #endif
 
 #if (LIBRARY_SIZE & 0x3fffff)
-#error "LIBRARY_SIZE must be a multiple of 4M"	// 库长度也必须是4MB的倍数.
+#error "LIBRARY_SIZE must be a multiple of 4M"	// 库长度也必须是 4MB 的倍数.
 #endif
 
 #if (LIBRARY_SIZE >= (TASK_SIZE/2))
@@ -20,17 +20,17 @@
 #endif
 
 #if (((TASK_SIZE>>16)*NR_TASKS) != 0x10000)
-#error "TASK_SIZE*NR_TASKS must be 4GB"			// 任务长度*任务总个数必须为4GB.
+#error "TASK_SIZE*NR_TASKS must be 4GB"			// 任务长度 * 任务总个数必须为 4GB.
 #endif
 
 // 在进程逻辑地址空间中动态库被加载的位置(60MB).
 #define LIBRARY_OFFSET (TASK_SIZE - LIBRARY_SIZE)
 
-// 下面宏CT_TO_SECS和CT_TO_USECS用于把系统当前嘀嗒数转换成用秒值加微秒值表示。
+// 下面宏 CT_TO_SECS 和 CT_TO_USECS 用于把系统当前嘀嗒数转换成用秒值加微秒值表示.
 #define CT_TO_SECS(x)	((x) / HZ)
 #define CT_TO_USECS(x)	(((x) % HZ) * 1000000 / HZ)
 
-#define FIRST_TASK task[0]						// 任务0比较特殊,所以特意给它单独定义一个符号.
+#define FIRST_TASK task[0]						// 任务 0 比较特殊, 所以特意给它单独定义一个符号.
 #define LAST_TASK task[NR_TASKS - 1]			// 任务数组中的最后一项任务.
 
 #include <linux/head.h>
@@ -48,15 +48,15 @@
 // 这里定义了进程运行时可能处的状态.
 #define TASK_RUNNING			0	// 进程正在运行或已准备就绪.
 #define TASK_INTERRUPTIBLE		1	// 进程处于可中断等待状态.
-#define TASK_UNINTERRUPTIBLE	2	// 进程处于不可中断等待状态,主要用于I/O操作等待.
-#define TASK_ZOMBIE				3	// 进程处于僵死状态,已经停止运行,但父进程还没发信号.
+#define TASK_UNINTERRUPTIBLE	2	// 进程处于不可中断等待状态, 主要用于 I/O 操作等待.
+#define TASK_ZOMBIE				3	// 进程处于僵死状态, 已经停止运行, 但父进程还没发信号.
 #define TASK_STOPPED			4	// 进程已停止.
 
 #ifndef NULL
-#define NULL ((void *) 0)			// 定义NULL为空指针.
+#define NULL ((void *) 0)			// 定义 NULL 为空指针.
 #endif
 
-// 复制进程的页目录页表.Linus认为这是内核中最复杂的函数之一.(mm/memory.c)
+// 复制进程的页目录页表. Linus 认为这是内核中最复杂的函数之一.(mm/memory.c)
 extern int copy_page_tables(unsigned long from, unsigned long to, long size);
 // 释放页表所指定的内存块及页表本身(mm/memory.c)
 extern int free_page_tables(unsigned long from, unsigned long size);
@@ -65,24 +65,24 @@ extern int free_page_tables(unsigned long from, unsigned long size);
 extern void sched_init(void);
 // 进程调度函数(kernel/sched.c)
 extern void schedule(void);
-// 异常(陷阱)中断处理初始化函数,设置中断调用门并允许中断请求信号.(kernel/traps.c)
+// 异常(陷阱)中断处理初始化函数, 设置中断调用门并允许中断请求信号.(kernel/traps.c)
 extern void trap_init(void);
-// 显示内核出错信息,然后进入死循环(kernel/panic.c)
+// 显示内核出错信息, 然后进入死循环(kernel/panic.c)
 extern void panic(const char * str);
-// 往tty上写指定长度的字符串。（kernel/chr_drv/tty_io.c）。
+// 往 tty 上写指定长度的字符串.(kernel/chr_drv/tty_io.c).
 extern int tty_write(unsigned minor,char * buf,int count);
 
 typedef int (*fn_ptr)();			// 定义函数指针类型.
 
 // 下面是数学协处理器使用的结构，主要用于保存进程切换时 i387 的执行状态信息。
 struct i387_struct {
-	long	cwd;            	// 控制字（Control word）。
-	long	swd;            	// 状态字（Status word）。
-	long	twd;            	// 标记字（Tag word）。
-	long	fip;            	// 协处理器代码指针。
-	long	fcs;            	// 协处理器代码段寄存器。
-	long	foo;            	// 内存操作数的偏移位置。
-	long	fos;            	// 内存操作数的段值。
+	long	cwd;            	// 控制字(Control word).
+	long	swd;            	// 状态字(Status word).
+	long	twd;            	// 标记字(Tag word).
+	long	fip;            	// 协处理器代码指针.
+	long	fcs;            	// 协处理器代码段寄存器.
+	long	foo;            	// 内存操作数的偏移位置.
+	long	fos;            	// 内存操作数的段值.
 	long	st_space[20];		/* 8*10 bytes for each FP-reg = 80 bytes */
 };                              /* 8 个 10 字节的协处理器累加器。 */
 
@@ -295,15 +295,15 @@ extern int jiffies_offset;												// 用于累计需要调整的时间滴答
 
 #define CURRENT_TIME (startup_time + (jiffies + jiffies_offset) / HZ)	// 当前时间(秒数).
 
-// 添加定时器函数（定时时间jiffies嘀嗒数，定时到时调用函数*fn()）。（kernel/sched.c）
+// 添加定时器函数(定时时间 jiffies 嘀嗒数，定时到时调用函数 *fn()).(kernel/sched.c)
 extern void add_timer(long jiffies, void (*fn)(void));
-// 不可中断的等待睡眠。（kernel/sched.c）
+// 不可中断的等待睡眠.(kernel/sched.c)
 extern void sleep_on(struct task_struct ** p);
-// 可中断的等待睡眠。（kernel/sched.c）
+// 可中断的等待睡眠.(kernel/sched.c)
 extern void interruptible_sleep_on(struct task_struct ** p);
-// 明确唤醒睡眠的进程。（kernel/sched.c）
+// 明确唤醒睡眠的进程.(kernel/sched.c)
 extern void wake_up(struct task_struct ** p);
-// 检查当前进程是否在指定的用户组grp中。
+// 检查当前进程是否在指定的用户组 grp 中.
 extern int in_group_p(gid_t grp);
 
 /*
@@ -335,7 +335,7 @@ extern int in_group_p(gid_t grp);
 // 返回: n - 当前任务号. 用于(kernel/traps.c).
 #define str(n) \
 __asm__(\
-	"str %%ax\n\t"  				/* 将任务寄存器中TSS段的选择符复制到ax中 */\
+	"str %%ax\n\t"  				/* 将任务寄存器中 TSS 段的选择符复制到 ax 中 */\
 	"subl %2, %%eax\n\t"  			/* (eax - FIRST_TSS_ENTRY*8) -> eax */\
 	"shrl $4, %%eax"  				/* (eax/16) -> eax = 当前任务号 */\
 	:"=a" (n) \
@@ -348,8 +348,8 @@ __asm__(\
  * tha math co-processor latest.
  */
 /*
- * switch_to(n)将切换当前任务到任务nr,即n.首先检测任务n不是当前任务,如果是则什么也不做退出.如果我们切换
- * 的任务最近(上次运行)使用过数学协处理器的话,则还需复位控制器cr0中的TS标志.
+ * switch_to(n) 将切换当前任务到任务 nr, 即 n. 首先检测任务 n 不是当前任务, 如果是则什么也不做退出. 
+ * 如果我们切换的任务最近(上次运行)使用过数学协处理器的话, 则还需复位控制器 cr0 中的 TS 标志.
  */
 // 跳转到一个任务的 TSS 段选择符组成的地址处会造成 CPU 进行任务切换操作.
 // 输入: %0 - 指向 __tmp;		     %1 - 指向 __tmp.b 处, 用于存放新 TSS 选择符.
@@ -357,7 +357,7 @@ __asm__(\
 // 其中临时数据结构 __tmp 用于组建远跳转(far jump)指令的操作数. 该操作数由4字节偏移地址和 2 字节的段选择符组成. 
 // 因此 __tmp 中 a 的值是 32 位偏移值, 而的低 2 字节是新 TSS 段的选择符(高 2 字节不用). 中转与 TSS 段选择符会造成任务切换到该 TSS 对应的进程.
 // 对于造成任务切换的长跳转, a 值无用. 177 行上的内存间接跳转指令使用 6 字节操作数作为跳转目的地的长指针, 
-// 其格式为 :jmp 16 位段选择符 :32 位偏移值. 但在内存中操作数的表示顺序与这里正好相反. 任务切换回来之后, 在判断原任务上次执行是否使用过协处理器时,
+// 其格式为: jmp 16 位段选择符 : 32 位偏移值. 但在内存中操作数的表示顺序与这里正好相反. 任务切换回来之后, 在判断原任务上次执行是否使用过协处理器时,
 // 是通过将原任务指针与保存在 last_task_used_math 变更中的上次使用过协处理器指针进行比较而作出的, 
 // 参见文件 kernel/sched.c 中有关 math_state_restore() 函数的说明.
 #define switch_to(n) { \
@@ -366,7 +366,7 @@ __asm__(\
 	"cmpl %%ecx, current\n\t"  				/* 任务 n 是当前任务吗?(current == task[n]?) */\
 	"je 1f\n\t"  							/* 是, 则什么都不做退出 */\
 	"movw %%dx, %1\n\t"  					/* 将新任务 TSS 的 16 位选择符存入 __tmp.b 中 */\
-	"xchgl %%ecx, current\n\t"  			/* current = task[n];ecx = 被切换出的任务. */\
+	"xchgl %%ecx, current\n\t"  			/* current = task[n]; ecx = 被切换出的任务. */\
 	"ljmp *%0\n\t"  						/* 执行长跳转至 *&__tmp, 造成任务切换. 在任务切换回来后才会继续执行下面的语句 */\
 	"cmpl %%ecx, last_task_used_math\n\t"  	/* 原任务上次使用过协处理器吗? */\
 	"jne 1f\n\t"  							/* 没有则跳转, 退出 */\
@@ -392,7 +392,7 @@ __asm__ __volatile__ ("movw %%dx,%0\n\t" \
 	:)
 */
 
-// 设置位于地址addr处描述符中的各基地址字段(基地址是base).
+// 设置位于地址 addr 处描述符中的各基地址字段(基地址是 base).
 // %0 - 地址 addr 偏移 2; %1 - 地址 addr 偏移 4; %2 - 地址 addr 偏移 7; edx - 基地址 base.
 #define _set_base(addr, base) do { unsigned long __pr; \
 __asm__ __volatile__ (\
@@ -411,32 +411,32 @@ __asm__ __volatile__ (\
 // %0 - 地址 addr; %1 - 地址 addr 偏移 6 处; edx - 段长值 limit.
 #define _set_limit(addr, limit) \
 __asm__(\
-	"movw %%dx, %0\n\t"   				/* 段长limit低16位(位15-0) -> [addr] */\
-	"rorl $16, %%edx\n\t"  				/* edx中的段长高4位(位19-16) -> dl */\
-	"movb %1, %%dh\n\t"  				/* 取原[addr+6]字节 -> dh,其中高4位是些标志 */\
-	"andb $0xf0, %%dh\n\t" 				/* 清dh的低4位(将存放段长的位19-16) */\
-	"orb %%dh, %%dl\n\t"  				/* 将原高4位标志和段长的高4位(位19-16)合成1字节,并放回[addr+6]处 */\
+	"movw %%dx, %0\n\t"   				/* 段长 limit 低 16 位(位 15-0) -> [addr] */\
+	"rorl $16, %%edx\n\t"  				/* edx 中的段长高 4 位(位 19-16) -> dl */\
+	"movb %1, %%dh\n\t"  				/* 取原 [addr+6] 字节 -> dh, 其中高 4 位是些标志 */\
+	"andb $0xf0, %%dh\n\t" 				/* 清 dh 的低 4 位(将存放段长的位 19-16) */\
+	"orb %%dh, %%dl\n\t"  				/* 将原高 4 位标志和段长的高 4 位(位 19-16)合成 1 字节, 并放回 [addr+6] 处 */\
 	"movb %%dl, %1" \
 	::"m" (*(addr)), \
 	  "m" (*((addr) + 6)), \
 	  "d" (limit) \
 	:)
 
-// 设置局部描述符表中ldt描述符的基地址字段.
+// 设置局部描述符表中 ldt 描述符的基地址字段.
 #define set_base(ldt, base) _set_base( ((char *)&(ldt)) , base )
-// 设置局部描述符表中ldt描述符的段长字段.
+// 设置局部描述符表中 ldt 描述符的段长字段.
 #define set_limit(ldt, limit) _set_limit( ((char *)&(ldt)) , (limit - 1) >> 12 )
 
-// 从地址addr处描述符中取段基地址.功能与_set_base()正好相反.
-// edx - 存放基地址(__base);%1 - 地址addr偏移2;%2 - 地址addr偏移4;%3 - addr偏移7.
+// 从地址 addr 处描述符中取段基地址. 功能与 _set_base() 正好相反.
+// edx - 存放基地址(__base); %1 - 地址 addr 偏移 2; %2 - 地址 addr 偏移 4; %3 - addr 偏移 7.
 #define _get_base(addr) ({\
 unsigned long __base; \
 __asm__(\
-	"movb %3, %%dh\n\t"  				/* 取[addr+7]处基地址高16位的高8位(位31-24) -> dh */\
-	"movb %2, %%dl\n\t"  				/* 取[addr+4]处基址高16位的低8位(位23-16) -> dl */\
-	"shll $16, %%edx\n\t"  				/* 基地址高16位移到edx中高16位处. */\
-	"movw %1, %%dx"  					/* 取[addr+2]处基址低16位(位16-0) -> dx */\
-	:"=&d" (__base)  					/* 从而edx中含有32位的段基地址 */\
+	"movb %3, %%dh\n\t"  				/* 取 [addr+7] 处基地址高 16 位的高 8 位(位 31-24) -> dh */\
+	"movb %2, %%dl\n\t"  				/* 取 [addr+4] 处基址高 16 位的低 8 位(位 23-16) -> dl */\
+	"shll $16, %%edx\n\t"  				/* 基地址高 16 位移到 edx 中高 16 位处. */\
+	"movw %1, %%dx"  					/* 取 [addr+2] 处基址低 16 位(位 16-0) -> dx */\
+	:"=&d" (__base)  					/* 从而 edx 中含有 32 位的段基地址 */\
 	:"m" (*((addr) + 2)), \
 	 "m" (*((addr) + 4)), \
 	 "m" (*((addr) + 7))); \
@@ -457,13 +457,13 @@ static inline unsigned long _get_base(char * addr){
 }
 */
 
-// 取局部描述符表中ldt所指段描述符中的基地址.
+// 取局部描述符表中 ldt 所指段描述符中的基地址.
 #define get_base(ldt) _get_base( ((char *)&(ldt)) )
 
-// 取段选择符segment指定的描述符中的段限长值.
-// 指令lsll是Load Segment Limit的缩写它从指定段描述符中取出分散的限长比特位拼成完整的段限长值放入指定寄存器中.所得的段限长是实际
-// 字节数减1,因此这里还需要加1后返回.
-// %0 - 存放段长值(字节数);%1 - 段选择符segment.
+// 取段选择符 segment 指定的描述符中的段限长值.
+// 指令 lsll 是 Load Segment Limit 的缩写它从指定段描述符中取出分散的限长比特位拼成完整的段限长值放入指定寄存器中. 
+// 所得的段限长是实际字节数减 1, 因此这里还需要加 1 后返回.
+// %0 - 存放段长值(字节数); %1 - 段选择符 segment.
 #define get_limit(segment) ({ \
 unsigned long __limit; \
 __asm__("lsll %1,%0\n\tincl %0":"=r" (__limit):"r" (segment)); \
