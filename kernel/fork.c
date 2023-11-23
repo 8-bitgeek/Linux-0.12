@@ -126,8 +126,8 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	// 首先为新任务数据结构分配内存. 如果内存分配出错, 则返回出错码并退出. 
 	// 然后将新任务结构指针放入任务数组的 nr 项中. 
 	// 其中 nr 为任务号, 由前面 find_empty_process() 返回. 
-	// 接着把当前进程任务结构复制到刚申请到的内存页面 p 开始处.
-	p = (struct task_struct *) get_free_page();
+	// 接着把当前进程任务结构复制到刚申请到的内存页面 p 开始处(p 指向新申请的空闲物理页面地址).
+	p = (struct task_struct *) get_free_page(); 	// 获取空闲的页面的物理起始地址(mem_map[i] 中标记为未使用的页面的物理地址)
 	if (!p)
 		return -EAGAIN;
 	task[nr] = p; 							// task_struct * task[NR_TASKS] 定义在 sched.c 中

@@ -232,7 +232,8 @@ int swap_out(void)
 // 如果已经没有可用物理页面, 则调用执行交换处理. 然后再次申请页面.
 // 输入: %1(ax = 0) - 0; %2(LOW_MEM) 内存字节位图管理的起始位置; 
 // 		%3(cx = PAGING_PAGES); %4(edi = mem_map + PAGING_PAGES - 1).
-// 输出: 返回 %0(ax = 物理页面起始地址). 函数返回新页面的物理地址.
+// 输出: 返回 %0(ax = 物理页面起始地址). 
+// 函数返回空闲页面的物理地址(页面起始地址).
 // 上面 %4 寄存器实际指向 mem_map[] 内存字节位图的最后一个字节. 
 // 本函数从位图末端开始向前扫描所有页面标志(页面总数为 PAGING_PAGES), 
 // 若有页面空闲(内存位图字节为 0)则返回页面地址. 
@@ -247,23 +248,23 @@ register unsigned long __res;
 // 首先在内存映射字节位图(mem_map[])中查找址为 0 的字节项, 然后把对应物理内存页面清零. 
 // 如果得到的页面地址大于实际物理内存容量则重新寻找. 
 // 如果没有找到空闲页面则去调用执行交换处理, 并重新查找. 最后返回空闲物理页面地址.
-// repne; scasb 用于搜索 edi 指向的内存(mem_map + PAGEING_PAGES - 1)[mem_map[] 中最后一项开始]中与 eax 中相同的数据(0).
+// repne; scasb 用于搜索 edi 指向的内存(mem_map[PAGEING_PAGES-1])[即 mem_map 中最后一项开始]中与 eax 中相同的数据(0).
 repeat:
 	__asm__(
-		"std ; repne ; scasb						/* 置方向位, al(0) 与对应每个页面的(di)内容比较, */\n\t"
+		"std ; repne ; scasb						/* 置方向位, al(0) 与对应每个页面的(di)内容比较, 每循环一次 ecx 都会递减, 最终 ecx 等于 mem_map 中为 0 的最高项的下标(3807) */\n\t"
 		"jne 1f										/* 如果没有等于 0 的字节, 则跳转结束(返回0). */\n\t"
-		"movb $1, 1(%%edi)							/* $1 =>[1 + edi], 将对应页面内存映像字节(mem_map[i])置 1. */\n\t"
-		"sall $12, %%ecx							/* 页面数 * 4K = 相对页面起始地址. */\n\t"
-		"addl %2, %%ecx								/* 再加上低端内存地址, 得页面实际物理起始地址. */\n\t"
-		"movl %%ecx, %%edx							/* 将页面实际起始地址 -> edx 寄存器. */\n\t"
+		"movb $1, 1(%%edi)							/* edi 指向对应的 mem_map 数组项的内存地址, [edi + 1] = mem_map[i] = 1, 将对应页面内存映像字节(mem_map[i])置 1. */\n\t"
+		"sall $12, %%ecx							/* 空闲页面号(3807) * 4K = 空闲页面起始地址. */\n\t"
+		"addl %2, %%ecx								/* 再加上低端内存地址(LOW_MEM = 1MB, 参考 PAGING_MEMORY 就可以知道为什么 +1MB), 得到空闲页面实际物理起始地址. */\n\t"
+		"movl %%ecx, %%edx							/* 将空闲页面实际起始地址放到 edx 寄存器. */\n\t"
 		"movl $1024, %%ecx							/* 寄存器 ecx 置计数值 1024. */\n\t"
-		"leal 4092(%%edx), %%edi					/* 将 4092 + edx 的位置 -> edi(该页面的末端). */\n\t"
+		"leal 4092(%%edx), %%edi					/* 将 4092 + edx 的地址放入 edi 寄存器(该页面的末端). */\n\t"
 		"rep ; stosl								/* 将 edi 所指内存清零(反方向, 即将该页面清零). */\n\t"
 		"movl %%edx, %%eax							/* 将页面起始地址 -> eax(返回值). */\n\t"
 		"1:\n\t"
 		"cld"
 		:"=a" (__res) 									/* =a 表示这是输出寄存器 %0(eax) */
-		:"0" (0), "i" (LOW_MEM), "c" (PAGING_PAGES), 	/* 输入寄存器列表: %1(=%0=eax), %2, %3(ecx)*/
+		:"0" (0), "i" (LOW_MEM), "c" (PAGING_PAGES), 	/* 输入寄存器列表: %1(=%0=eax), %2, %3(ecx); LOW_MEM = 1MB; PAGING_PAGES = 3840 */
 		"D" (mem_map + PAGING_PAGES - 1) 				/* %4(edi) */
 		:"dx");
 	if (__res >= HIGH_MEMORY)						// 页面地址大于实际内存容量则重新寻找

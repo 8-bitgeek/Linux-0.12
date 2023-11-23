@@ -104,7 +104,7 @@ int jiffies_offset = 0;								/* # clock ticks to add to get "true
  * 为调整时钟而需要增加的时钟滴答, 以获得"精确时间". 这些调整用滴答数的总和不应该超过 1 秒. 
  * 这样做是为了那些对时间精确度要求苛刻的人, 他们培养喜欢自己的机器时间与 WWV 同步 :-
  */
-struct task_struct *current = &(init_task.task);	// 当前任务指针(初始化指向任务0)
+struct task_struct *current = &(init_task.task);	// 当前任务指针(初始化时指向任务 0)
 struct task_struct *last_task_used_math = NULL;		// 使用过协处理器任务的指针.
 
 // 定义任务指针数组. 第 1 项被初始化指向初始任务(任务 0)的任务数据结构.

@@ -250,7 +250,7 @@ struct task_struct {
  * INIT_TASK 用于设置第 1 个任务表, 若想修改, 责任自负!
  * 基址 Base = 0, 段长 limit = 0x9ffff(= 640KB).
  */
-// 对应上面任务结构的第 1 个任务的信息.
+// 对应上面任务结构的第 1 个任务(TASK-0)的信息.
 #define INIT_TASK {\
 	/* state etc */ 0, 15, 15, \
 	/* signals */	0, {{},}, 0, \
@@ -285,7 +285,7 @@ struct task_struct {
 // 至于 DPL 要去对应的 LDT 中看, 即上面的 ldt 字段中的 0x9f,0xc0fa00 = 0xc0fa009f 对应的 DPL = 0xf = 0b1-11-1  对应的 DPL = 11 = 3, 即 DPL 为 3.
 // tss 结构中的第二项为 esp0 = PAGE_SIZE+(long)&init_task, ss0 = 0x10.
 
-extern struct task_struct *task[NR_TASKS];								//　任务指针数组.
+extern struct task_struct *task[NR_TASKS];								// 任务指针数组.
 extern struct task_struct *last_task_used_math;							// 上一个使用过协处理器的进程
 extern struct task_struct *current;										// 当前运行进程结构指针变量.
 //extern struct task_struct *test_task;
