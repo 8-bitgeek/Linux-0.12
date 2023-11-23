@@ -68,13 +68,13 @@ int copy_mem(int nr, struct task_struct * p)
 	unsigned long old_data_base, new_data_base, data_limit;
 	unsigned long old_code_base, new_code_base, code_limit;
 
-	// 首先取当前进程局部描述符表中代码段描述符和数据段描述符项中的段限长(字节数).
-	// 0x0f 是代码段选择符; 0x17 是数据段选择符. 然后取当前进程代码段和数据段的线性地址空间中的基地址. 
+	// 首先取当前进程局部描述符表(LDT)中代码段描述符和数据段描述符项中的段限长(字节数).
+	// 0x0f 是局部代码段选择符; 0x17 是局部数据段选择符. 然后取当前进程代码段和数据段的线性地址空间中的基地址. 
 	// 由于 Linux0.12 内核还不支持代码和数据段分立的情况,
 	// 因此这里需要检查代码段和数据段基址是否都相同, 并且要求数据段的长度至少不小于代码段的长度, 否则内核显示出错信息, 并停止运行.
 	// get_limit() 和 get_base() 定义在 include/linux/sched.h.
-	code_limit = get_limit(0x0f);
-	data_limit = get_limit(0x17);
+	code_limit = get_limit(0x0f); 							// 0x0f = 0b-00001-1-11 (LDT 表项 1[从 0 开始] 局部代码段, 特权级 3)
+	data_limit = get_limit(0x17); 							// 0x17 = 0b-00010-1-11 (LDT 表项 2, 局部数据段, 特权级 3)
 	old_code_base = get_base(current->ldt[1]);
 	old_data_base = get_base(current->ldt[2]);
 	if (old_data_base != old_code_base)
@@ -149,18 +149,18 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	p->start_time = jiffies;				// 进程开始运行时间(当前开机时间的滴答数 [每 10ms/滴答]).
 	// 再修改任务状态段 TSS 数据. 由于系统给任务结构 p 分配了 1 页新内存, 
 	// 所以(PAGE_SIZE + (long) p)让 esp0 正好指向该页末端. 
-	// ss0:esp0 用作程序在内核态执行时的栈. 
+	// ss0:esp0 用作程序在内核态执行时的栈(特权级 0). 
 	// 另外, 在第 3 章中我们已经知道, 每个任务在 GDT 表中都有两个段描述符, 
 	// 一个是任务的 TSS 段描述符, 另一个是任务的 LDT 表段描述符.
 	// 下面语句就是把 GDT 中本任务 LDT 段描述符的选择符保存在本任务的 TSS 段.
 	// 当 CPU 执行切换任务时, 会自动从 TSS 中把 LDT 段描述符的选择符加载到 ldtr 寄存器中.
 	p->tss.back_link = 0;
-	p->tss.esp0 = PAGE_SIZE + (long) p;		// 任务内核态栈指针.
+	p->tss.esp0 = PAGE_SIZE + (long) p;		// 任务内核态栈指针(指向该物理页面的末端处).
 	p->tss.ss0 = 0x10;              		// 内核态栈的段选择符(与内核数据段相同).
 	p->tss.eip = eip;						// 指令代码指针.
 	p->tss.eflags = eflags;					// 标志寄存器.
 	p->tss.eax = 0;							// 这是当 fork() 返回时新进程会返回 0 的原因所在.
-	p->tss.ecx = ecx;
+	p->tss.ecx = ecx; 						// 以下几个寄存器是由参数传入
 	p->tss.edx = edx;
 	p->tss.ebx = ebx;
 	p->tss.esp = esp;
@@ -168,12 +168,12 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	p->tss.esi = esi;
 	p->tss.edi = edi;
 	p->tss.es = es & 0xffff;				// 段寄存器仅 16 位有效.
-	p->tss.cs = cs & 0xffff;
+	p->tss.cs = cs & 0xffff;				// 注意: TASK-1 仍然使用了内核代码段, cs = 0xf
 	p->tss.ss = ss & 0xffff;
 	p->tss.ds = ds & 0xffff;
 	p->tss.fs = fs & 0xffff;
 	p->tss.gs = gs & 0xffff;
-	p->tss.ldt = _LDT(nr);					// 任务局部表描述符的选择符(LDT 描述符在 GET 中).
+	p->tss.ldt = _LDT(nr);					// 任务局部表描述符的选择符(LDT 描述符在 GDT 中).
 	p->tss.trace_bitmap = 0x80000000;		// (高 16 位有效).
 	// 如果当前任务使用了协处理器, 就保存其上下文. 汇编指令 clts 用于清除控制寄存器 CR0 中的任务已交换(TS)标志. 
 	// 每当发生任务切换, CPU 都会设置该标志. 该标志用于管理数学协处理器: 如果该标志置位, 那么每个 ESC 指令都会被捕获(异常 7). 
@@ -183,8 +183,9 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	// 指令 fnsave 用于把协处理器的所有状态保存到目的操作数指定的内存区域中(tss.i387).
 	if (last_task_used_math == current)
 		__asm__("clts ; fnsave %0 ; frstor %0"::"m" (p->tss.i387));
-	// 接下来复制进程页表. 即在线性地址空间设置新任务代码段和数据段描述符中的基址和限长, 并复制页表. 
-	// 如果出错(返回值不是 0), 则复位任务数组中相应项并释放为该新任务分配的用于任务结构的内存页.
+
+	/* 接下来复制进程页表. 即在线性地址空间设置新任务代码段和数据段描述符中的基址和限长, 并复制页表. 
+	   如果出错(返回值不是 0), 则复位任务数组中相应项并释放为该新任务分配的用于任务结构的内存页. */
 	if (copy_mem(nr, p)) {					// 返回不为 0 表示出错.
 		task[nr] = NULL;
 		free_page((long) p);

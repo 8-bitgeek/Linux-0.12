@@ -460,7 +460,7 @@ static inline unsigned long _get_base(char * addr){
 // 取局部描述符表中 ldt 所指段描述符中的基地址.
 #define get_base(ldt) _get_base( ((char *)&(ldt)) )
 
-// 取段选择符 segment 指定的描述符中的段限长值.
+// 取段选择符 segment 指定的 **描述符** 中的段限长值.
 // 指令 lsll 是 Load Segment Limit 的缩写它从指定段描述符中取出分散的限长比特位拼成完整的段限长值放入指定寄存器中. 
 // 所得的段限长是实际字节数减 1, 因此这里还需要加 1 后返回.
 // %0 - 存放段长值(字节数); %1 - 段选择符 segment.
