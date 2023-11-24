@@ -75,18 +75,18 @@ int copy_mem(int nr, struct task_struct * p)
 	// get_limit() 和 get_base() 定义在 include/linux/sched.h.
 	code_limit = get_limit(0x0f); 							// 0x0f = 0b-00001-1-11 (LDT 表项 1[从 0 开始] 局部代码段, 特权级 3)
 	data_limit = get_limit(0x17); 							// 0x17 = 0b-00010-1-11 (LDT 表项 2, 局部数据段, 特权级 3)
-	old_code_base = get_base(current->ldt[1]);
-	old_data_base = get_base(current->ldt[2]);
+	old_code_base = get_base(current->ldt[1]); 				// 这里的 ldt 是 task_struct 结构中的 ldt 字段, 不是 task_struct->tss.ldt 段选择符.
+	old_data_base = get_base(current->ldt[2]); 				// 获取父进程的代码段和数据段基地址
 	if (old_data_base != old_code_base)
 		panic("We don't support separate I&D");
 	if (data_limit < code_limit)
 		panic("Bad data_limit");
-	// 然后设置创建中的新进程在线性地址空间中的基地址等于(64MB * 其任务号), 并用该值设置新进程局部描述符表中段描述符中的基地址. 
+	// 然后设置创建中的新进程在线性地址空间中的基地址等于(64MB * 其任务号[nr]), 并用该值设置新进程局部描述符表(LDT)中段描述符中的基地址. 
 	// 接着设置新进程的页目录表项和页表项, 即复制当前进程(父进程)的页目录表项和页表项. 此时子进程共享父进程的内存页面.
 	// 正常情况下 copy_page_tables() 返回 0, 否则表示出错, 则释放刚申请的页表项.
 	new_data_base = new_code_base = nr * TASK_SIZE;
-	p->start_code = new_code_base;
-	set_base(p->ldt[1], new_code_base);
+	p->start_code = new_code_base; 							// nr = 1 时, start_code = 64 * 1024 * 1024
+	set_base(p->ldt[1], new_code_base); 					// 因为 Linux-0.12 中所有进程共用同一个页目录表, 所以, 共同同一个线性地址(虚拟地址是私有的)?
 	set_base(p->ldt[2], new_data_base);
 	if (copy_page_tables(old_data_base, new_data_base, data_limit)) {
 		free_page_tables(new_data_base, data_limit);
