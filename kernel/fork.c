@@ -74,7 +74,7 @@ int copy_mem(int nr, struct task_struct * p)
 	// 因此这里需要检查代码段和数据段基址是否都相同, 并且要求数据段的长度至少不小于代码段的长度, 否则内核显示出错信息, 并停止运行.
 	// get_limit() 和 get_base() 定义在 include/linux/sched.h.
 	code_limit = get_limit(0x0f); 							// 0x0f = 0b-00001-1-11 (LDT 表项 1[从 0 开始] 局部代码段, 特权级 3)
-	data_limit = get_limit(0x17); 							// 0x17 = 0b-00010-1-11 (LDT 表项 2, 局部数据段, 特权级 3)
+	data_limit = get_limit(0x17); 							// 父进程(当前进程)的数据段长度: 0x17 = 0b-00010-1-11 (LDT 表项 2, 局部数据段, 特权级 3)
 	old_code_base = get_base(current->ldt[1]); 				// 这里的 ldt 是 task_struct 结构中的 ldt 字段, 不是 task_struct->tss.ldt 段选择符.
 	old_data_base = get_base(current->ldt[2]); 				// 获取父进程的代码段和数据段基地址
 	if (old_data_base != old_code_base)

@@ -216,13 +216,14 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 	// 然后 & 0xffc(低两位为 0) 得到页目录项的地址.
 	from_dir = (unsigned long *) ((from >> 20) & 0xffc); 				/* _pg_dir = 0 */	// 0xffc = 0b-1111-1111-1100
 	to_dir = (unsigned long *) ((to >> 20) & 0xffc); 					
-	size = ((unsigned) (size + 0x3fffff)) >> 22; 						// 占用的页目录项数(之所以要 + 0x3fffff 是因为确保至少要占一项 0x3fffff >> 22 = 0)
+ 	// 要拷贝的数据段(父进程也即当前进程)占用的页目录项数(之所以要 + 0x3fffff 是因为确保至少要占一项 0x3fffff >> 22 = 0)
+	size = ((unsigned) (size + 0x3fffff)) >> 22;
 	// 在得到了源起始目录项指针 from_dir 和目的起始目录项指针 to_dir 以及需要复制的页表个数 size 后, 下面开始对每个页目录项依次申请 1 页内存来保存对应的面表,
 	// 并且开始页表项复制操作. 如果目的目录项指定的页表已经存在(P = 1), 则出错死机. 如果源目录项无效, 即指定的页表不存在(P = 0), 则继续循环处理下一个页目录项.
 	for( ; size-- > 0 ; from_dir++, to_dir++) {
-		if (1 & *to_dir)
+		if (1 & *to_dir) 												// 不允许在页目录项有内容的情况下覆盖
 			panic("copy_page_tables: already exist");
-		if (!(1 & *from_dir))
+		if (!(1 & *from_dir)) 											// 如果源页目录项中没有内容, 则继续操作下一个页目录项
 			continue;
 		// 在验证了当前源目录项和目的项正常之后, 取源目录项中页表地址 from_page_table. 为了保存目的目录项对应的页表, 需要在主内存区中申请1页空闲内存页. 
 		// 如果取空闲页面函数 get_free_page() 返回 0, 则说明没有申请到空闲内存页面, 可能是内存不够. 于是返回 -1 值退出.
