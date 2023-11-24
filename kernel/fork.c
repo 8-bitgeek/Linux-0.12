@@ -138,7 +138,7 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	// 然后设置新进程的进程号 pid, 并初始化进程运行时间片值等于其 priorty 值(一般为 16 个嘀嗒).
 	// 接着复位新进程的信号位图, 报警定时值, 会话(session)领导标志 leader, 进程及其子进程在内核和用户态运行时间统计值, 
 	// 还设置进程开始运行的系统时间 start_time.
-	p->state = TASK_UNINTERRUPTIBLE;
+	p->state = TASK_UNINTERRUPTIBLE; 		// 防止时钟中断切换到该进程执行. 参见: (kernel/sched.c#schedule 方法)
 	p->pid = last_pid;						// 新进程号. 也由 find_empty_process() 得到.
 	p->counter = p->priority;				// 运行时间片值(单位: 嘀嗒数)(越大运行时间越长).
 	p->signal = 0;							// 信号位图.
