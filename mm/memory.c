@@ -205,14 +205,18 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 	unsigned long nr;
 
 	// 首先检测参数给出的源地址 from 和目的地址 to 的有效性. 源地址和目的地址都需要在 4MB 内存边界地址上. 否则出错死机. 
-	// 作这样的要求是因为一个页表的 1024 项可管理 4MB 内存. 源地址 from 和目的地址 to 只有满足这个要求才能保证从一个页表的第 1 项开始复制页表项, 
-	// 并且新页表最初所有项都是有效的. 然后取得源地址和目的地址的起始目录项指针(from_dir 和 do_dir). 
+	// 作这样的要求是因为一个页表的 1024 项可管理 4MB 内存. 
+	// 源地址 from 和目的地址 to 只有满足这个要求才能保证从一个页表的第 1 项开始复制页表项, 并且新页表最初所有项都是有效的. 
+	// 然后取得源地址和目的地址的起始目录项指针(from_dir 和 do_dir). 
 	// 再根据参数给出的长度 size 计算要复制的内存块占用的页表数(即目录项数)
-	if ((from & 0x3fffff) || (to & 0x3fffff))
+	if ((from & 0x3fffff) || (to & 0x3fffff)) 							// x & 11-1111-1111-1111-1111-1111 == 0 表示在 4MB 边界
 		panic("copy_page_tables called with wrong alignment");
-	from_dir = (unsigned long *) ((from >> 20) & 0xffc); 				/* _pg_dir = 0 */
-	to_dir = (unsigned long *) ((to >> 20) & 0xffc);
-	size = ((unsigned) (size + 0x3fffff)) >> 22;
+	// 获取源地址和目的地址的起始页目录项指针(页目录项地址).
+	// 右移 20 位(应该是右移 22 位, 但是每项占 4 字节, 还要左移 2 位得到地址, 此处就直接右移 20 位再将低 2 位 &0[0xffc] 得到地址)得到页目录项编号, 
+	// 然后 & 0xffc(低两位为 0) 得到页目录项的地址.
+	from_dir = (unsigned long *) ((from >> 20) & 0xffc); 				/* _pg_dir = 0 */	// 0xffc = 0b-1111-1111-1100
+	to_dir = (unsigned long *) ((to >> 20) & 0xffc); 					
+	size = ((unsigned) (size + 0x3fffff)) >> 22; 						// 占用的页目录项数(之所以要 + 0x3fffff 是因为确保至少要占一项 0x3fffff >> 22 = 0)
 	// 在得到了源起始目录项指针 from_dir 和目的起始目录项指针 to_dir 以及需要复制的页表个数 size 后, 下面开始对每个页目录项依次申请 1 页内存来保存对应的面表,
 	// 并且开始页表项复制操作. 如果目的目录项指定的页表已经存在(P = 1), 则出错死机. 如果源目录项无效, 即指定的页表不存在(P = 0), 则继续循环处理下一个页目录项.
 	for( ; size-- > 0 ; from_dir++, to_dir++) {
