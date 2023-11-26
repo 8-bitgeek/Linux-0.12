@@ -216,7 +216,7 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	// "gdt+(nr<<1)+FIRST_TSS_ENTRY" 是任务 nr 的 TSS 描述符项在全局表中的地址.
 	// 因为每个任务占用 GDT 表中 2 项, 因此上式中要包括 '(nr<<1)'.
 	// 请注意, 在任务切换时, 任务寄存器 tr 会由 CPU 自动加载.
-	set_tss_desc(gdt + (nr << 1) + FIRST_TSS_ENTRY, &(p->tss));
+	set_tss_desc(gdt + (nr << 1) + FIRST_TSS_ENTRY, &(p->tss)); 		// 在 GDT 中设置新进程的 tss 和 ldt 描述符
 	set_ldt_desc(gdt + (nr << 1) + FIRST_LDT_ENTRY, &(p->ldt));
 	p->p_pptr = current;				// 设置新进程的父进程指针.
 	p->p_cptr = 0;						// 复位新进程的最新子进程指针.
@@ -225,7 +225,7 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 	if (p->p_osptr)						// 若新进程有老兄兄弟进程, 则让其年轻进程兄弟指针指向新进程
 		p->p_osptr->p_ysptr = p;
 	current->p_cptr = p;				// 让当前进程最新子进程指针指向新进程.
-	p->state = TASK_RUNNING;			/* do this last, just in case */  /* 设置进程状态为待运行状态栏 */
+	p->state = TASK_RUNNING;			/* do this last, just in case */  /* 设置进程状态为待运行状态 */
 	Log(LOG_INFO_TYPE, "<<<<< fork new process current_pid = %d, child_pid = %d, nr = %d >>>>>\n", current->pid, p->pid, nr);
 	return last_pid;        			// 返回新进程号
 }
