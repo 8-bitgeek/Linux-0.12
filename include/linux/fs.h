@@ -107,38 +107,45 @@ struct buffer_head {
 // 磁盘上的索引节点(i 节点)数据结构.
 struct d_inode {
 	unsigned short i_mode;					// 文件类型和属性(rwx 位).
-	unsigned short i_uid;					// 用户 id(文件拥有者标识符).
+	unsigned short i_uid;					// 文件宿主的用户 id(文件拥有者标识符).
 	unsigned long i_size;					// 文件大小(字节数).
 	unsigned long i_time;					// 修改时间(自 1970.1.1.:0 算起, 秒).
-	unsigned char i_gid;					// 组 id(文件拥有者所在的组).
-	unsigned char i_nlinks;					// 链接数(多少个文件目录项指向该 i 节点).
-	unsigned short i_zone[9];				// 直接(0-6), 间接(7)或双重间接(8)逻辑块号.
-											// zone 是区的意思, 可译成区段, 或逻辑块.
+	unsigned char i_gid;					// 文件宿主的组 id(文件拥有者所在的组).
+	unsigned char i_nlinks;					// 链接数(有多少个文件目录项指向该 i 节点).
+	unsigned short i_zone[9];				// 文件所占用的盘上逻辑块号数组. 
+											// 其中, zone[0]-zone[6] 是直接块号;
+											// zone[7] 是一次间接块号; zone[8] 是二次(双重)间接块号.
+											// 注: zone 是区的意思, 可译成区块或逻辑块.
+											// 对于设备特殊文件的 i 节点, 其 zone[0] 中存放的是该文件名所指设备的设备号.
 };
 
 // 这时内存中的 i 节点结构. 前 7 项与 d_inode 完全一样.
 struct m_inode {
 	unsigned short i_mode;								// 文件类型和属性(rwx 位).
-	unsigned short i_uid;								// 用户 id(文件拥有者标识符).
+	unsigned short i_uid;								// 文件宿主的用户 id(文件拥有者标识符).
 	unsigned long i_size;								// 文件大小(字节数).
 	unsigned long i_mtime;								// 修改时间(自 1970.1.1.:0 算起, 秒).
-	unsigned char i_gid;								// 组 id(文件拥有者所在的组).
-	unsigned char i_nlinks;								// 链接数(多少个文件目录项指向该 i 节点).
-	unsigned short i_zone[9];							// 直接(0-6), 间接(7)或双重间接(8)逻辑块号.
+	unsigned char i_gid;								// 文件宿主的组 id(文件拥有者所在的组).
+	unsigned char i_nlinks;								// 链接数(有多少个文件目录项指向该 i 节点).
+	unsigned short i_zone[9];							// 文件所占用的盘上逻辑块号数组. 
+														// 其中, zone[0]-zone[6] 是直接块号;
+														// zone[7] 是一次间接块号; zone[8] 是二次(双重)间接块号.
+														// 注: zone 是区的意思, 可译成区块或逻辑块.
+														// 对于设备特殊文件的 i 节点, 其 zone[0] 中存放的是该文件名所指设备的设备号.
 	/* these are in memory also */
 	struct task_struct * i_wait;						// 等待该 i 节点的进程.
 	struct task_struct * i_wait2;						/* for pipes */
 	unsigned long i_atime;								// 最后访问时间.
-	unsigned long i_ctime;								// i 节点自身修改时间.
+	unsigned long i_ctime;								// i 节点自身被修改的时间.
 	unsigned short i_dev;								// i 节点所在的设备号.
 	unsigned short i_num;								// i 节点号.
-	unsigned short i_count;								// i 节点被使用的次数, 0 表示该 i 节点空闲.
-	unsigned char i_lock;								// 锁定标志.
-	unsigned char i_dirt;								// 已修改(脏)标志.
-	unsigned char i_pipe;								// 管道标志.
-	unsigned char i_mount;								// 安装标志.
-	unsigned char i_seek;								// 搜寻标志(lseek 时).
-	unsigned char i_update;								// 更新标志.
+	unsigned short i_count;								// i 节点被引用的次数, 0 表示该 i 节点空闲.
+	unsigned char i_lock;								// i 节点被锁定标志.
+	unsigned char i_dirt;								// i 节点已修改(脏)标志.
+	unsigned char i_pipe;								// i 节点用作管道标志.
+	unsigned char i_mount;								// i 节点安装了其它文件系统标志.
+	unsigned char i_seek;								// 搜索标志(lseek 操作时).
+	unsigned char i_update;								// i 节点已更新标志.
 };
 
 // 文件结构(用于在文件句柄与 i 节点之间建立关系).
@@ -152,22 +159,22 @@ struct file {
 
 // 内存中磁盘超级块结构.
 struct super_block {
-	unsigned short s_ninodes;							// 节点数.
-	unsigned short s_nzones;							// 逻辑块数.
+	unsigned short s_ninodes;							// i 节点数.
+	unsigned short s_nzones;							// 逻辑块数(或称为区块数).
 	unsigned short s_imap_blocks;						// i 节点位图所占用的数据块数.
 	unsigned short s_zmap_blocks;						// 逻辑块位图所占用的数据块数.
-	unsigned short s_firstdatazone;						// 第一个数据逻辑块号.
+	unsigned short s_firstdatazone;						// 数据区中第一个逻辑块块号.
 	unsigned short s_log_zone_size;						// log(数据块数/逻辑块). (以 2 为底)
-	unsigned long s_max_size;							// 文件最大长度.
-	unsigned short s_magic;								// 文件系统魔数.
+	unsigned long s_max_size;							// 文件的最大长度.
+	unsigned short s_magic;								// 文件系统魔数(0x137f).
 	/* These are only in memory */
-	struct buffer_head * s_imap[8];						// i 节点位图缓冲块指针数组(占用 8 块, 可表示 64M).
-	struct buffer_head * s_zmap[8];						// 逻辑块位图缓冲块指针数组(占用 8 块).
+	struct buffer_head * s_imap[8];						// i 节点位图在高速缓冲块指针数组(占用 8 块, 可表示 64M).
+	struct buffer_head * s_zmap[8];						// 逻辑块位图在高速缓冲块指针数组(占用 8 块).
 	unsigned short s_dev;								// 超级块所在设备号.
 	struct m_inode * s_isup;							// 被安装的文件系统根目录的 i 节点. (isup-superi)
-	struct m_inode * s_imount;							// 被安装到的 i 节点.
+	struct m_inode * s_imount;							// 该文件系统被安装到的 i 节点.
 	unsigned long s_time;								// 修改时间.
-	struct task_struct * s_wait;						// 等待该超级块的进程.
+	struct task_struct * s_wait;						// 等待该超级块的进程指针.
 	unsigned char s_lock;								// 被锁定标志.
 	unsigned char s_rd_only;							// 只读标志.
 	unsigned char s_dirt;								// 已修改(脏)标志.
