@@ -157,8 +157,8 @@ sys_call:
 	cmpl $0, counter(%eax)			# counter, 如果当前进程剩余的执行时间为 0 则重新进行调度进程执行
 	je reschedule
 
-# 以下这段代码执行从系统调用 C 函数返回后, 对信号进行识别处理. 其它中断服务程序退出时也将跳转到这里进行处理后才退出中断过程,
-# 例如后面的处理器出错中断 int 16.
+# 以下这段代码执行从系统调用 C 函数返回后, 对信号进行识别处理. 
+# 其它中断服务程序退出时也将跳转到这里进行处理后才退出中断过程, 例如后面的处理器出错中断 int 16.
 # 首先判断当前任务是不是初始任务 task0, 如果是则不必对其进行信号量方面的处理, 直接返回.
 # task 对应 C 程序中的 task[] 数组, 直接引用 task 相当于引用 task[0].
 ret_from_sys_call:
@@ -193,7 +193,7 @@ ret_from_sys_call:
 	popl %ecx						# 弹出入栈信号值.
 	testl %eax, %eax				# 测试返回值, 若不为 0 则跳转到前面标号 2 处.
 	jne 2b							# see if we need to switch tasks, or do more signals
-3:	popl %eax						# eax 中含有第 100 行入栈的系统调用返回值.
+3:	popl %eax						# eax 中含有第 147 行(`pushl %eax`)入栈的系统调用返回值.
 	popl %ebx
 	popl %ecx
 	popl %edx

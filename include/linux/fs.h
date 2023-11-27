@@ -105,6 +105,7 @@ struct buffer_head {
 };
 
 // 磁盘上的索引节点(i 节点)数据结构.
+// short: 2bytes, long: 4 bytes, char: 1 bytes. 共 2 + 2 + 4 + 4 + 1 + 1 + 2 * 9 = 32Bytes.
 struct d_inode {
 	unsigned short i_mode;					// 文件类型和属性(rwx 位).
 	unsigned short i_uid;					// 文件宿主的用户 id(文件拥有者标识符).
@@ -112,7 +113,7 @@ struct d_inode {
 	unsigned long i_time;					// 修改时间(自 1970.1.1.:0 算起, 秒).
 	unsigned char i_gid;					// 文件宿主的组 id(文件拥有者所在的组).
 	unsigned char i_nlinks;					// 链接数(有多少个文件目录项指向该 i 节点).
-	unsigned short i_zone[9];				// 文件所占用的盘上逻辑块号数组. 
+	unsigned short i_zone[9];				// 文件所占用的盘上逻辑块号的数组. 
 											// 其中, zone[0]-zone[6] 是直接块号;
 											// zone[7] 是一次间接块号; zone[8] 是二次(双重)间接块号.
 											// 注: zone 是区的意思, 可译成区块或逻辑块.
@@ -127,7 +128,7 @@ struct m_inode {
 	unsigned long i_mtime;								// 修改时间(自 1970.1.1.:0 算起, 秒).
 	unsigned char i_gid;								// 文件宿主的组 id(文件拥有者所在的组).
 	unsigned char i_nlinks;								// 链接数(有多少个文件目录项指向该 i 节点).
-	unsigned short i_zone[9];							// 文件所占用的盘上逻辑块号数组. 
+	unsigned short i_zone[9];							// 文件所占用的盘上逻辑块号的数组. 
 														// 其中, zone[0]-zone[6] 是直接块号;
 														// zone[7] 是一次间接块号; zone[8] 是二次(双重)间接块号.
 														// 注: zone 是区的意思, 可译成区块或逻辑块.
