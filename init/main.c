@@ -94,7 +94,8 @@ extern long rd_init(long mem_start, int length);	// 虚拟盘初始化(blk_drv/r
 extern long kernel_mktime(struct tm * tm);			// 计算系统开机启动时间(秒)
 
 // fork 系统调用函数, 该函数作为 static inline 表示内联函数, 主要用来在进程 0 里面创建进程 1 的时候内联, 
-// 使进程 0 在生成进程 1 的时候不使用自己的用户堆栈
+// 使进程 0 在生成进程 1 的时候不使用自己的用户堆栈.
+// 该内联函数返回值为新进程的 pid(last_pid) 或者 -1(获取不到正确的新进程号时).
 static inline long fork_for_process0() {
 	long __res;
 	__asm__ volatile (
@@ -102,7 +103,7 @@ static inline long fork_for_process0() {
 		: "=a" (__res)  							/* 返回值 -> eax(__res) */  	// 返回值放入 __res 中
 		: "0" (2));  								/* 输入为系统中断调用号 __NR_name(2) */ 	// 输入寄存器为 eax(%0) = 2, 
 													/* 即调用 sys_call_table[2] 中的 sys_fork (kernel/sys_call.s) */
-	if (__res >= 0)  								/* 如果返回值 >=0, 则直接返回该值 */
+	if (__res >= 0)  								/* 如果返回值(新进程的 pid, 存放在 eax 中) >= 0, 则直接返回该值 */
 		return __res;
 	errno = -__res;  								/* 否则置出错号, 并返回 -1 */
 	return -1;
@@ -262,6 +263,7 @@ int main(void)										/* This really IS void, no error here. */
 	// 下面过程通过在堆栈中设置的参数, 利用中断返回指令启动任务 0 执行.
 	move_to_user_mode();							// 移到用户模式下执行. (include/asm/system.h)
 	if (!fork_for_process0()) {						/* we count on this going ok */
+		// 如果上面可以正常创建新进程时, init() 方法不会在这里执行.
 		init();										// 在新建的子进程(任务 1 即 init 进程)中执行.
 	}
 	/*

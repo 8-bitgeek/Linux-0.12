@@ -323,7 +323,7 @@ sys_fork:
 	pushl %eax 						# eax 中是调用 copy_process 时的第一个参数 nr
 	call copy_process				# 调用 C 函数 copy_process()(kernel/fork.c)
 	addl $20, %esp					# 丢弃这里所有压栈内容.
-1:	ret
+1:	ret 							# 返回值是新进程的 pid(last_pid), 存放在 eax 中.
 
 # int 46 -- (int 0x2E) 硬盘中断处理程序, 响应硬盘中断请求 IRQ14.
 # 当请求的硬盘操作完成或出错就会发出此中断信号. (参见 kernel/blk_drv/hd.c).
