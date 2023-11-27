@@ -103,6 +103,8 @@ static inline long fork_for_process0() {
 		: "=a" (__res)  							/* 返回值 -> eax(__res) */  	// 返回值放入 __res 中
 		: "0" (2));  								/* 输入为系统中断调用号 __NR_name(2) */ 	// 输入寄存器为 eax(%0) = 2, 
 													/* 即调用 sys_call_table[2] 中的 sys_fork (kernel/sys_call.s) */
+
+	// 从 fork_for_process0() 返回时, cs = 0xf = 0b-0000-1-1-11 ==> LDT 中第一项(代码段), CPL = 3.
 	if (__res >= 0)  								/* 如果返回值(新进程的 pid, 存放在 eax 中) >= 0, 则直接返回该值 */
 		return __res;
 	errno = -__res;  								/* 否则置出错号, 并返回 -1 */
@@ -281,7 +283,8 @@ int main(void)										/* This really IS void, no error here. */
 	// pause() 系统调用(kernel/sched.c)会把任务 0 转换成可中断等待状态, 再执行调度函数. 
 	// 但是调度函数只要发现系统中没有其他任务可以运行时就会切换到任务 0, 是不信赖于任务 0 的状态.
 	for(;;)
-		__asm__("int $0x80"::"a" (__NR_pause):);					// 即执行系统调用 pause().
+		__asm__("int $0x80"::"a" (__NR_pause):);					// 即执行系统调用 pause() ==> include/linux/sys.h#sys_call_table[29].
+	// pause() 函数会调用 schedule() 函数来执行调度程序.
 }
 
 // 下面函数产生格式化信息并输出到标准输出设备 stdout(1), 这里是指屏幕上显示. 参数 '*fmt' 指定输出将采用的格式, 参见标准 C 语言书籍.
