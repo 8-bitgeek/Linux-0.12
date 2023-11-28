@@ -207,8 +207,8 @@ struct task_struct {
 	unsigned short gid;					// 组标识号(级 id)
 	unsigned short egid;				// 有效级 id
 	unsigned short sgid;				// 保存的组 id
-	unsigned long timeout;				// 内核定时超时值
-	unsigned long alarm;				// 报警定时值(单位: 滴答数)
+	unsigned long timeout;				// 内核定时超时值(单位: 滴答数) ==> 应该是指明该任务在系统运行多长时间后超时
+	unsigned long alarm;				// 报警定时值(单位: 滴答数) ==> 指明该任务在系统运行多长时间后时间到
 	long utime;							// 当前进程用户态总运行时间(滴答数)
 	long stime;							// 当前进程系统态总运行时间(滴答数)
 	long cutime;						// 子进程用户态运行时间
@@ -342,7 +342,7 @@ __asm__(\
 	:"a" (0), "i" (FIRST_TSS_ENTRY << 3))
 
 /*
- *	switch_to(n) should switch tasks to task nr n, first
+ * switch_to(n) should switch tasks to task nr n, first
  * checking that n isn't the current task, in which case it does nothing.
  * This also clears the TS-flag if the task we switched to has used
  * tha math co-processor latest.
@@ -355,9 +355,11 @@ __asm__(\
 // 输入: %0 - 指向 __tmp;		     %1 - 指向 __tmp.b 处, 用于存放新 TSS 选择符.
 //      dx - 新任务 n 的 TSS 选择符;  ecx - 新任务 n 的任务结构指针 task[n].
 // 其中临时数据结构 __tmp 用于组建远跳转(far jump)指令的操作数. 该操作数由4字节偏移地址和 2 字节的段选择符组成. 
-// 因此 __tmp 中 a 的值是 32 位偏移值, 而的低 2 字节是新 TSS 段的选择符(高 2 字节不用). 中转与 TSS 段选择符会造成任务切换到该 TSS 对应的进程.
+// 因此 __tmp 中 a 的值是 32 位偏移值, 而的低 2 字节是新 TSS 段的选择符(高 2 字节不用). 
+// 中转与 TSS 段选择符会造成任务切换到该 TSS 对应的进程.
 // 对于造成任务切换的长跳转, a 值无用. 177 行上的内存间接跳转指令使用 6 字节操作数作为跳转目的地的长指针, 
-// 其格式为: jmp 16 位段选择符 : 32 位偏移值. 但在内存中操作数的表示顺序与这里正好相反. 任务切换回来之后, 在判断原任务上次执行是否使用过协处理器时,
+// 其格式为: jmp 16 位段选择符 : 32 位偏移值. 但在内存中操作数的表示顺序与这里正好相反. 
+// 任务切换回来之后, 在判断原任务上次执行是否使用过协处理器时,
 // 是通过将原任务指针与保存在 last_task_used_math 变更中的上次使用过协处理器指针进行比较而作出的, 
 // 参见文件 kernel/sched.c 中有关 math_state_restore() 函数的说明.
 #define switch_to(n) { \

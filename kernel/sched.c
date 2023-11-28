@@ -179,19 +179,18 @@ void schedule(void)
 
 	// 从任务数组中最后一个任务开始循环检测 alarm. 在循环时跳过空指针项.
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
-		if (*p) {
-			// 如果设置过任务超时定时 timeout, 并且已经超时, 则复位超时定时值, 
-			// 并且如果任务处于可中断睡眠状态 TASK_INTERRUPTIBLE 下, 
-			// 将其置为就绪状态(TASK_RUNNING).
-			if ((*p)->timeout && (*p)->timeout < jiffies) {
+		if (*p) { 									// 任务指针(*p)不为 0, 即任务不为空.
+			// 如果设置过任务超时定时 timeout, 并且已经超时(timeout < jiffies), 则复位超时定时值; 
+			// 并且如果任务处于可中断睡眠状态 TASK_INTERRUPTIBLE 下, 将其置为就绪状态(TASK_RUNNING).
+			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
+			if ((*p)->timeout && (*p)->timeout < jiffies) { 	// TODO: 这里的 timeout < jiffies 代表什么意思?
 				(*p)->timeout = 0;
 				if ((*p)->state == TASK_INTERRUPTIBLE)
 					(*p)->state = TASK_RUNNING;
 			}
-			// 如果设置过任务的定时值 alarm, 并且已经过期(alarm<jiffies), 
+			// 如果设置过任务的 alarm 定时值, 并且已经过期(alarm < jiffies), 
 			// 则在信号位图中置 SIGALRM 信号, 即向任务发送 SIGALARM 信号. 
 			// 然后清 alarm. 该信号的默认操作是终止进程. 
-			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 定义在 sched.h 中.
 			if ((*p)->alarm && (*p)->alarm < jiffies) {
 				(*p)->signal |= (1 << (SIGALRM - 1));
 				(*p)->alarm = 0;
@@ -220,19 +219,19 @@ void schedule(void)
 				c = (*p)->counter, next = i;
 		}
 		// 如果比较得出有 counter 值不等于 0 的结果, 或者后方中没有一个可运行的任务存在(此时 c 仍然为 -1, next=0), 
-		// 则退出开始的循环, 执行 161 行上的任务切换操作. 
-		// 否则就根据每个任务的优先权值, 更新每一个任务的 counter 值, 然后回到 125 行重新比较. 
+		// 则退出开始的循环, 执行任务切换操作(下面的 switch_to()). 
+		// 否则就根据每个任务的优先权值, 更新每一个任务的 counter 值, 然后重新循环比较. 
 		// counter 值的计算方式为 counter = counter/2 + priority.
 		// 注意, 这里计算过程不考虑进程的状态.
-		if (c) break;
+		if (c) break; 					// 如果找到待运行的任务, 则跳出循环切换到其上执行.
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 			if (*p)
 				(*p)->counter = ((*p)->counter >> 1) + (*p)->priority;
 	}
 	// 用下面的宏(定义在 sched.h 中)把当前任务指针 current 指向任务号为 next 的任务, 并切换到该任务中运行. 
-	// 在 146 行上 next 被初始化为 0. 因此若系统中没有任何其他任务可运行时, 则 next 始终为 0. 
-	// 因此调度函数会在系统空闲时去执行任务 0. 此时任务 0 权执行 pause()
-	switch_to(next);					// 切换到任务号为 next 的任务, 并运行之.
+	// next 被初始化为 0. 因此若系统中没有任何其他任务可运行时, 则 next 始终为 0. 
+	// 因此调度函数会在系统空闲时去执行任务 0. 此时任务 0 仅执行 pause() 调用, 然后又会调用本函数(schedule).
+	switch_to(next);					// 切换到任务号为 next(任务项号 nr) 的任务, 并运行之.
 }
 
 // pause() 系统调用. 转换当前任务的状态为可中断的等待状态, 并重新调试.
