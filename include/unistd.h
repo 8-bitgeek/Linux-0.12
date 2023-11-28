@@ -190,7 +190,7 @@ type name(atype a) \
 long __res; \
 __asm__ volatile ("int $0x80" 												/* 调用系统中断 0x80 */\
 	: "=a" (__res) 															/* 返回值 -> eax(__res) */\
-	: "0" (__NR_##name), "b" ((long)(a))); 									/* 输入为系统中断调用号 __NR_name, a 表示存放在 ebx 中的参数 */\
+	: "0" (__NR_##name), "b" ((long)(a))); 									/* 输入为系统中断调用号 __NR_{name}, (a) 表示将参数 a 存放在 ebx 中 */\
 if (__res >= 0) \
 	return (type) __res; 													/* 否则置出错号, 并返回 -1 */\
 errno = -__res; \
