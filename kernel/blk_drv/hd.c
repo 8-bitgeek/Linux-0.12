@@ -204,13 +204,12 @@ int sys_setup(void * BIOS)
 	// 从而可以知道扇区中位于偏移 0x1BE 开始处的分区表是否有效. 若有效则将硬盘分区表信息放入硬盘分区结构数组 hd[] 中. 最后释放 bh 缓冲区.
 	for (drive = 0 ; drive < NR_HD ; drive++) {
 		if (!(bh = bread(0x300 + drive * 5, 0))) {								// 0x300, 0x305 是设备号.
-			printk("Unable to read partition table of drive %d\n\r",
-				drive);
+			printk("Unable to read partition table of drive %d\n\r", drive);
 			panic("");
 		}
 		if (bh->b_data[510] != 0x55 || (unsigned char)
 		    bh->b_data[511] != 0xAA) {											// 判断硬盘标志 0xAA55.
-			printk("Bad partition table on drive %d\n\r",drive);
+			printk("Bad partition table on drive %d\n\r", drive);
 			panic("");
 		}
 		p = 0x1BE + (void *)bh->b_data;	 										// 分区表位于第 1 扇区 0x1BE 处.
