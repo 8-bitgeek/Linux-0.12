@@ -265,8 +265,8 @@ int main(void)										/* This really IS void, no error here. */
 	// 下面过程通过在堆栈中设置的参数, 利用中断返回指令启动任务 0 执行.
 	move_to_user_mode();							// 移到用户模式下执行. (include/asm/system.h)
 	if (!fork_for_process0()) {						/* we count on this going ok */
-		// 如果上面可以正常创建新进程时, init() 方法不会在这里执行.
-		init();										// 在新建的子进程(任务 1 即 init 进程)中执行.
+		// TASK-0 中不会进入到这里, 但是子进程 TASK-1 会进入到这里来执行
+		init();										// 在新建的子进程(TASK-1 即 init 进程)中执行.
 	}
 	/*
 	 *   NOTE!!   For any other task 'pause()' would mean we have to get a
