@@ -61,9 +61,9 @@
 /* max nr of sectors of setup: don't change unless you also change
  * bootsect etc */
 /* 下面指定 setup 模块占的最大扇区数: 不要改变该值, 除非也改变 bootsect 等相应文件. */
-#define SETUP_SECTS 4           // setup 最大长度 4 个扇区(2KB).
+#define SETUP_SECTS 4           		// setup 最大长度 4 个扇区(2KB).
 
-#define STRINGIFY(x) #x         // 把 x 转换成字符串类型, 用于出错显示语句中.
+#define STRINGIFY(x) #x         		// 把 x 转换成字符串类型, 用于出错显示语句中.
 
 #define MAJOR(a) (((unsigned)(a))>>8)
 #define MINOR(a) ((a)&0xff)
@@ -212,11 +212,11 @@ int main(int argc, char ** argv)
 	if (((long *) buf)[1] != MINIX_HEADER)
 		die("Non-Minix header of 'setup'");
 // 判断数据段长字段 d_data, 堆字段 a_bss, 起始执行点字段 a_entry 和符号表字段 a_sym 的内容是否为 0. 必须都为 0.        
-	if (((long *) buf)[3] != 0)               // 数据段长 a_data 字段.
+	if (((long *) buf)[3] != 0)               	// 数据段长 a_data 字段.
 		die("Illegal data segment in 'setup'");
-	if (((long *) buf)[4] != 0)               // 堆 a_bss 字段.
+	if (((long *) buf)[4] != 0)               	// 堆 a_bss 字段.
 		die("Illegal bss in 'setup'");
-	if (((long *) buf)[5] != 0)             // 执行起始点 a_entry 字段.
+	if (((long *) buf)[5] != 0)             	// 执行起始点 a_entry 字段.
 		die("Non-Minix header of 'setup'");
 	if (((long *) buf)[7] != 0)
 		die("Illegal symbol table in 'setup'");
@@ -226,7 +226,7 @@ int main(int argc, char ** argv)
 	for (i=0 ; (c=read(id, buf, sizeof buf)) > 0 ; i += c)
 		if (write(1, buf, c) != c)
 			die("Write call failed");
-	close(id);             // 关闭 setup 模块文件.
+	close(id);             						// 关闭 setup 模块文件.
 	if (i > SETUP_SECTS*512)
 		die("Setup exceeds " STRINGIFY(SETUP_SECTS)
 			" sectors - rewrite build/boot/setup");
@@ -253,7 +253,7 @@ int main(int argc, char ** argv)
 	/*
 	if (read(id,buf,GCC_HEADER) != GCC_HEADER)
 		die("Unable to read header of 'system'");
-	if (((long *) buf)[5] != 0)             // 执行入口点字段 a_entry 值应为 0.
+	if (((long *) buf)[5] != 0)             	// 执行入口点字段 a_entry 值应为 0.
 		die("Non-GCC header of 'system'");
 	*/
 	for (i=0 ; (c = read(id, buf, sizeof buf)) > 0; i += c)
