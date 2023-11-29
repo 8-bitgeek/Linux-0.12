@@ -154,7 +154,7 @@ void invalidate_buffers(int dev)
 /*
  * 该子程序检查一个软盘是否已被更换, 如果已经更换就使高速缓冲中与该软驱对应的所有缓冲区无效.
  * 该子程序相对来说较慢, 所以我们要尽量少使用它.
- * 所以仅在执行 'mount' 或 'open' 时才调用它. 我想这是将程度与实用性相结合的最好方法. 
+ * 所以仅在执行 'mount' 或 'open' 时才调用它. 我想这是将速度与实用性相结合的最好方法. 
  * 若在操作过程中更换软盘, 就会导致数据的丢失. 这是咎由自取.
  *
  * 注意! 尽管目前该子程序仅用于软盘, 以后任何可移动介质的块设备都有将使用该程序, 
@@ -236,7 +236,7 @@ static inline void insert_into_queues(struct buffer_head * bh)
 	// 因此此时 hash(bh->b_dev, bh->b_blocknr) 得到的 bh->b_next 肯定是 NULL,
 	// 所以 bh->b_next->b_prev = bh 应该在 bh->b_next 不为 NULL 时才能给 b_pev 赋 bh 值. 
 	// 即 bh->b_next->b_prev = bh 前应该增加判断 "if(bh->b_next)". 该错误到 0.96 版后才被纠正.
-	if(bh->b_next)
+	if(bh->b_next) 							// 已添加用于修正错误!
 		bh->b_next->b_prev = bh;			// 此句前应添加 "if(bh->b_next)" 判断.
 }
 
@@ -309,7 +309,7 @@ struct buffer_head * getblk(int dev, int block)
 	struct buffer_head * tmp, * bh;
 
 repeat:
-	if (bh = get_hash_table(dev, block))
+	if (bh = get_hash_table(dev, block)) 			// 如果在缓冲区中找到, 则直接返回
 		return bh;
 	// 扫描空闲数据块链表, 寻找空闲缓冲区.
 	// 首先让 tmp 指向空闲链表的第一个空闲缓冲区头.
@@ -320,21 +320,21 @@ repeat:
 		// 因此, 我们还是需要继续下面的判断和选择. 例如当一个任务改写过一块内容后就释放了, 于是该块 b_count=0, 但 b_lock 不等于 0;
 		// 当一个任务执行 breada() 预读几个块时, 只要 ll_rw_block() 命令发出后, 它就会递减 b_count; 
 		// 但此时实际上硬盘访问操作可能还在进行, 因此此时 b_lock=1, 但 b_count=0.
-		if (tmp->b_count)
+		if (tmp->b_count) 							// 有引用的一定是不可用的
 			continue;
 		// 如果缓冲头指针 bh 为空, 或者 tmp 所指缓冲头的标志(修改, 锁定)权重小于 bh 头标志的权重, 则让 bh 指向 tmp 缓冲块头. 
-		// 如果该tmp缓冲块头表明缓冲块既没有修改也没有锁定标志置位, 则说明已为指定设备上的块取得对应的高速缓冲块, 则退出循环.
+		// 如果该 tmp 缓冲块头表明缓冲块既没有修改也没有锁定, 则说明已为指定设备上的块取得对应的高速缓冲块, 则退出循环.
 		// 否则我们就继续执行本循环, 看看能否找到一个 BADNESS() 最小的缓冲块.
 		if (!bh || BADNESS(tmp) < BADNESS(bh)) {
-			bh = tmp;
-			if (!BADNESS(tmp))
+			bh = tmp; 								// 得到 dirt 和 block 更小的 buffer_head
+			if (!BADNESS(tmp)) 						// b_dirt 和 b_block 都为 0 则表示找到可用的缓冲块, 退出循环.
 				break;
 		}
 	/* and repeat until we find something good */	/* 重复操作直到找到适合的缓冲块 */
-	} while ((tmp = tmp->b_next_free) != free_list);
+	} while ((tmp = tmp->b_next_free) != free_list); 	// 循环一圈, 不管找没找到(没找到的情况下 bh 指向 dirt+lock 最小的), 循环结束.
 	// 如果循环检查发现所有缓冲块都正在被使用(所有缓冲块的状况引用计数者 >0)中, 则睡眠等待有空闲缓冲区可用. 
-	// 当有空闲缓冲块可用时本各会被明确地唤醒. 然后我们就跳转到函数开始处重新查找空闲缓冲块.
-	if (!bh) {
+	// 当有空闲缓冲块可用时本进程会被明确地唤醒. 然后我们就跳转到函数开始处重新查找空闲缓冲块.
+	if (!bh) { 										// TODO: 会有这种情况吗(bh == 0)?
 		sleep_on(&buffer_wait);
 		goto repeat;
 	}
@@ -353,7 +353,7 @@ repeat:
 	/* NOTE!! While we slept waiting for this block, somebody else might */
 	/* already have added "this" block to the cache. check it */
 	/* 注意!! 当进程为了等待该缓冲块而睡眠时, 其他进程可能已经将该缓冲块加入进高速缓冲中, 所以我们也要对此进行检查. */
-	// 在高速缓冲 hash 表中检查指定设备和块的缓冲块是否乘我们睡眠之即已经被加入进去. 如果是的话就再次重复上述寻找过程.
+	// 在高速缓冲 hash 表中检查指定设备和块的缓冲块是否在我们睡眠的时候已经被加入进去. 如果是的话就再次重复上述寻找过程.
 	if (find_buffer(dev, block))
 		goto repeat;
 	/* OK, FINALLY we know that this buffer is the only one of it's kind, */
@@ -394,7 +394,7 @@ void brelse(struct buffer_head * buf)
  */
 // 从设备上读取数据块.
 // 该函数根据指定的设备号 dev 和数据块号 block, 首先在高速缓冲区中申请一块缓冲块. 
-// 如果该缓冲块中经包含有有效的数据就直接返回该缓冲块指针, 否则就从设备中读取指定的数据块到该缓冲块中并返回缓冲块指针.
+// 如果该缓冲块中已经包含有效的数据就直接返回该缓冲块指针, 否则就从设备中读取指定的数据块到该缓冲块中并返回缓冲块指针.
 struct buffer_head * bread(int dev, int block)
 {
 	struct buffer_head * bh;

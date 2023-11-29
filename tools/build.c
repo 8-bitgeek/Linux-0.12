@@ -65,8 +65,8 @@
 
 #define STRINGIFY(x) #x         		// 把 x 转换成字符串类型, 用于出错显示语句中.
 
-#define MAJOR(a) (((unsigned)(a))>>8)
-#define MINOR(a) ((a)&0xff)
+#define MAJOR(a) (((unsigned)(a)) >> 8)
+#define MINOR(a) ((a) & 0xff)
 
 // 显示出错信息, 并终止程序.
 void die(char * str)

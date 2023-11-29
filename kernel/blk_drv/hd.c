@@ -148,8 +148,8 @@ int sys_setup(void * BIOS)
 	// 该数组的项 0 和项 5 分别表示两个硬盘的整体参数, 而项 1-4 和 6-9 分别表示两个硬盘的 4 个分区参数. 
 	// 因此这里仅设置硬盘整体信息的两项(项 0 和 5).
 	for (i = 0 ; i < NR_HD ; i++) {
-		hd[i * 5].start_sect = 0;												// 硬盘起始扇区号
-		hd[i * 5].nr_sects = hd_info[i].head * hd_info[i].sect * hd_info[i].cyl;// 硬盘总扇区数
+		hd[i * 5].start_sect = 0;													// 硬盘起始扇区号
+		hd[i * 5].nr_sects = hd_info[i].head * hd_info[i].sect * hd_info[i].cyl;	// 硬盘总扇区数
 	}
 
 	/*

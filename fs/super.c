@@ -345,9 +345,9 @@ void mount_root(void)
 	if (32 != sizeof (struct d_inode))
 		panic("bad i-node size");
 	// 首先初始化文件表数组(共 64 项, 即系统同时只能打开 64 个文件)和超级块表. 这里将所有文件结构中的引用计数设置为 0(表示空闲), 
-	// 并把超级块表中各项结构的设备字段初始化为0(也表示空闲). 如果根文件系统所在设备是软盘的话, 就提示 "插入根文件系统盘, 并按回车键", 并等待按键.
+	// 并把超级块表中各项结构的设备字段初始化为 0(也表示空闲). 如果根文件系统所在设备是软盘的话, 就提示 "插入根文件系统盘, 并按回车键", 并等待按键.
 	for(i = 0; i < NR_FILE; i++)									// 初始化文件表.
-		file_table[i].f_count = 0;
+		file_table[i].f_count = 0; 									// (fs/file_table.c)
 	if (MAJOR(ROOT_DEV) == 2) {										// 提示插入根文件系统盘.
 		printk("Insert root floppy and press ENTER\r\n");
 		wait_for_keypress();
