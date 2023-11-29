@@ -165,8 +165,8 @@ void check_disk_change(int dev)
 {
 	int i;
 
-	// 首先检测一下是不是软盘设备. 因为现在仅支持软盘可移动介质. 如果不是则退出. 然后测试软盘是否已更换, 
-	// 如果没有则退出. floppy_chang() 在 blk_drv/floppy.c.
+	// 首先检测一下是不是软盘设备. 因为现在仅支持软盘可移动介质. 如果不是则退出. 
+	// 然后测试软盘是否已更换, 如果没有则退出. floppy_chang() 在 blk_drv/floppy.c.
 	if (MAJOR(dev) != 2)
 		return;
 	if (!floppy_change(dev & 0x03))
