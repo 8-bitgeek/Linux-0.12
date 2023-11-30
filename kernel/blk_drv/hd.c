@@ -200,7 +200,7 @@ int sys_setup(void * BIOS)
 	// 好, 到此为止我们已经真正确定了系统中所含的硬盘个数 NR_HD. 现在我们来读取每个硬盘上第 1 个扇区中的分区表信息, 
 	// 用来设置分区结构数组 hd[] 中硬盘各分区的信息. 首先利用读函数 bread() 读硬盘第 1 个数据块(fs/buffer.c), 
 	// 第 1 个参数(0x300, 0x305)分别是两个硬盘的设备号, 第 2 个参数(0)是所需读取的块号. 若读操作成功, 则数据会被存放在缓冲块 bh 的数据区中.
-	// 若缓冲块头指针 bh 为 0, 则说明读操作失败, 则显示出错信息并停机. 否则我们根据硬盘第 1 个扇区最后两个字节应该是 0xAA55 来判断扇区中数据的有效性, 
+	// 若缓冲块头指针 bh 为 0, 则说明读操作失败, 则显示出错信息并停机. 否则我们根据硬盘第 1(0) 个扇区最后两个字节应该是 0xAA55 来判断扇区中数据的有效性, 
 	// 从而可以知道扇区中位于偏移 0x1BE 开始处的分区表是否有效. 若有效则将硬盘分区表信息放入硬盘分区结构数组 hd[] 中. 最后释放 bh 缓冲区.
 	for (drive = 0 ; drive < NR_HD ; drive++) {
 		if (!(bh = bread(0x300 + drive * 5, 0))) {								// 0x300, 0x305 是设备号.
@@ -212,7 +212,7 @@ int sys_setup(void * BIOS)
 			printk("Bad partition table on drive %d\n\r", drive);
 			panic("");
 		}
-		p = 0x1BE + (void *)bh->b_data;	 										// 分区表位于第 1 扇区 0x1BE 处.
+		p = 0x1BE + (void *)bh->b_data;	 										// 分区表位于第 1(0) 扇区 0x1BE 处.
 		for (i = 1; i < 5; i++, p++) {
 			hd[i + 5 * drive].start_sect = p->start_sect;
 			hd[i + 5 * drive].nr_sects = p->nr_sects;
