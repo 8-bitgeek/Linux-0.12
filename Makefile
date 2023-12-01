@@ -98,11 +98,13 @@ clean:
 	@for i in mm fs kernel lib boot; do make clean -C $$i; done
 
 debug:
-	@qemu-system-i386 -m 32M -boot a -fda Image -fdb rootimage-0.12 -hda rootimage-0.12-hd \
+	@dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
+	@qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd \
 	-serial pty -S -gdb tcp::1234
 
 start:
-	@qemu-system-i386 -m 32M -boot a -fda Image -fdb rootimage-0.12 -hda rootimage-0.12-hd
+	@dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
+	@qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd
 
 dep:
 	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
