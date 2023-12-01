@@ -203,7 +203,8 @@ int sys_setup(void * BIOS)
 	// 若缓冲块头指针 bh 为 0, 则说明读操作失败, 则显示出错信息并停机. 否则我们根据硬盘第 1(0) 个扇区最后两个字节应该是 0xAA55 来判断扇区中数据的有效性, 
 	// 从而可以知道扇区中位于偏移 0x1BE 开始处的分区表是否有效. 若有效则将硬盘分区表信息放入硬盘分区结构数组 hd[] 中. 最后释放 bh 缓冲区.
 	for (drive = 0 ; drive < NR_HD ; drive++) {
-		if (!(bh = bread(0x300 + drive * 5, 0))) {								// 0x300, 0x305 是设备号.
+		// 0x300 表示整个第 1 个硬盘, 对应的设备文件是 /dev/hd0, 0x301 表示第 1 个硬盘的第 1 个分区, 对应的设备文件是 /dev/hd1, 0x305 表示整个第 2 个硬盘.
+		if (!(bh = bread(0x300 + drive * 5, 0))) {								// 0x300, 0x305 是设备号. 参见 p218 表 6-1.
 			printk("Unable to read partition table of drive %d\n\r", drive);
 			panic("");
 		}
