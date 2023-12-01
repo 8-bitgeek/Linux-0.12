@@ -189,7 +189,7 @@ void check_disk_change(int dev)
 // 因此设计的 hash 函数肯定需要包含这两个关键值. 这里两个关键字的异或操作只是计算关键值的一种方法. 
 // 再对关键值进行 MOD 运算就可以保证函数计算得到的值都处于函数数组项范围内.
 #define _hashfn(dev, block) (((unsigned)(dev ^ block)) % NR_HASH)
-#define hash(dev, block) hash_table[_hashfn(dev, block)]
+#define hash(dev, block) hash_table[_hashfn(dev, block)] 				// hash_table 中默认值为 NULL(0)
 
 // 从 hash 队列和空闲缓冲队列中移走缓冲块.
 // hash 队列是双向链表结构, 空闲缓冲块队列是双向循环链表结构.
@@ -246,9 +246,9 @@ static struct buffer_head * find_buffer(int dev, int block)
 {
 	struct buffer_head * tmp;
 
-	// 搜索 hash 表, 寻找指定设备与和块号的缓冲块.
-	for (tmp = hash(dev, block) ; tmp != NULL ; tmp = tmp->b_next)
-		if (tmp->b_dev == dev && tmp->b_blocknr == block)
+	// 搜索 hash 表, 寻找指定设备与和块号的缓冲块.							  // for 循环执行流程: 表达式 1 -> 表达式 2 -> 循环体 -> 表达式 3
+	for (tmp = hash(dev, block) ; tmp != NULL ; tmp = tmp->b_next) 		// hash_table 中初始值为 NULL(0), 表示没有缓冲头指针 buffer_head *
+		if (tmp->b_dev == dev && tmp->b_blocknr == block) 				// 如果对应的哈希槽不为空, 则遍历链表找到正确的页面
 			return tmp;
 	return NULL;
 }
