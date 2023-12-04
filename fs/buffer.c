@@ -58,7 +58,7 @@ int NR_BUFFERS = 0;													// 系统含有缓冲块个数.
 // 使用 sleep_on() 进入睡眠状态的进程需要用 wake_up() 明确地唤醒.
 static inline void wait_on_buffer(struct buffer_head * bh)
 {
-	cli();							// 关中断
+	cli();							// 关中断.
 	while (bh->b_lock)				// 如果已被上锁则进程进入睡眠, 等待其解锁.
 		sleep_on(&bh->b_wait);
 	sti();							// 开中断.
@@ -248,7 +248,7 @@ static struct buffer_head * find_buffer(int dev, int block)
 
 	// 搜索 hash 表, 寻找指定设备与和块号的缓冲块.							  // for 循环执行流程: 表达式 1 -> 表达式 2 -> 循环体 -> 表达式 3
 	for (tmp = hash(dev, block) ; tmp != NULL ; tmp = tmp->b_next) 		// hash_table 中初始值为 NULL(0), 表示没有缓冲头指针 buffer_head *
-		if (tmp->b_dev == dev && tmp->b_blocknr == block) 				// 如果对应的哈希槽不为空, 则遍历链表找到正确的页面
+		if (tmp->b_dev == dev && tmp->b_blocknr == block) 				// 如果对应的哈希槽不为空, 则遍历链表以找到正确的页面, 如果没找到则返回 NULL
 			return tmp;
 	return NULL;
 }
