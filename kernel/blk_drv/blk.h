@@ -38,7 +38,7 @@ struct request {
 	int dev;							/* -1 if no request */		// 请求的设备号
 	int cmd;							/* READ or WRITE */			// READ 或 WRITE 命令.
 	int errors;             			// 操作时产生的错误次数.
-	unsigned long sector;   			// 起始扇区. (1 块 = 2 扇区)
+	unsigned long sector;   			// 起始扇区. (1 缓冲块 = 2 扇区)
 	unsigned long nr_sectors;			// 读/写扇区数.
 	char * buffer;                  	// 数据缓冲区.
 	struct task_struct * waiting;   	// 任务等待请求完成操作的地方(队列).
@@ -203,10 +203,10 @@ repeat: \
 		return; \
 	} \
 	if (MAJOR(CURRENT->dev) != MAJOR_NR)  					/* 如果当前设备主设备号不对则停机 */\
-		panic(DEVICE_NAME ": request list destroyed"); \
+		panic(DEVICE_NAME ": request list destroyed!"); \
 	if (CURRENT->bh) { \
 		if (!CURRENT->bh->b_lock)  							/* 如果请求项的缓冲区没锁定则停机 */\
-			panic(DEVICE_NAME ": block not locked"); \
+			panic(DEVICE_NAME ": block not locked!"); \
 	}
 
 #endif

@@ -313,7 +313,7 @@ struct buffer_head * getblk(int dev, int block)
 repeat:
 	if (bh = get_hash_table(dev, block)) 			// 如果在缓冲区中找到, 则直接返回
 		return bh;
-	// 扫描空闲数据块链表, 寻找空闲缓冲区.
+	// 扫描空闲数据块链表, 从空闲链表中查找空闲缓冲区.
 	// 首先让 tmp 指向空闲链表的第一个空闲缓冲区头.
 	tmp = free_list;
 	do {
@@ -367,7 +367,7 @@ repeat:
 	bh->b_dirt = 0;
 	bh->b_uptodate = 0;
 	// 从 hash 队列和空闲块链表中移出该缓冲头, 让该缓冲区用于指定设备和其上的指定块. 
-	// 然后根据此新设备号和块号重新插入空闲链表和 hash 队列新位置处. 并最终返回缓冲头指针.
+	// 然后根据此新设备号和块号重新插入空闲链表(链表尾)和 hash 队列新位置处(链表头). 并最终返回缓冲头指针.
 	remove_from_queues(bh);
 	bh->b_dev = dev;
 	bh->b_blocknr = block;
@@ -401,7 +401,7 @@ struct buffer_head * bread(int dev, int block)
 {
 	struct buffer_head * bh;
 
-	// 从高速缓冲区中申请一块缓冲块. 如果返回值是 NULL, 则表示内核出错, 停机. 否则我们判断其中是否已有可用数据.
+	// 从高速缓冲区(主要是空闲链表 free_list)中申请一块缓冲块. 如果返回值是 NULL, 则表示内核出错, 停机. 否则我们判断其中是否已有可用数据.
 	if (!(bh = getblk(dev, block)))
 		panic("bread: getblk returned NULL\n");
 	// 如果该缓冲块中数据是有效的(已更新的)可以直接使用, 则返回.

@@ -21,7 +21,7 @@
 /*
  * 请求结构中含有加载 nr 个扇区数据到内存中去的所有必须的信息.
  */
-// 请求项数组队列. 共有 NR_REQUEST = 32 个请求项. (参见文件 kernel/blk_drv/blk.h)
+// 请求项数组队列. 共有 NR_REQUEST = 32 个请求项(所有类型的设备共用这一个请求数组). (参见文件 kernel/blk_drv/blk.h)
 struct request request[NR_REQUEST];
 
 /*
@@ -43,7 +43,7 @@ struct task_struct * wait_for_request = NULL;
  */
 // 块设备数组. 该数组使用主设备号作为索引. 实际内容将在各块设备驱动程序初始化时填入.
 // 例如, 硬盘驱动程序初始化时(hd.c), 第一条语句即用于设备 blk_dev[3] 的内容.
-struct blk_dev_struct blk_dev[NR_BLK_DEV] = {
+struct blk_dev_struct blk_dev[NR_BLK_DEV] = { 				// blk_dev_struct 在 kernel/blk_drv/blk.h 中, 结构体中有两个字段: request_fn, request.
 	{ NULL, NULL },		/* no_dev */		// 0 - 无设备
 	{ NULL, NULL },		/* dev mem */		// 1 - 内存
 	{ NULL, NULL },		/* dev fd */		// 2 - 软驱设备
@@ -70,7 +70,7 @@ struct blk_dev_struct blk_dev[NR_BLK_DEV] = {
 int * blk_size[NR_BLK_DEV] = { NULL, NULL, };
 
 // 锁定指定缓冲块.
-// 如果指定的缓冲块已经被其他任务锁定, 则使自己睡眠(不可中断的等待), 直到被执行解锁缓冲块的任务明确地唤醒
+// 如果指定的缓冲块已经被其他任务锁定, 则使自己睡眠(不可中断的等待), 直到被执行解锁缓冲块的任务明确地唤醒.
 static inline void lock_buffer(struct buffer_head * bh)
 {
 	cli();							// 清中断许可.
@@ -120,9 +120,9 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 	// 然后查看指定设备是否有当前请求项, 即查看设备是否正忙. 如果指定设备 dev 当前请求项(current_equest)字段为空, 则表示目前该设备没有请求项, 
 	// 本次是第 1 个请求项, 也是唯一的一个. 因此可将块设备当前请求指针直接指向该请求项, 并立刻执行相应设备的请求函数.
 	if (!(tmp = dev->current_request)) {
-		dev->current_request = req;
+		dev->current_request = req; 	// 直接设置为该设备的当前请求项.
 		sti();							// 开中断.
-		(dev->request_fn)();			// 执行请求函数, 对于硬盘是 do_hd_request().
+		(dev->request_fn)();			// 执行请求函数, 对于硬盘是 do_hd_request() (kernel/blk_drv/hd.c).
 		return;
 	}
 	// 如果目前该设备已经有当前请求项在处理, 则首先利用电梯算法搜索最佳插入位置, 然后将当前请求项插入到请求链表中. 
@@ -155,7 +155,7 @@ static void make_request(int major, int rw, struct buffer_head * bh)
 	int rw_ahead;
 
 	/* WRITEA/READA is special case - it is not really needed, so if the */
-	/* buffer is locked, we just forget about it, else it's a normal read */
+	/* buffer is locked, we just forget about it, else it's a normal read. */
 	/* WRITEA/READA 是一种特殊情况 - 它们并非必要, 所以如果缓冲区已经上锁, 我们就不用管它, 否则它只是一个一般的读操作. */
 	// 这里 'READ' 和 'WRITE' 后面的 'A' 字符代表英文单词 Ahead, 表示预读/写数据块的意思.
 	// 该函数首先对命令 READA/WRITEA 的情况进行一些处理. 对于这两个命令, 当指定的缓冲区正在使用而已被上锁时, 就放弃预读/写请求. 
@@ -177,7 +177,6 @@ static void make_request(int major, int rw, struct buffer_head * bh)
 		unlock_buffer(bh);
 		return;
 	}
-repeat:
 	/* we don't allow the write-requests to fill up the queue completely:
 	 * we want some room for reads: they take precedence. The last third
 	 * of the requests are only for reads.
@@ -186,11 +185,13 @@ repeat:
 	 * 我们不能让队列中全都是写请求项: 我们需要为读请求保留一些空间: 读操作是优先的. 请求队列的后三分之一空间仅用于读请求项.
 	 */
 	// 好, 现在我们必须为本函数生成并添加读/写请求项了. 首先我们需要在请求数组中寻找到一个空闲项(糟)来存放新请求项. 搜索过程从请求数组末端开始.
-	// 根据上述要求, 对于读命令请求, 我们直接从队列末尾开始搜索, 而对于写请求就只能从队列 2/3 处向队列头处搜索空项填入. 于是我们开始从后向前搜索,
-	// 当请求结构 request 的设备字段 dev 值 = -1 时, 表示该项未被占用(空闲). 如果没有一项是空闲的(此时请求项数组指针已经搜索越过头部), 
-	// 则查看此次请求是否是提前读/写(READA 或 WRITEA), 如果是则放弃此次请求操作. 否则让本次请求操作先睡眠(以等待请求队列腾出空项), 过一会儿再来搜索请求队列.
+	// 根据上述要求, 对于读命令请求, 我们直接从队列末尾开始搜索, 而对于写请求就只能从队列 2/3 处向队列头处搜索空项填入. 
+	// 于是我们开始从后向前搜索, 当请求结构 request 的设备字段 dev 值 = -1 时, 表示该项未被占用(空闲). 
+	// 如果没有一项是空闲的(此时请求项数组指针已经搜索越过头部), 则查看此次请求是否是提前读/写(READA 或 WRITEA), 如果是则放弃此次请求操作. 
+	// 否则让本次请求操作先睡眠(以等待请求队列腾出空闲项), 过一会儿再来搜索请求队列.
+repeat:
 	if (rw == READ)
-		req = request + NR_REQUEST;						// 对于读请求, 将指针指向队列尾部.
+		req = request + NR_REQUEST;						// 对于读请求, 将指针指向请求队列尾部(最后一个请求槽的尾部).
 	else
 		req = request + ((NR_REQUEST * 2) / 3);			// 对于写请求, 指针指向队列 2/3 处.
 	/* find an empty request */
@@ -221,7 +222,7 @@ repeat:
 	req->waiting = NULL;								// 任务等待操作执行完成的地方.
 	req->bh = bh;										// 缓冲块头指针.
 	req->next = NULL;									// 指向下一请求项.
-	add_request(major + blk_dev, req);					// 将请求项加入队列中(blk_dev[major], reg).
+	add_request(major + blk_dev, req);					// 将请求项加入队列中(major + blk_dev ==> blk_dev[major], reg).
 }
 
 // 低级页面读写函数(Low Level Read Write Pagk).
@@ -279,7 +280,7 @@ repeat:
 // 主要功能是创建块设备读写请求项并插入到指定块设备请求队列. 
 // 实际的读写操作则是由设备的 request_fn() 函数完成. 对于硬盘操作, 该函数是 do_hd_request(); 
 // 对于软盘操作该函数是 do_fd_request(); 对于虚拟盘则是 do_rd_request(). 
-// 另外, 在调用该函数之前, 调用者需要首先把读/写块设备的信息保存在缓冲块头结构中, 如设备号, 块号.
+// 另外, 在调用该函数之前, 调用者需要首先把读/写块设备的信息保存在缓冲块头结构(buffer_head)中, 如设备号, 块号.
 // 参数: rw - READ, READA, WRITE 或 WRITEA 是命令; bh - 数据缓冲块头指针.
 void ll_rw_block(int rw, struct buffer_head * bh)
 {
@@ -287,11 +288,11 @@ void ll_rw_block(int rw, struct buffer_head * bh)
 
 	// 如果设备主设备号不存在或者该设备的请求操作函数不存在, 则显示出错信息, 并返回. 否则创建请求项并插入请求队列.
 	if ((major = MAJOR(bh->b_dev)) >= NR_BLK_DEV ||
-	!(blk_dev[major].request_fn)) {
+		!(blk_dev[major].request_fn)) {
 		printk("Trying to read nonexistent block-device\n\r");
 		return;
 	}
-	make_request(major, rw, bh);
+	make_request(major, rw, bh); 				// 创建请求项并插入到请求队列中.
 }
 
 // 块设备初始化函数, 由初始化程序 main.c 调用.

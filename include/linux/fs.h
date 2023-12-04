@@ -41,12 +41,12 @@
 // 块设备操作类型
 #define READ 		0          		// 读
 #define WRITE 		1         		// 写
-#define READA 		2				/* read-ahead - don't pause */  // 预读
-#define WRITEA 		3				/* "write-ahead" - silly, but somewhat useful */        // 预写
+#define READA 		2				/* read-ahead - don't pause */  					// 预读
+#define WRITEA 		3				/* "write-ahead" - silly, but somewhat useful */    // 预写
 
 void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 
-#define MAJOR(a) (((unsigned)(a)) >> 8)					// 取高字节(主设备号)
+#define MAJOR(a) (((unsigned)(a)) >> 8)					// 取高字节(主设备号); 1 - 内存, 2 - 磁盘, 3 - 硬盘, 4 - ttyx, 5 - tty, 6 - 并行口, 7 - 非命名管道.
 #define MINOR(a) ((a) & 0xff)							// 取低字节(次设备号)
 
 #define NAME_LEN 14										// 名字长度值.
