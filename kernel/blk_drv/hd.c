@@ -258,10 +258,11 @@ static int controller_ready(void)
 }
 
 // 检测硬盘执行命令后的状态. (win 表示温切斯特硬盘的缩写)
-// 读取状态寄存器中的命令执行结果状态. 返回 0 表示正常; 1 表示出错. 如果执行命令错, 则需要再读错误寄存器 HD_ERROR(0x1f1).
+// 读取状态寄存器中的命令执行结果状态. 返回 0 表示正常; 1 表示出错. 
+// 如果执行命令错, 则需要再读错误寄存器 HD_ERROR(0x1f1).
 static int win_result(void)
 {
-	int i = inb_p(HD_STATUS);							// 取状态信息.
+	int i = inb_p(HD_STATUS);							// 读取硬盘状态信息.
 
 	if ((i & (BUSY_STAT | READY_STAT | WRERR_STAT | SEEK_STAT | ERR_STAT))
 		== (READY_STAT | SEEK_STAT))
@@ -276,7 +277,7 @@ static int win_result(void)
 //     intr_addr() - 硬盘中断处理中将调用的 C 处理函数指针.
 // 该函数在硬盘控制器就绪之后, 先设置全局指针亦是 do_hd 为硬盘中断处理程序中将调用的 C 处理函数指针. 
 // 然后发送硬盘控制字节和7字节的参数命令块. 硬盘中断处理程序的代码位于 kernel/sys_call.s 程序中.
-// 第 191 行定义 1 个寄存器变量 __res. 该变量将被保存在 1 个寄存器中, 以便于快速访问.
+// 关键字 `register` 定义 1 个寄存器变量 port. 该变量将被保存在 1 个寄存器中, 以便于快速访问.
 // 如果想指定寄存器(如 eax), 则我们可以把该句写成 "register char __res asm("ax");"
 static void hd_out(unsigned int drive, unsigned int nsect, unsigned int sect,
 		unsigned int head, unsigned int cyl, unsigned int cmd,
@@ -290,10 +291,10 @@ static void hd_out(unsigned int drive, unsigned int nsect, unsigned int sect,
 		panic("Trying to write bad sector");
 	if (!controller_ready())
 		panic("HD controller not ready");
-	// 接着我们设置硬盘中断发生时将调用的 C 函数指针 do_hd(该函数指针定义在 blk.h 文件). 然后在向硬盘控制器发送参数和命令之前, 
-	// 规定要先向控制器命令端口(0x3f6)发送一指定硬盘的控制字节, 以建立相应的硬盘控制方式. 该控制字节即是硬盘信息结构数组中的 ctl 字节. 
-	// 然后向控制器端口 0x1f1 - 0x1f7 发送 7 字节的参数命令块.
-	SET_INTR(intr_addr);								// do_hd = intr_addr 在中断中被调用.
+	// 接着我们设置硬盘中断发生时将调用的 C 函数指针 do_hd(该函数指针定义在 blk.h 文件). 
+	// 然后在向硬盘控制器发送参数和命令之前, 规定要先向控制器命令端口(0x3f6)发送指定硬盘的控制字节, 以建立相应的硬盘控制方式. 
+	// 该控制字节即是硬盘信息结构数组中的 ctl 字节. 然后向控制器端口 0x1f1 - 0x1f7 发送 7 字节的参数命令块.
+	SET_INTR(intr_addr);								// do_hd = intr_addr 在硬盘触发中断时被调用.
 	outb_p(hd_info[drive].ctl, HD_CMD);					// 向控制寄存器输出控制字节
 	port = HD_DATA;										// 置 dx 为数据寄存器端口(0x1f0)
 	outb_p(hd_info[drive].wpcom >> 2, ++port);			// 参数: 写预补偿柱面号(需除 4)
@@ -402,19 +403,19 @@ static void read_intr(void)
 	// 接着再次请求硬盘作复位处理并执行其他请求项. 然后返回. 每次读操作出错都会对当前请求项作出错次数累计, 若出错次数不到最大允许出错次数一半, 
 	// 则会先执行硬盘复位操作, 然后再执行本次请求项处理. 若出错次数已经大于等于最大允许出错次数 MAX_ERRORS(7次), 
 	// 则结束本次请求项的处理而去处理队列中下一个请求项.
-	if (win_result()) {									// 若控制器忙, 读写错或命令执行错, 则进行读写硬盘失败处理.
+	if (win_result()) {									// 若控制器忙, 读写错或命令执行错, 则进行读写硬盘失败处理. win 表示温切斯特硬盘.
 		bad_rw_intr();
 		do_hd_request();								// 再次请求硬盘作相应(复位)处理.
 		return;
 	}
 	// 如果读命令没有出错, 则从数据寄存器端口把 1 扇区的数据读到请求项的缓冲区中, 并且递减请求项所需读取的扇区数值. 
 	// 若递减后不等于 0, 表示本项请求还有数据没取完, 于是再次置中断调用 C 函数指针 do_hd 为 read_intr() 并直接返回, 
-	// 等待硬盘在读出另 1 个扇区数据后发出中断并再次调用本函数. 注意: 281 行语句中的 256 是指内存字, 即 512 字节. 
+	// 等待硬盘在读出另 1 个扇区数据后发出中断并再次调用本函数. 注意: 下面的 256 是指内存字(words), 即 512 字节. 
 	// 注意: 262 行再次置 do_hd 指针指向 read_intr() 是因为硬盘中断处理程序每次调用 do_hd 时都会将该函数指针置空.
-	port_read(HD_DATA, CURRENT->buffer, 256);			// 读数据到请求结构缓冲区.
-	CURRENT->errors = 0;								// 清出错次数
-	CURRENT->buffer += 512;								// 高速缓冲区指针,指向新的空区.
-	CURRENT->sector++;									// 起始扇区号加1.
+	port_read(HD_DATA, CURRENT->buffer, 256);			// 读 256 字(2bytes)数据到请求结构缓冲区.
+	CURRENT->errors = 0;								// 清出错次数.
+	CURRENT->buffer += 512;								// 高速缓冲区指针, 指向新的待读入数据缓冲区.
+	CURRENT->sector++;									// 起始扇区号加 1.
 	if (--CURRENT->nr_sectors) {						// 如果所需读出的扇区数还没读完, 则再置硬盘调用 C 函数指针为 read_intr().
 		SET_INTR(&read_intr);
 		return;
@@ -515,17 +516,17 @@ void do_hd_request(void)
 		end_request(0);
 		goto repeat;								// 该标号在 blk.h 最后面.
 	}
-	block += hd[dev].start_sect;
+	block += hd[dev].start_sect; 					// 得到绝对扇区号.
 	dev /= 5;										// 此时 dev 代表硬盘号(硬盘 0 还是硬盘 1)
 	// 然后根据求得的绝对扇区号 block 和硬盘号 dev, 我们就可以计算出对应硬盘中的磁道中扇区号(sec), 所在柱面号(cyl)和磁头号(head).
 	// 下面嵌入的汇编代码即用来根据硬盘信息结构中的每磁道扇区数和硬盘磁头数来计算这些数据. 
 	// 计算方法为: 初始时 eax 是扇区号 block, edx 中置 0. divl 指令把 edx:eax 组成的扇区号除以每磁道扇区数(hd_info[dev].sect),
 	// 所得整数商值在 eax 中, 余数在 edx 中. 其中 eax 中是到指定位置的对应总磁道数(所有磁头面), edx 中是当前磁道上的扇区号. 
-	// 348-349 行代码初始时 eax 是计算出的对应总磁道数, edx 中置 0. divl 指令把 edx:eax 的对应总磁道数除以硬盘总磁头数(hd_info[dev].head),
-	// 在 eax 中得到的整除值是柱面号(cyl), edx 得到的余数就是对应得当前磁头号(head).
-	// 对应总磁道数 * 每磁道扇区数 + 当前磁道上的扇区号 = 绝对扇区号
 	__asm__("divl %4":"=a" (block), "=d" (sec):"0" (block), "1" (0),
 		"r" (hd_info[dev].sect));
+	// 代码初始时 eax 是上面计算出的对应总磁道数, edx 中置 0. divl 指令把 edx:eax 的对应总磁道数除以硬盘总磁头数(hd_info[dev].head),
+	// 在 eax 中得到的整除值是柱面号(cyl), edx 得到的余数就是对应得当前磁头号(head).
+	// 对应总磁道数 * 每磁道扇区数 + 当前磁道上的扇区号 = 绝对扇区号
 	// 总磁头数 * 柱面号 + 磁头号 = 对应总磁道数
 	__asm__("divl %4":"=a" (cyl), "=d" (head):"0" (block), "1" (0),
 		"r" (hd_info[dev].head));
@@ -541,7 +542,8 @@ void do_hd_request(void)
 		reset_hd();
 		return;
 	}
-	// 如果此时重新校正标志(recalibrate)是置位的, 则首先复位该标志, 然后向硬盘控制器发送重新校正命令. 该命令会执行寻道操作, 让处于任何地方的磁头移动到 0 柱面.
+	// 如果此时重新校正标志(recalibrate - 重新校准)是置位的, 则首先复位该标志, 然后向硬盘控制器发送重新校正命令. 
+	// 该命令会执行寻道操作, 让处于任何地方的磁头移动到 0 柱面.
 	if (recalibrate) {
 		recalibrate = 0;
 		hd_out(dev, hd_info[CURRENT_DEV].sect, 0, 0, 0,
@@ -551,8 +553,8 @@ void do_hd_request(void)
 	// 如果以上两个标志都没有置位, 那么我们就可以开始向硬盘控制器发送真正的数据读/写操作命令了. 
 	// 如果当前请求是写扇区操作, 则发送命令, 循环读取状态寄存器信息并判断请求服务标志 DRQ_STAT 是否置位. 
 	// DRQ_STAT 是硬盘状态寄存器的请求服务位表示驱动器已经准备好在主机和数据端口之间传输一个字或一个字节的数据.
-	// 如果请求服务 DRQ 置位则退出循环. 若等到循环结束也没有置位, 则表示发送的要求写硬盘命令失败, 于是跳转去处理出现在问题或继续执行下一个硬盘请求. 
-	// 否则我们可以向硬盘控制器数据寄存器端口 HD_DATA 写入 1 个扇区的数据.
+	// 如果请求服务 DRQ 置位则退出循环. 若等到循环结束也没有置位, 则表示发送的要求写硬盘命令失败. 
+	// 于是跳转去处理出现在问题或继续执行下一个硬盘请求, 否则我们可以向硬盘控制器数据寄存器端口 HD_DATA 写入 1 个扇区的数据.
 	if (CURRENT->cmd == WRITE) {
 		hd_out(dev, nsect, sec, head, cyl, WIN_WRITE, &write_intr);
 		for(i = 0 ; i < 10000 && !(r = inb_p(HD_STATUS) & DRQ_STAT) ; i++)

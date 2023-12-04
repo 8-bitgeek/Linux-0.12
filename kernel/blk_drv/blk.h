@@ -150,7 +150,7 @@ static inline void unlock_buffer(struct buffer_head * bh)
 	if (!bh->b_lock)
 		printk(DEVICE_NAME ": free buffer being unlocked\n");
 	bh->b_lock = 0;
-	wake_up(&bh->b_wait);
+	wake_up(&bh->b_wait); 								// 定义在 kernel/sched.c
 }
 
 // 结束请求处理.
@@ -160,7 +160,7 @@ static inline void unlock_buffer(struct buffer_head * bh)
 // 最后, 唤醒等待该请求项的进程以及等待空闲请求项出现的进程, 释放并从请求链表中删除本请求项, 并把当前请求项指针指向下一请求项.
 static inline void end_request(int uptodate)
 {
-	DEVICE_OFF(CURRENT->dev);							// 关闭设备
+	DEVICE_OFF(CURRENT->dev);							// 关闭设备. (实际上好像只有软盘有关闭设备的函数.)
 	if (CURRENT->bh) {									// CURRENT 为当前请求结构项指针
 		CURRENT->bh->b_uptodate = uptodate;				// 置更新标志.
 		unlock_buffer(CURRENT->bh);						// 解锁缓冲区.
