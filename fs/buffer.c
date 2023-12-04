@@ -41,8 +41,8 @@
 // 而 b_wait 则是专门供等待指定缓冲块(即 b_wait 对应的缓冲块)的任务使用的等待队列头指针.
 extern int end;
 struct buffer_head * start_buffer = (struct buffer_head *) &end;
-struct buffer_head * hash_table[NR_HASH];							// NR_HASH = 307 项.
-static struct buffer_head * free_list;								// 空闲缓冲块链表头指针.
+struct buffer_head * hash_table[NR_HASH];							// NR_HASH = 307 项. 主要使用 buffer_head 中的 b_prev 和 b_next 两个字段.
+static struct buffer_head * free_list;								// 空闲缓冲块链表头指针. 由 buffer_head 的 b_prev_free 和 b_next_free 字段构成的链表.
 static struct task_struct * buffer_wait = NULL;						// 等待空闲缓冲块而睡眠的任务队列.
 // 下面定义系统缓冲区中含有的缓冲块个数. 这里, NR_BUFFERS 是一个定义在 linux/fs.h 头文件的宏, 
 // 其值即是变量名 nr_buffers, 并且在 fs.h 文件声明为全局变量.
@@ -54,7 +54,7 @@ int NR_BUFFERS = 0;													// 系统含有缓冲块个数.
 // 如果指定的缓冲块 bh 已经上锁就让进程不可中断地睡眠在该缓冲块的等待队列 b_wait 中. 
 // 在缓冲块解锁时, 其等待队列上的所有进程将被唤醒. 
 // 虽然是在关闭中断(cli)之后去睡眠的, 但这样做并不会影响在其他进程上下文中响应中断. 
-// 因为每个进程都在自己的 TSS 段中保存了标志寄存器 EFLAGS 的值, 所在在进程切换时 CPU 中当前 EFLAGS 的值也随之改变. 
+// 因为每个进程都在自己的 TSS 段中保存了标志寄存器 EFLAGS 的值, 所在进程切换时 CPU 中当前 EFLAGS 的值也随之改变. 
 // 使用 sleep_on() 进入睡眠状态的进程需要用 wake_up() 明确地唤醒.
 static inline void wait_on_buffer(struct buffer_head * bh)
 {
@@ -201,15 +201,15 @@ static inline void remove_from_queues(struct buffer_head * bh)
 		bh->b_next->b_prev = bh->b_prev;
 	if (bh->b_prev)
 		bh->b_prev->b_next = bh->b_next;
-	// 如果该缓冲我是该队列的头一个块, 则让 hash 表的对应项指向本队列中的下一个缓冲区.
-	if (hash(bh->b_dev, bh->b_blocknr) == bh)
+	// 如果该缓冲头是该队列的头一个, 则让 hash 表的对应项指向本队列中的下一个缓冲区(重新确立链表头).
+	if (hash(bh->b_dev, bh->b_blocknr) == bh) 				// 判断是否为链表头; 如果是则需要确立新的链表头.
 		hash(bh->b_dev, bh->b_blocknr) = bh->b_next;
 	/* remove from free list */
 	/* 从空闲缓冲块表中移除缓冲块 */
 	if (!(bh->b_prev_free) || !(bh->b_next_free))
 		panic("Free block list corrupted");
 	bh->b_prev_free->b_next_free = bh->b_next_free;
-	bh->b_next_free->b_prev_free = bh->b_prev_free;
+	bh->b_next_free->b_prev_free = bh->b_prev_free; 		// 从空闲链表中移除.
 	// 如果空闲链表头指向本缓冲区, 则让其指向下一缓冲区.
 	if (free_list == bh)
 		free_list = bh->b_next_free;
@@ -223,20 +223,20 @@ static inline void insert_into_queues(struct buffer_head * bh)
 	bh->b_next_free = free_list;
 	bh->b_prev_free = free_list->b_prev_free;
 	free_list->b_prev_free->b_next_free = bh;
-	free_list->b_prev_free = bh;
+	free_list->b_prev_free = bh;							// 以上四句将给定缓冲块头放到空闲链表末尾.
 	/* put the buffer in new hash-queue if it has a device */
 	/* 如果该缓冲块对应一个设备, 则将其插入新 hash 队列中 */
 	bh->b_prev = NULL;
 	bh->b_next = NULL;
-	if (!bh->b_dev)
+	if (!bh->b_dev) 										// 如果没有指定设备号, 则不需要放到 hash_table 中.
 		return;
 	bh->b_next = hash(bh->b_dev, bh->b_blocknr);
-	hash(bh->b_dev, bh->b_blocknr) = bh;
-	// 请注意当 hash 表某项第 1 次插入项时, hash() 计算值肯定为 NULL, 
+	hash(bh->b_dev, bh->b_blocknr) = bh; 					// 放到对应的链表头部.
+	// 请注意当 hash 表某索引第 1 次插入元素时, hash() 计算值肯定为 NULL, 
 	// 因此此时 hash(bh->b_dev, bh->b_blocknr) 得到的 bh->b_next 肯定是 NULL,
 	// 所以 bh->b_next->b_prev = bh 应该在 bh->b_next 不为 NULL 时才能给 b_pev 赋 bh 值. 
 	// 即 bh->b_next->b_prev = bh 前应该增加判断 "if(bh->b_next)". 该错误到 0.96 版后才被纠正.
-	if(bh->b_next) 							// 已添加用于修正错误!
+	if(bh->b_next) 							// 已添加用于修正错误! 非空判断.
 		bh->b_next->b_prev = bh;			// 此句前应添加 "if(bh->b_next)" 判断.
 }
 
@@ -334,9 +334,9 @@ repeat:
 		}
 	/* and repeat until we find something good */	/* 重复操作直到找到适合的缓冲块 */
 	} while ((tmp = tmp->b_next_free) != free_list); 	// 循环一圈, 不管找没找到(没找到的情况下 bh 指向 dirt+lock 最小的), 循环结束.
-	// 如果循环检查发现所有缓冲块都正在被使用(所有缓冲块的状况引用计数者 >0)中, 则睡眠等待有空闲缓冲区可用. 
+	// 如果循环检查发现所有缓冲块都正在被使用(所有缓冲块的引用计数都 >0)中, 则睡眠等待有空闲缓冲区可用. 
 	// 当有空闲缓冲块可用时本进程会被明确地唤醒. 然后我们就跳转到函数开始处重新查找空闲缓冲块.
-	if (!bh) { 										// TODO: 会有这种情况吗(bh == 0)?
+	if (!bh) { 										// 没有找到合适的缓冲块, 则重新寻找
 		sleep_on(&buffer_wait);
 		goto repeat;
 	}
@@ -360,8 +360,8 @@ repeat:
 		goto repeat;
 	/* OK, FINALLY we know that this buffer is the only one of it's kind, */
 	/* and that it's unused (b_count=0), unlocked (b_lock=0), and clean */
-	/* OK, 最终我们知道该缓冲块是指定参数的唯一一块, 而且目前还没有被占用 */
-	/* (b_count=0), 也未被上锁(b_lock=0), 并且是干净的(未被修改的) */
+	/* OK, 最终我们知道该缓冲块是指定参数的唯一一块, 而且目前还没有被占用(b_count=0), */
+	/* 也未被上锁(b_lock=0), 并且是干净的(未被修改的 b_dirty=0). */
 	// 于是让我们占用此缓冲块. 置引用计数为 1, 复位修改标志和有效(更新)标志.
 	bh->b_count = 1;
 	bh->b_dirt = 0;
