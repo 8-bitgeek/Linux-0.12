@@ -43,7 +43,7 @@ struct task_struct * wait_for_request = NULL;
  */
 // 块设备数组. 该数组使用主设备号作为索引. 实际内容将在各块设备驱动程序初始化时填入.
 // 例如, 硬盘驱动程序初始化时(hd.c), 第一条语句即用于设备 blk_dev[3] 的内容.
-struct blk_dev_struct blk_dev[NR_BLK_DEV] = { 				// blk_dev_struct 在 kernel/blk_drv/blk.h 中, 结构体中有两个字段: request_fn, request.
+struct blk_dev_struct blk_dev[NR_BLK_DEV] = { 		// blk_dev_struct 在 kernel/blk_drv/blk.h 中, 结构体中有两个字段: request_fn, request.
 	{ NULL, NULL },		/* no_dev */		// 0 - 无设备
 	{ NULL, NULL },		/* dev mem */		// 1 - 内存
 	{ NULL, NULL },		/* dev fd */		// 2 - 软驱设备
@@ -67,7 +67,7 @@ struct blk_dev_struct blk_dev[NR_BLK_DEV] = { 				// blk_dev_struct 在 kernel/b
  */
 // 设备数据块总数指针数组. 每个指针项指向指定主设备号的总块数组. 
 // 该总块数数组每一项对应子设备号确定的一个子设备上所拥有的数据总数(1 块大小 = 1KB).
-int * blk_size[NR_BLK_DEV] = { NULL, NULL, };
+int * blk_size[NR_BLK_DEV] = { NULL, NULL, }; 			// 这个数组里存放着各个块设备的大小的指针.
 
 // 锁定指定缓冲块.
 // 如果指定的缓冲块已经被其他任务锁定, 则使自己睡眠(不可中断的等待), 直到被执行解锁缓冲块的任务明确地唤醒.
@@ -226,7 +226,8 @@ repeat:
 }
 
 // 低级页面读写函数(Low Level Read Write Pagk).
-// 以页面(4K)为单位访问设备数据, 即每次读/写 8 个扇区. 参见下面 ll_rw_blk() 函数.
+// 以页面(4K)为单位访问设备数据, 即每次读/写 8 个扇区. 参见下面 ll_rw_blk() 函数. 
+// page - 要读取的页面号; buffer - 要缓存到的缓冲区指针.
 void ll_rw_page(int rw, int dev, int page, char * buffer)
 {
 	struct request * req;
@@ -239,39 +240,39 @@ void ll_rw_page(int rw, int dev, int page, char * buffer)
 		return;
 	}
 	if (rw != READ && rw != WRITE)
-		panic("Bad block dev command, must be R/W");
+		panic("Bad block dev command, must be R/W!");
 	// 在参数检测操作完成后, 我们现在需要为本次操作建立请求项. 首先我们需要在请求数组中寻找到一个空闲项(槽)来存放新请求项. 
 	// 搜索过程从请求数组末端开始. 于是我们开始从后向前搜索, 当请求结构 request 的设备字段值 < 0 时, 表示该项未被占用(空闲). 
 	// 如果没有一项是空闲的(此时请求项数组指针已经搜索越过头部), 则让本次请求操作先睡眠(以等待请求队列腾出空项), 过一会再来搜索请求队列.
 repeat:
 	req = request + NR_REQUEST;							// 将指针指向队列尾部.
 	while (--req >= request)
-		if (req->dev < 0)
+		if (req->dev < 0) 								// 找到空闲的请求项.
 			break;
-	if (req < request) {
+	if (req < request) { 								// 低于数组起始地址则表示没有找到空闲的请求项.
 		sleep_on(&wait_for_request);					// 睡眠, 过会再查看请求队列.
 		goto repeat;
 	}
 	/* fill up the request-info, and add it to the queue */
 	/* 向空闲请求项中填写请求信息, 并将其加入队列中 */
 	// OK, 程序执行到这里表示已找到一个空闲请求项. 
-	// 于是我们设置好新请求项, 把当前进程置为不可中断睡眠中断后, 就去调用 add_request() 把它添加到请求队列中,
+	// 于是我们设置好新请求项, 把当前进程置为不可中断睡眠状态后, 就去调用 add_request() 把它添加到请求队列中,
 	// 然后直接调用调度函数让当前进程睡眠等待页面从交换设备中读入. 
 	// 这里不像 make_request() 函数那样直接退出函数而调用了 schedule(), 
-	// 是因为 make_request() 函数仅读2个扇区数据. 而这里需要对交换设备读/写 8 个扇区, 需要花较长的时间. 
+	// 是因为 make_request() 函数仅读 2 个扇区数据. 而这里需要对交换设备读/写 8 个扇区, 需要花较长的时间. 
 	// 因此当前进程肯定需要等待而睡眠. 因此这里直接就让进程去睡眠了, 省得在程序其他地方还要进行这些判断操作.
-	req->dev = dev;										// 设备号
-	req->cmd = rw;										// 命令(READ/WRITE) start_code
-	req->errors = 0;									// 读写操作错误计数
-	req->sector = page << 3;							// 起始读写扇区
-	req->nr_sectors = 8;								// 读写扇区数
-	req->buffer = buffer;								// 数据缓冲区
-	req->waiting = current;								// 当前进程进入该请求等待队列
-	req->bh = NULL;										// 无缓冲块头指针(不用高速缓冲)
-	req->next = NULL;									// 下一个请求项指针
-	current->state = TASK_UNINTERRUPTIBLE;				// 置为不可中断状态
+	req->dev = dev;										// 设备号.
+	req->cmd = rw;										// 命令(READ/WRITE).
+	req->errors = 0;									// 读写操作错误计数.
+	req->sector = page << 3;							// 起始读写扇区. 一个页面 = 8 个扇区 = 8 * 512B = 4KB.
+	req->nr_sectors = 8;								// 读写扇区数.
+	req->buffer = buffer;								// 数据缓冲区.
+	req->waiting = current;								// 当前进程进入该请求等待队列.
+	req->bh = NULL;										// 无缓冲块头指针(不用高速缓冲区).
+	req->next = NULL;									// 下一个请求项指针.
+	current->state = TASK_UNINTERRUPTIBLE;				// 置为不可中断状态.
 	add_request(major + blk_dev, req);					// 将请求项加入队列中.
-	// 当前进程需要读取 8 个扇区的数据因此需要睡眠, 因此调用调度程序选择进程运行
+	// 当前进程需要读取 8 个扇区的数据因此需要睡眠, 因此调用调度程序选择进程运行.
 	schedule();
 }
 

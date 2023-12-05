@@ -47,7 +47,7 @@ bitop(bit, "")								// 定义内嵌函数 bit(char * addr, unsigned int nr).
 bitop(setbit, "s")							// 定义内嵌函数 setbit(char * addr, unsigned int nr).
 bitop(clrbit, "r")							// 定义内嵌函数 clrbit(char * addr, unsigned int nr).
 
-static char * swap_bitmap = NULL;
+static char * swap_bitmap = NULL;           // 交换内存的位图所在物理页面的指针.
 int SWAP_DEV = 0;							// 内核初始化时设置的交换设备号.
 
 /*
@@ -228,7 +228,7 @@ int swap_out(void)
 /*
  * 获取首个(实际上是最后 1 个)空闲页面, 并标志为已使用. 如果没有空闲页面, 就返回 0.
  */
-// 在主内存区中申请 1 页空闲物理页面.
+// 在主内存区(主内存区在高速缓冲区之后)中申请 1 页空闲物理页面.
 // 如果已经没有可用物理页面, 则调用执行交换处理. 然后再次申请页面.
 // 输入: %1(ax = 0) - 0; %2(LOW_MEM) 内存字节位图管理的起始位置; 
 // 		%3(cx = PAGING_PAGES); %4(edi = mem_map + PAGING_PAGES - 1).
@@ -278,7 +278,7 @@ repeat:
 void init_swapping(void)
 {
 	// blk_size[] 指向指定主设备号的块设备块数数组. 该块数数组每一项对应一个设备上所拥有的数据块总数(1 块大小 = 1KB).
-	extern int *blk_size[];							// kernel/blk_drv/ll_rw_blk.c
+	extern int *blk_size[];							// kernel/blk_drv/ll_rw_blk.c 存放各个块设备大小的指针.
 	int swap_size, i, j;
 
 	// 如果没有定义交换设备则返回. 如果交换设备没有设置块数数组, 则显示并返回.
@@ -296,12 +296,12 @@ void init_swapping(void)
 		printk("Swap device too small (%d blocks)\n\r", swap_size);
 		return;
 	}
-	// 每页 4 个数据块, 所以 swap_size >>= 2 计算出交换页面总数.
+	// 每页 4 个数据块(4096KB), 所以 swap_size >>= 2 计算出交换页面总数.
 	// 交换数据块总数转换成对应可交换页面总数. 该值不能大于 SWAP_BITS 所能表示的页面数. 即交换页面总数不得大于 32768.
 	swap_size >>= 2;
 	if (swap_size > SWAP_BITS)
 		swap_size = SWAP_BITS;
-	// 然后申请一页物理内存来存放交换页面映射数组 swap_bitmap, 其中每 1 比特代表 1 页交换页面.
+	// 然后从主内存区申请一页物理内存(4KB)来存放交换页面映射数组 swap_bitmap, 其中每 1 比特代表 1 页交换页面.
 	swap_bitmap = (char *) get_free_page();
 	if (!swap_bitmap) {
 		printk("Unable to start swapping: out of memory :-)\n\r");
@@ -319,7 +319,7 @@ void init_swapping(void)
 	}
 	// 将交换设备的标志字符串 "SWAP-SPACE" 字符串清空
 	memset(swap_bitmap + 4086, 0, 10);
-	// 然后检查读入的交换位映射图. 应该 32768 个位全为 0, 若位图中有置位的位 0, 则表示位图有问题, 于是显示出错信息, 释放位图占用的页面并退出函数. 
+	// 然后检查读入的交换位映射图. 应该 32768 个位全为 0, 若位图中有置位的位(1), 则表示位图有问题, 于是显示出错信息, 释放位图占用的页面并退出函数. 
 	// 为了加快检查速度, 这里首先仅挑选查看位图 0 和最后一个交换页面对应的位, 即 swap_size 交换页面对应的位, 以及随后到 SWAP_BITS(32768) 位.
 	for (i = 0 ; i < SWAP_BITS ; i++) {
 		if (i == 1)

@@ -31,7 +31,7 @@
 #define CT_TO_USECS(x)	(((x) % HZ) * 1000000 / HZ)
 
 #define FIRST_TASK task[0]						// 任务 0 比较特殊, 所以特意给它单独定义一个符号.
-#define LAST_TASK task[NR_TASKS - 1]			// 任务数组中的最后一项任务.
+#define LAST_TASK task[NR_TASKS - 1]			// 指向任务数组中的最后一项任务.
 
 #include <linux/head.h>
 #include <linux/fs.h>

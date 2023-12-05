@@ -523,8 +523,8 @@ struct buffer_head * breada(int dev, int first, ...)
 	return (NULL);
 }
 
-// 缓冲区初始化函数: 让每个缓冲块指针 buffer_header* 指向对应的缓冲块，并形成链表等.
-// 参数 buffer_end 是缓冲区内存末端. 
+// 高速缓冲区初始化函数: 让每个缓冲块指针 buffer_header* 指向对应的缓冲块，并形成链表等.
+// 参数 buffer_end 是高速缓冲区内存末端. 
 // 对于具有 16M 内存的系统, 缓冲区末端被设置为 4MB. 对于有 8MB 内存的系统, 缓冲区末端被设置 2MB. 
 // 该函数从缓冲区开始位置 start_buffer 处和缓冲区末端 buffer_end 处分别同时设置(初始化)缓冲块头结构和对应的数据块. 
 // 直到缓冲区中所有内存被分配完毕.

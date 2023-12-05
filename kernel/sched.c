@@ -104,7 +104,7 @@ int jiffies_offset = 0;								/* # clock ticks to add to get "true
  * 为调整时钟而需要增加的时钟滴答, 以获得"精确时间". 这些调整用滴答数的总和不应该超过 1 秒. 
  * 这样做是为了那些对时间精确度要求苛刻的人, 他们培养喜欢自己的机器时间与 WWV 同步 :-
  */
-struct task_struct *current = &(init_task.task);	// 当前任务指针(初始化时指向任务 0)
+struct task_struct *current = &(init_task.task);	// 当前任务指针(初始化时指向任务 0).
 struct task_struct *last_task_used_math = NULL;		// 使用过协处理器任务的指针.
 
 // 定义任务指针数组. 第 1 项被初始化指向初始任务(任务 0)的任务数据结构.
@@ -164,7 +164,7 @@ void math_state_restore()
  */
 /*
  * 'schedule()' 是调度函数. 这是个很好的代码! 没有任何理由对它进行修改, 
- * 因为它可以在所有的环境下工作(比如能够对 IO 边界下得很好的响应等). 只有一件事值得留意, 那就是这里的信号处进代码.
+ * 因为它可以在所有的环境下工作(比如能够对 IO 边界下得很好的响应等). 只有一件事值得留意, 那就是这里的信号处理代码.
  *
  * 注意!! 任务 0 是个闲置('idle')任务, 只有当没有其他任务可以运行时才调用它. 它不能被杀死, 也不睡眠. 
  * 任务 0 中的状态信息 'state' 是从来不用的.
@@ -179,11 +179,11 @@ void schedule(void)
 
 	// 从任务数组中最后一个任务开始循环检测 alarm. 在循环时跳过空指针项.
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
-		if (*p) { 									// 任务指针(*p)不为 0, 即任务不为空.
+		if (*p) { 									// 任务指针(*p 指向任务数组的某一项[任务指针])不为 0, 即任务不为空, 表示任务存在.
 			// 如果设置过任务超时定时 timeout, 并且已经超时(timeout < jiffies), 则复位超时定时值; 
 			// 并且如果任务处于可中断睡眠状态 TASK_INTERRUPTIBLE 下, 将其置为就绪状态(TASK_RUNNING).
 			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
-			if ((*p)->timeout && (*p)->timeout < jiffies) { 	// TODO: 这里的 timeout < jiffies 代表什么意思?
+			if ((*p)->timeout && (*p)->timeout < jiffies) { 	// jiffies < timeout 表示已经超时
 				(*p)->timeout = 0;
 				if ((*p)->state == TASK_INTERRUPTIBLE)
 					(*p)->state = TASK_RUNNING;
@@ -215,7 +215,7 @@ void schedule(void)
 			// 当前索引没有进程指针则跳过当前循环
 			if (!*--p)
 				continue;
-			if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
+			if ((*p)->state == TASK_RUNNING && (*p)->counter > c) 	// 找到 counter 更大的 RUNNING(正在运行或者已准备就绪)进程.
 				c = (*p)->counter, next = i;
 		}
 		// 如果比较得出有 counter 值不等于 0 的结果, 或者后方中没有一个可运行的任务存在(此时 c 仍然为 -1, next=0), 
@@ -226,7 +226,7 @@ void schedule(void)
 		if (c) break; 					// 如果找到待运行的任务, 则跳出循环切换到其上执行.
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 			if (*p)
-				(*p)->counter = ((*p)->counter >> 1) + (*p)->priority;
+				(*p)->counter = ((*p)->counter >> 1) + (*p)->priority; 	// 重置 counter 值.
 	}
 	// 用下面的宏(定义在 sched.h 中)把当前任务指针 current 指向任务号为 next 的任务, 并切换到该任务中运行. 
 	// next 被初始化为 0. 因此若系统中没有任何其他任务可运行时, 则 next 始终为 0. 

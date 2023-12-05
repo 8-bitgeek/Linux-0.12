@@ -236,9 +236,9 @@ int sys_setup(void * BIOS)
 		Log(LOG_INFO_TYPE, "<<<<< Partition table%s ok. >>>>>\n\r",(NR_HD > 1) ? "s":"");
 	for (i = 0; i < NR_HD; i++)
 		Log(LOG_INFO_TYPE, "<<<<< HD%d Info: cyl = %d, head = %d, sect = %d, ctl = %x >>>>>\n", hd_info[i].cyl, hd_info[i].head, hd_info[i].sect, hd_info[i].ctl);
-	rd_load();																	// kernel/blk_drv/ramdisk.c
-	init_swapping();															// mm/swap.c
-	mount_root();																// fs/super.c
+	rd_load();						// kernel/blk_drv/ramdisk.c
+	init_swapping();				// 初始化交换设备使用位图, 如果存在交换设备, 则在内存中申请一页物理内存(4KB)生成交换内存位图信息 swap_bitmap. (mm/swap.c)
+	mount_root();					// fs/super.c
 	return (0);
 }
 
@@ -412,9 +412,9 @@ static void read_intr(void)
 	// 若递减后不等于 0, 表示本项请求还有数据没取完, 于是再次置中断调用 C 函数指针 do_hd 为 read_intr() 并直接返回, 
 	// 等待硬盘在读出另 1 个扇区数据后发出中断并再次调用本函数. 注意: 下面的 256 是指内存字(words), 即 512 字节. 
 	// 注意: 262 行再次置 do_hd 指针指向 read_intr() 是因为硬盘中断处理程序每次调用 do_hd 时都会将该函数指针置空.
-	port_read(HD_DATA, CURRENT->buffer, 256);			// 读 256 字(2bytes)数据到请求结构缓冲区.
+	port_read(HD_DATA, CURRENT->buffer, 256);			// 读 256 字(2bytes)数据到请求结构数据缓冲区.
 	CURRENT->errors = 0;								// 清出错次数.
-	CURRENT->buffer += 512;								// 高速缓冲区指针, 指向新的待读入数据缓冲区.
+	CURRENT->buffer += 512;								// 数据缓冲区指针, 指向新的待读入数据缓冲区.
 	CURRENT->sector++;									// 起始扇区号加 1.
 	if (--CURRENT->nr_sectors) {						// 如果所需读出的扇区数还没读完, 则再置硬盘调用 C 函数指针为 read_intr().
 		SET_INTR(&read_intr);
