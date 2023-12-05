@@ -80,12 +80,13 @@ struct super_block * get_super(int dev)
 {
 	struct super_block * s;									// s 是超级块数据结构指针.
 
-	// 首先判断参数给出设备的有效性. 若设备号为 0 则返回空指针. 然后让 s 指向超级块数组起始处, 开始搜索整个超级块数组, 以寻找指定设备 dev 的超级块.
-	// 第 62 行上的指针赋值语句 "s = 0+super_block" 等同于 "s = super_block", "s = &super_block[0]".
+	// 首先判断参数给出设备的有效性. 若设备号为 0 则返回空指针. 
+	// 然后让 s 指向超级块数组起始处, 开始搜索整个超级块数组, 以寻找指定设备 dev 的超级块.
+	// 下面的指针赋值语句 `s = 0+super_block` 等同于 `s = super_block` 或 `s = &super_block[0]`.
 	if (!dev)
 		return NULL;
 	s = 0 + super_block;
-	while (s < NR_SUPER + super_block)
+	while (s < NR_SUPER + super_block) {
 		// 如果当前搜索项是指定设备的超级块, 即该超级块的设备号字段值与函数参数指定的相同, 则先等待该超级块解锁(若已被其他进程上锁的话).
 		// 在等待期间, 该超级块项有可能被其他设备使用, 因此等待返回之后需再判断一次是否是指定设备的超级块, 如果是则返回该超级块的指针. 
 		// 否则就重新对超级块数组再搜索一遍, 因此此时 s 需重又指向超级块数组开始处.
@@ -95,8 +96,10 @@ struct super_block * get_super(int dev)
 				return s;
 			s = 0 + super_block;
 		// 如果当前搜索项不是, 则检查下一项. 如果没有找到指定的超级块, 则返回空指针.
-		} else
+		} else {
 			s++;
+		}
+	}
 	return NULL;
 }
 
@@ -145,28 +148,31 @@ static struct super_block * read_super(int dev)
 	struct buffer_head * bh;
 	int i, block;
 
-	// 首先判断参数的有效性. 如果没有指明设备, 则返回空指针. 然后检查该设备是否可更换过盘片(也即是否是软盘设备). 
+	// 首先判断参数的有效性. 如果没有指明设备, 则返回空指针. 然后检查该设备是否更换过盘片(也即是否是软盘设备). 
 	// 如果更换过盘, 则高速缓冲区有关该设备的所有缓冲块均失效, 需要进行失效处理, 即释放原来加载的文件系统.
 	if (!dev)
 		return NULL;
 	check_disk_change(dev);
-	// 如果设备的超级块已经在超级块表中, 则直接返回该超级块的指针. 否则, 首先在超级块数组中找出一个空项(也即字段 s_dev = 0的项). 如果数组已经占满则返回空指针.
+	// 如果设备的超级块已经在超级块表中, 则直接返回该超级块的指针. 
+	// 否则, 首先在超级块数组中找出一个空项(也即字段 s_dev = 0 的项). 如果数组已经占满则返回空指针.
 	if (s = get_super(dev))
 		return s;
-	for (s = 0 + super_block ;; s++) {
+	for (s = 0 + super_block; ; s++) {
 		if (s >= NR_SUPER + super_block)
 			return NULL;
-		if (!s->s_dev)
+		if (!s->s_dev) 									// 找到空闲项
 			break;
 	}
-	// 在超级块数组中找到空项之后, 就将该超级块项用于指定设备 dev 上的文件系统. 于是对该超级块结构中的内存字段进行部分初始化处理.
-	s->s_dev = dev;										// 用于 dev 设备上的文件系统.
+	// 在超级块数组中找到空项之后, 就将该超级块项用于指定设备 dev 上的文件系统. 
+	// 于是对该超级块结构中的内存字段进行部分初始化处理.
+	s->s_dev = dev;										// 指定该超级块所属的 dev 设备号.
 	s->s_isup = NULL;
 	s->s_imount = NULL;
 	s->s_time = 0;
-	s->s_rd_only = 0;
-	s->s_dirt = 0;
-	//　然后锁定该超级块, 并从设备上读取超级块信息到 bh 指向的缓冲块中. 超级块位于块设备的第 2 个逻辑块(1 号块)中, (第 1 个是引导盘块). 
+	s->s_rd_only = 0; 									// 只读标志.
+	s->s_dirt = 0; 										// 已修改(脏)标志.
+	// 然后锁定该超级块, 并从设备上读取超级块信息到 bh 指向的缓冲块中. 
+	// 超级块位于块设备的第 2 个逻辑块(1 号块)中, (第 1 个是引导块). (每个块大小为 1KB).
 	// 如果读超级块操作失败, 则释放上面选定的超级块数组中的项(即置 s_dev = 0), 并解锁该项, 返回空指针退出. 
 	// 否则就将设备上读取的超级块信息从缓冲块数据区复制到超级块数组相应项结构中. 并释放存放读取信息的高速缓冲块.
 	lock_super(s);
@@ -175,19 +181,22 @@ static struct super_block * read_super(int dev)
 		free_super(s);
 		return NULL;
 	}
-	*((struct d_super_block *) s) =
-		*((struct d_super_block *) bh->b_data);
+	// 把硬盘中读取的超级块信息复制到超级块列表的对应项中.
+	*((struct d_super_block *) s) = *((struct d_super_block *) bh->b_data);
 	brelse(bh);
 	// 现在我们从设备 dev 上得到了文件系统的超级块, 于是开始检查这个超级块的有效性并从设备上读取 i 节点位图和逻辑块位图等信息. 
-	// 如果所读取的超级块的文件系统魔数字段不对, 说明设备上不是正确的文件系统, 因此向上面一样, 释放上面选定的超级块数组中的项, 并解锁该项, 返回空指针退出.
+	// 如果所读取的超级块的文件系统魔数字段不对, 说明设备上不是正确的文件系统, 因此向上面一样, 
+	// 释放上面选定的超级块数组中的项, 并解锁该项, 返回空指针退出. 
 	// 对于该版 Linux 内核, 只支持 MINIX 文件系统 1.0 版本, 其魔数是 0x137f.
 	if (s->s_magic != SUPER_MAGIC) {
 		s->s_dev = 0;
 		free_super(s);
 		return NULL;
 	}
-	// 下面开始读取设备上 i 节点位图和逻辑块位图数据. 首先初始化内存超级块结构中位图空间. 然后从设备上读取 i 节点位图和逻辑块位图信息, 并存放在超级块对应字段中. 
-	// i 节点位图保存在设备上 2 号块开始的逻辑块中, 共占用 s_imap_blocks 个块. 逻辑块位图在 i 节点位图所在块的后续块中, 共占用 s_zmap_blocks 个块.
+	// 下面开始读取设备上 i 节点位图和逻辑块位图数据. 首先初始化内存超级块结构中位图空间. 
+	// 然后从设备上读取 i 节点位图和逻辑块位图信息, 并存放在超级块对应字段中. 
+	// i 节点位图保存在设备上 2 号块开始的逻辑块中, 共占用 s_imap_blocks 个块. 
+	// 逻辑块位图在 i 节点位图所在块的后续块中, 共占用 s_zmap_blocks 个块.
 	for (i = 0; i < I_MAP_SLOTS; i++)					// 初始化操作.
 		s->s_imap[i] = NULL;
 	for (i = 0; i < Z_MAP_SLOTS; i++)
@@ -206,7 +215,8 @@ static struct super_block * read_super(int dev)
 		else
 			break;
 	// 如果读出的位图个数不等于位图应该占有的逻辑块数, 说明文件系统位图信息有问题, 超级块初始化失败. 
-	// 因此只能释放前面申请并占用的所有资源, 即释放 i 节点位图和逻辑块位图占用的高速缓冲块, 释放上面选定的超级块数组项, 解锁该超级块项, 并返回空指针退出.
+	// 因此只能释放前面申请并占用的所有资源, 即释放 i 节点位图和逻辑块位图占用的高速缓冲块, 
+	// 释放上面选定的超级块数组项, 解锁该超级块项, 并返回空指针退出.
 	if (block != 2 + s->s_imap_blocks + s->s_zmap_blocks) {
 		for(i = 0; i < I_MAP_SLOTS; i++)				// 释放位图占用的高速缓冲块.
 			brelse(s->s_imap[i]);
@@ -327,8 +337,8 @@ int sys_mount(char * dev_name, char * dir_name, int rw_flag)
 	// 并设置安装位置 i 节点的安装标志和节点已修改标志. 然后返回 0(安装成功).
 	sb->s_imount = dir_i;
 	dir_i->i_mount = 1;
-	dir_i->i_dirt = 1;									/* NOTE! we don't iput(dir_i) */        /* 注意! 这里没有用 iput(dir_i) */
-	return 0;											/* we do that in umount */      		/* 这将在 umount 内操作 */
+	dir_i->i_dirt = 1;					/* NOTE! we don't iput(dir_i) */        /* 注意! 这里没有用 iput(dir_i) */
+	return 0;							/* we do that in umount */      		/* 这将在 umount 内操作 */
 }
 
 // 安装根文件系统.
@@ -345,27 +355,30 @@ void mount_root(void)
 	// 若磁盘 i 节点结构不是 32 字节, 则出错停机. 该判断用于防止修改代码时出现不一致情况.
 	if (32 != sizeof (struct d_inode))
 		panic("bad i-node size");
-	// 首先初始化文件表数组(共 64 项, 即系统同时只能打开 64 个文件)和超级块表. 这里将所有文件结构中的引用计数设置为 0(表示空闲), 
-	// 并把超级块表中各项结构的设备字段初始化为 0(也表示空闲). 如果根文件系统所在设备是软盘的话, 就提示 "插入根文件系统盘, 并按回车键", 并等待按键.
+	// 首先初始化文件表数组(共 64 项, 即系统同时只能打开 64 个文件)和超级块表. 
+	// 这里将所有文件结构中的引用计数设置为 0(表示空闲), 并把超级块表中各项结构的设备字段初始化为 0(也表示空闲). 
+	// 如果根文件系统所在设备是软盘的话, 就提示 "插入根文件系统盘, 并按回车键", 并等待按键.
 	for(i = 0; i < NR_FILE; i++)									// 初始化文件表.
 		file_table[i].f_count = 0; 									// (fs/file_table.c)
-	if (MAJOR(ROOT_DEV) == 2) {										// 提示插入根文件系统盘.
+	if (MAJOR(ROOT_DEV) == 2) {										// 如果是 ROOT_DEV(根文件设备)是软盘, 则提示插入根文件系统盘.
 		printk("Insert root floppy and press ENTER\r\n");
 		wait_for_keypress();
 	}
-	for(p = &super_block[0] ; p < &super_block[NR_SUPER] ; p++) {
+	for(p = &super_block[0]; p < &super_block[NR_SUPER]; p++) {
 		p->s_dev = 0;												// 初始化超级块表
 		p->s_lock = 0;
 		p->s_wait = NULL;
 	}
-	// 做好以上 "分外" 的初始化工作之后, 我们开始安装根文件系统. 于是从根设备上读取文件系统超级块, 并取得文件系统的根 i 节点(1 号节点)在内存 i 节点表中的指针.
+	// 做好以上 "分外" 的初始化工作之后, 我们开始安装根文件系统. 
+	// 于是从根设备上读取文件系统超级块, 并取得文件系统的根 i 节点(1[0] 号节点)在内存 i 节点表中的指针.
 	// 如果读根设备上超级块失败或取根节点失败, 则都显示信息并停机.
 	if (!(p = read_super(ROOT_DEV)))
 		panic("Unable to mount root");
 	if (!(mi = iget(ROOT_DEV, ROOT_INO)))							// 在 fs.h 中 ROOT_INO 定义为 1.
 		panic("Unable to read root i-node");
-	// 现在我们对超级块和根 i 节点进行设置. 把根 i 节点引用次数递增 3 次. 因为下面 266 行上也引用了该 i 节点. 
-	// 另外, iget() 函数中 i 节点引用计数已被设置为 1. 然后置该超级块的被安装文件系统 i 节点和被安装到 i 节点字段为该 i 节点.
+	// 现在我们对超级块和根 i 节点进行设置. 把根 i 节点引用次数递增 3 次. 
+	// 因为下面 266 行上也引用了该 i 节点. 另外, iget() 函数中 i 节点引用计数已被设置为 1. 
+	// 然后置该超级块的被安装文件系统 i 节点和被安装到 i 节点字段为该 i 节点.
 	// 再设置当前进程的当前工作目录和根目录 i 节点. 此时当前进程是 1 号进程(init 进程).
 	mi->i_count += 3 ;												/* NOTE! it is logically used 4 times, not 1 */
                                 									/* 注意! 从逻辑上讲, 它已被引用了 4 次, 而不是 1 次 */

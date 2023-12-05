@@ -58,7 +58,7 @@ void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 
 #define NR_OPEN 		20								// 进程最多打开文件数.
 #define NR_INODE 		64								// 系统同时最多使用 i 节点个数.
-#define NR_FILE 		64								// 系统最多文件个数(文件数组项数).
+#define NR_FILE 		64								// 系统能同时打开的最多文件个数(文件数组项数).
 #define NR_SUPER 		8								// 系统所含超级块个数(超级块数组项数).
 #define NR_HASH 		307								// 缓冲区 Hash 表数组项数值.
 #define NR_BUFFERS 		nr_buffers						// 系统所含缓冲个数. 初始化后不再改变.
@@ -171,7 +171,7 @@ struct super_block {
 	/* These are only in memory */
 	struct buffer_head * s_imap[8];						// i 节点位图在高速缓冲块指针数组(占用 8 块, 可表示 64M).
 	struct buffer_head * s_zmap[8];						// 逻辑块位图在高速缓冲块指针数组(占用 8 块).
-	unsigned short s_dev;								// 超级块所在设备号.
+	unsigned short s_dev;								// 超级块所在设备号(比如 0x301 表示第一个硬盘的第一个分区).
 	struct m_inode * s_isup;							// 被安装的文件系统根目录的 i 节点. (isup-superi)
 	struct m_inode * s_imount;							// 该文件系统被安装到的 i 节点.
 	unsigned long s_time;								// 修改时间.
