@@ -84,10 +84,10 @@ struct hd_i_struct hd_info[] = { {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0} };
 static int NR_HD = 0;
 #endif
 
-// 定义硬盘分区结构. 给出每个分区从硬盘 0 首开始算起的物理起始扇区号和分区扇区总数. 
+// 定义硬盘分区结构. 给出每个分区从硬盘 0 开始算起的物理起始扇区号和分区扇区总数. 
 // 其中 5 的倍数处的项(例如 hd[0] 和 hd[5] 等)代表整个硬盘的参数.
 static struct hd_struct {
-	long start_sect;				// 分区在硬盘中起始物理(绝对)扇区.
+	long start_sect;				// 分区在硬盘中起始物理(绝对)扇区. (扇区 0 一般用于主引导扇区, 所以 start_sect 一般最小是 1)
 	long nr_sects;					// 分区中扇区总数.
 } hd[5 * MAX_HD] = {{0, 0}, };
 
@@ -215,8 +215,8 @@ int sys_setup(void * BIOS)
 		}
 		p = 0x1BE + (void *)bh->b_data;	 										// 分区表位于第 1(0) 扇区 0x1BE 处.
 		for (i = 1; i < 5; i++, p++) {
-			hd[i + 5 * drive].start_sect = p->start_sect;
-			hd[i + 5 * drive].nr_sects = p->nr_sects;
+			hd[i + 5 * drive].start_sect = p->start_sect; 						// hd[1] 表示第一个硬盘的第一个分区; hd[6] 表示第二个硬盘的第一个分区.
+			hd[i + 5 * drive].nr_sects = p->nr_sects; 							// 一个硬盘的第 0 个扇区一般是主引导扇区. 所以 start_sect == 1 或更大的值.
 		}
 		brelse(bh);																// 释放为存放硬盘数据块而申请的缓冲区.
     }

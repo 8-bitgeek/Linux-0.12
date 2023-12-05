@@ -384,7 +384,7 @@ void brelse(struct buffer_head * buf)
 	wait_on_buffer(buf);
 	if (!(buf->b_count--))
 		panic("Trying to free free buffer");
-	wake_up(&buffer_wait);
+	wake_up(&buffer_wait); 			// 唤醒其它因没有缓冲块可用而进入睡眠等待的进程, 因为现在有空闲的缓冲块可用了.
 }
 
 /*
