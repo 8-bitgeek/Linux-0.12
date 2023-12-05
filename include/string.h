@@ -132,10 +132,10 @@ __asm__(
 return __res;												// 返回比较结果.
 }
 
-// 字符串与字符串 2 的前 count 个字符进行比较.
+// 字符串 1(cs) 与字符串 2(ct) 的前 count 个字符进行比较.
 // 参数: cs - 字符串 1, ct - 字符串 2, count - 比较的字符数.
 // %0 - eax(__res) 返回值, %1 - edi(cs) 字符串 1 指针, %2 - esi(ct) 字符串 2 指针, %3 - ecx(count).
-// 返回: 如果串 1 > 串 2, 则返回 1; 串 1 = 串 2, 则返回 0; 串 1 < 串 2, 则返回 -1.
+// 返回: 如果串 1 > 串 2, 则返回 1; 串 1 == 串 2, 则返回 0; 串 1 < 串 2, 则返回 -1.
 static inline int strncmp(const char * cs, const char * ct, int count)
 {
 register int __res __asm__("ax");							// __res 是寄存器变量(eax).

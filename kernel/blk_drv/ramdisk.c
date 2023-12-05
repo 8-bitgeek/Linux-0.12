@@ -108,16 +108,16 @@ long rd_init(long mem_start, int length)
  * 如果根文件设备(root device)是 ramdisk 的话, 则尝试加载它. root device 原先是指向软盘的, 我们将它改成指向 ramdisk.
  */
 // 尝试根文件系统加载到虚拟盘中.
-// 该函数将在内核设置函数 setup()(hd.c) 中被调用. 另外, 1 磁盘块 = 1024 字节. 
+// 该函数将在内核设置函数 setup()(kernel/blk_drv/hd.c) 中被调用. 另外, 1 磁盘块 = 1024 字节. 
 // 变量 block = 256 表示根文件系统映像被存储于 boot 盘第 256 磁盘块开始处.
 void rd_load(void)
 {
-	struct buffer_head *bh;								// 调整缓冲块头指针.
-	struct super_block	s;								// 文件超级块结构.
+	struct 	buffer_head *bh;							// 调整缓冲块头指针.
+	struct 	super_block	s;								// 文件超级块结构.
 	int		block = 256;								/* Start at block 256 */	/* 开始于 256 盘块 */
 	int		i = 1;
 	int		nblocks;									// 文件系统盘块总数.
-	char		*cp;									/* Move pointer */
+	char	*cp;										/* Move pointer */
 
 	// 首先检查虚拟盘的有效性和完整性. 如果 ramdisk 的长度为零, 则退出. 
 	// 否则显示 ramdisk 的大小以及内存起始位置. 如果此时根文件设备不是软盘设备, 则也退出.

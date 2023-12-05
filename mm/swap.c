@@ -19,7 +19,7 @@
 #include <linux/head.h>
 #include <linux/kernel.h>
 
-// 每个字节 8 位, 因此 1 页(4096B)共有 32768 个位. 若 1 个位对应1页内存, 则最多可管理 32768 个页面, 对应 128MB 内存容量.
+// 每个字节 8 位, 因此 1 页(4096B)共有 32768 个位. 若 1 个位对应 1 页内存, 则最多可管理 32768 个页面, 对应 128MB 内存容量.
 #define SWAP_BITS (4096 << 3)
 
 // 位操作宏. 通过给定不同的 "op", 可定义对指定比特位进行测试, 设置或清除三种操作.
@@ -48,7 +48,7 @@ bitop(setbit, "s")							// 定义内嵌函数 setbit(char * addr, unsigned int 
 bitop(clrbit, "r")							// 定义内嵌函数 clrbit(char * addr, unsigned int nr).
 
 static char * swap_bitmap = NULL;
-int SWAP_DEV = 0;		// 内核初始化时设置的交换设备号.
+int SWAP_DEV = 0;							// 内核初始化时设置的交换设备号.
 
 /*
  * We never page the pages in task[0] - kernel memory.
@@ -278,7 +278,7 @@ repeat:
 void init_swapping(void)
 {
 	// blk_size[] 指向指定主设备号的块设备块数数组. 该块数数组每一项对应一个设备上所拥有的数据块总数(1 块大小 = 1KB).
-	extern int *blk_size[];							// blk_drv/ll_rw_blk.c
+	extern int *blk_size[];							// kernel/blk_drv/ll_rw_blk.c
 	int swap_size, i, j;
 
 	// 如果没有定义交换设备则返回. 如果交换设备没有设置块数数组, 则显示并返回.
@@ -288,7 +288,7 @@ void init_swapping(void)
 		printk("Unable to get size of swap device\n\r");
 		return;
 	}
-	// 取指定交换设备号的交换区数据块总数 swap_size. 若为 0 则返回, 若总块数小于 100 块则显示信息 "交换设备区太小", 然后退出.
+	// 取指定交换设备号的交换区数据块总数 swap_size. 若为 0 则返回, 若总块数小于 100 块(100KB)则显示信息 "交换设备区太小", 然后退出.
 	swap_size = blk_size[MAJOR(SWAP_DEV)][MINOR(SWAP_DEV)];
 	if (!swap_size)
 		return;
@@ -301,7 +301,7 @@ void init_swapping(void)
 	swap_size >>= 2;
 	if (swap_size > SWAP_BITS)
 		swap_size = SWAP_BITS;
-	// 然后申请一页物理内存来存放交换页面映射数组 swap_bitmap, 其中每 1 比特代表 1 页交换页面
+	// 然后申请一页物理内存来存放交换页面映射数组 swap_bitmap, 其中每 1 比特代表 1 页交换页面.
 	swap_bitmap = (char *) get_free_page();
 	if (!swap_bitmap) {
 		printk("Unable to start swapping: out of memory :-)\n\r");

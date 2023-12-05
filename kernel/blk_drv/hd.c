@@ -236,7 +236,7 @@ int sys_setup(void * BIOS)
 		Log(LOG_INFO_TYPE, "<<<<< Partition table%s ok. >>>>>\n\r",(NR_HD > 1) ? "s":"");
 	for (i = 0; i < NR_HD; i++)
 		Log(LOG_INFO_TYPE, "<<<<< HD%d Info: cyl = %d, head = %d, sect = %d, ctl = %x >>>>>\n", hd_info[i].cyl, hd_info[i].head, hd_info[i].sect, hd_info[i].ctl);
-	rd_load();																	// blk_drv/ramdisk.c
+	rd_load();																	// kernel/blk_drv/ramdisk.c
 	init_swapping();															// mm/swap.c
 	mount_root();																// fs/super.c
 	return (0);
