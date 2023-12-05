@@ -201,15 +201,15 @@ static struct super_block * read_super(int dev)
 		s->s_imap[i] = NULL;
 	for (i = 0; i < Z_MAP_SLOTS; i++)
 		s->s_zmap[i] = NULL;
-	block = 2;
-	// 从第二逻辑块号开始读取 i 节点位图
-	for (i = 0 ; i < s->s_imap_blocks ; i++)			// 读取设备中 i 节点位图.
+	block = 2; 											// 2 号块保存 i 节点位图(引导块 - 超级块 - i 节点位图 - 逻辑块位图 - i 节点 - 数据区).
+	// 从第二逻辑块号(2 号块)开始读取 i 节点位图.
+	for (i = 0; i < s->s_imap_blocks; i++)				// 读取块设备中 i 节点位图信息到高速缓冲区, 并设置超级块信息指向这些缓冲区.
 		if (s->s_imap[i] = bread(dev, block))
 			block++;
 		else
 			break;
 	// 从 i 节点位图之后开始读取逻辑块位图
-	for (i = 0 ; i < s->s_zmap_blocks ; i++)			// 读取设备中逻辑块位图.
+	for (i = 0; i < s->s_zmap_blocks; i++)				// 读取设备中逻辑块位图.
 		if (s->s_zmap[i] = bread(dev, block))
 			block++;
 		else

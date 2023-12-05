@@ -169,7 +169,7 @@ struct super_block {
 	unsigned long s_max_size;							// 文件的最大长度.
 	unsigned short s_magic;								// 文件系统魔数(0x137f).
 	/* These are only in memory */
-	struct buffer_head * s_imap[8];						// i 节点位图在高速缓冲块指针数组(占用 8 块, 可表示 64M).
+	struct buffer_head * s_imap[8];						// i 节点位图在高速缓冲块(每块 1KB)指针数组(占用 8 块, 可表示 64M).
 	struct buffer_head * s_zmap[8];						// 逻辑块位图在高速缓冲块指针数组(占用 8 块).
 	unsigned short s_dev;								// 超级块所在设备号(比如 0x301 表示第一个硬盘的第一个分区).
 	struct m_inode * s_isup;							// 被安装的文件系统根目录的 i 节点. (isup-superi)
