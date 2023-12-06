@@ -382,15 +382,15 @@ void mount_root(void)
 	// 再设置当前进程的当前工作目录和根目录 i 节点. 此时当前进程是 1 号进程(init 进程).
 	mi->i_count += 3 ;												/* NOTE! it is logically used 4 times, not 1 */
                                 									/* 注意! 从逻辑上讲, 它已被引用了 4 次, 而不是 1 次 */
-	p->s_isup = p->s_imount = mi;
-	current->pwd = mi;
-	current->root = mi;
+	p->s_isup = p->s_imount = mi; 									// 设置根目录及超级块被安装到的 i 节点.
+	current->pwd = mi; 												// 设置当前任务的工作目录 i 节点.
+	current->root = mi; 											// 设置当前任务的根目录 i 节点.
 	// 然后我们对根文件系统上的资源作统计工作. 统计该设备上空闲块数和空闲 i 节点数. 首先令 i 等于超级块中表明的设备逻辑块总数. 
 	// 然后根据逻辑块位图中相应位的占用情况统计出空闲块数. 这里宏函数 set_bit() 只是在测试位, 而非设置位. 
 	// "i&8191" 用于取得 i 节点号在当前位图块中对应的位偏移值. "i>>13" 是将 i 除以 8192, 也即除一个磁盘块包含的位数.
 	free = 0;
 	i = p->s_nzones;
-	while (-- i >= 0)
+	while (--i >= 0)
 		if (!set_bit(i & 8191, p->s_zmap[i >> 13]->b_data))
 			free++;
 	// 打印当前主设备上空闲和总的逻辑块数

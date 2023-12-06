@@ -14,7 +14,7 @@ int printk(const char * fmt, ...);              // 内核专用的打印信息�
 void console_print(const char * str);           // 控制台显示函数. (kernel/chr_drv/console.c)
 int tty_write(unsigned ch,char * buf,int count);// 往tty上写指定长度的字符串. (kernel/chr_drv/tty_io.c)
 void * malloc(unsigned int size);               // 通用内核内存分配函数. (lib/malloc.c)
-void free_s(void * obj, int size);              // 释放指定对象占用的内在. (lib/malloc.c)
+void free_s(void * obj, int size);              // 释放指定对象占用的内存. (lib/malloc.c)
 extern void hd_times_out(void);                 // 硬盘处理超时. (kernel/blk_drv/hd.c)
 extern void sysbeepstop(void);                  // 停止蜂鸣. (kernel/chr_drv/console.c)
 extern void hd_times_out(void);                 // 硬盘处理超时. (kernel/blk_drv/hd.c)

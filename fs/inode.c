@@ -346,7 +346,7 @@ struct m_inode * get_pipe_inode(void)
 	return inode;
 }
 
-// 取得一个i节点.
+// 取得一个 i 节点.
 // 参数: dev - 设备号; nr - i 节点号.
 // 从设备上读取指定节点号的 i 节点结构内容到内存 i 节点表中, 并且返回该 i 节点指针. 
 // 首先在位于高速缓冲区中的 i 节点表中搜寻, 若找到指定节点号的 i 节点则在经过一些判断处理后返回该 i 节点指针. 
@@ -357,7 +357,7 @@ struct m_inode * iget(int dev, int nr)
 
 	// 首先判断参数有效性. 若设备号是 0, 则表明内核代码问题, 显示出错信息并停机. 然后预先从 i 节点表中取一个空闲 i 节点备用.
 	if (!dev)
-		panic("iget with dev==0");
+		panic("iget with dev == 0");
 	empty = get_empty_inode(); 							// 预先从 inode_table 中获取一个空闲项.
 	// 接着扫描 i 节点表. 寻找指定设备 dev 及节点号 nr 对应的 i 节点. 并递增该节点的引用次数. 
 	inode = inode_table;
@@ -413,7 +413,7 @@ struct m_inode * iget(int dev, int nr)
 	inode = empty;
 	inode->i_dev = dev;									// 设置 i 节点的设备.
 	inode->i_num = nr;									// 设置 i 节点号.
-	read_inode(inode);      							// 读取 i 节点信息
+	read_inode(inode);      							// 读取指定设备号及节点号的 i 节点信息.
 	return inode;
 }
 
@@ -433,17 +433,18 @@ static void read_inode(struct m_inode * inode)
 	lock_inode(inode);
 	if (!(sb = get_super(inode->i_dev)))
 		panic("trying to read inode without dev");
-	// 该i节点所在设备逻辑块号 = (启动块 + 超级块) + i节点位图占用的块数 + 逻辑块位图的块数 + (i节点号 - 1) / 每块含有的 i 节点数. 
+	// 该 i 节点所在设备逻辑块号 = (启动块 + 超级块) + i 节点位图占用的块数 + 逻辑块位图的块数 + (i 节点号 - 1) / 每块含有的 i 节点数. 
 	// 虽然 i 节点号从 0 开始编号, 但第 1 个 0 号 i 节点不用, 并且磁盘上也不保存对应的 0 号 i 节点结构. 
 	// 因此存放 i 节点的盘块的第 1 块上保存的是 i 节点号是 1--16 的 i 节点结构而不是 0--15 的. 
 	// 因此在上面计算 i 节点号对应的 i 节点结构所在盘块时需要减 1, 即: B = (i 节点号 - 1) / 每块含有 i 节点结构数. 
 	// 例如, 节点号 16 的 i 节点结构应该在 B = (16 - 1) / 16 = 0 的块上. 
 	// 这里我们从设备上读取该 i 节点所在逻辑块, 并复制指定 i 节点内容到 inode 指针所指位置处.
-	block = 2 + sb->s_imap_blocks + sb->s_zmap_blocks + (inode->i_num - 1) / INODES_PER_BLOCK;
+	block = 2 + sb->s_imap_blocks + sb->s_zmap_blocks + ((inode->i_num - 1) / INODES_PER_BLOCK);
 	// 将 i 节点信息的那个逻辑块读取到高速缓存中
 	if (!(bh = bread(inode->i_dev, block)))
 		panic("unable to read i-node block");
-	*(struct d_inode *)inode = ((struct d_inode *)bh->b_data)[(inode->i_num - 1) % INODES_PER_BLOCK];
+	// 复制磁盘上的 inode 信息到内存中.
+	*(struct d_inode *)inode = ((struct d_inode *)bh->b_data)[(inode->i_num - 1) % INODES_PER_BLOCK]; 	// 求余得到在该页面内的下标.
 	// 最后释放读入的缓冲块, 并解锁该 i 节点. 对于块设备文件, 还需要设置 i 节点的文件最大长度值.
 	brelse(bh);
 	if (S_ISBLK(inode->i_mode)) {
