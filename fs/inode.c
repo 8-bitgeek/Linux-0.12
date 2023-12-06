@@ -282,21 +282,21 @@ repeat:
 struct m_inode * get_empty_inode(void)
 {
 	struct m_inode * inode;
-	static struct m_inode * last_inode = inode_table;			// 指向 i 节点表第 1 项.
+	static struct m_inode * last_inode = inode_table;			// 指向 i 节点表第 0 项.
 	int i;
 
-	// 在初始化 last_inode 指针指向 i 节点表头一项后循环扫描整个 i 节点表, 
+	// 在初始化 last_inode 指针指向 i 节点表第一(0)项后循环扫描整个 i 节点表, 
 	// 如果 last_inode 已经指向 i 节点表的最后 1 项之后, 则让其重新指向 i 节点表开始处,
 	// 以继续循环寻找空闲 i 节点项. 如果 last_inode 所指向的 i 节点计数值为 0, 则说明可能找到空闲 i 节点项. 
 	// 让 inode 指向该 i 节点. 如果该 i 节点的已修改标志和和锁定标志均为 0, 则我们可以使用该 i 节点, 于是退出 for 循环.
 	do {
 		inode = NULL;
-		for (i = NR_INODE; i ; i--) {							// NR_INODE = 64.
-			if (++last_inode >= inode_table + NR_INODE)
+		for (i = NR_INODE; i; i--) {							// NR_INODE = 64.
+			if (++last_inode >= inode_table + NR_INODE) 		// 如果超出表末尾则从头开始.
 				last_inode = inode_table;
 			if (!last_inode->i_count) {
 				inode = last_inode;
-				if (!inode->i_dirt && !inode->i_lock)
+				if (!inode->i_dirt && !inode->i_lock) 			// 脏标志为 0, 且未上锁表示已找到空闲项.
 					break;
 			}
 		}
@@ -359,7 +359,7 @@ struct m_inode * iget(int dev, int nr)
 	if (!dev)
 		panic("iget with dev==0");
 	empty = get_empty_inode();
-	// 接着扫描 i 节点表. 寻找参数指定节点号 nr 的 i 节点. 并递增该节点的引用次数. 
+	// 接着扫描 i 节点表. 寻找参数指定设备 dev 及节点号 nr 的 i 节点. 并递增该节点的引用次数. 
 	// 如果当前扫描 i 节点的设备号不等于指定的设备号或者节点号不等于指定的节点号, 则继续扫描.
 	inode = inode_table;
 	while (inode < NR_INODE + inode_table) {
@@ -375,18 +375,19 @@ struct m_inode * iget(int dev, int nr)
 			inode = inode_table;
 			continue;
 		}
-		// 到这里表示找到相应的 i 节点. 于是将该 i 节点引用计数增 1. 然后再作进一步检查, 看它是否是另一个文件系统的安装点. 
-		// 若是则寻找被安装文件系统根节点并返回. 如果该 i 节点的确是其他文件系统的安装点, 则在超级块表中搜寻安装在此 i 节点的超级块. 
+		// 到这里表示找到相应的 i 节点. 于是将该 i 节点引用计数增 1. 
+		// 然后再作进一步检查, 看它是否是某个文件系统的安装点. 若是则寻找被安装文件系统根节点并返回. 
+		// 如果该 i 节点的确是其他文件系统的安装点, 则在超级块表中搜寻安装在此 i 节点的超级块. 
 		// 如果没有找到, 则显示出错信息, 并放回本函数开始时获取的空闲节点 empty, 返回该 i 节点指针.
 		inode->i_count++;
 		if (inode->i_mount) {
 			int i;
 
 			for (i = 0 ; i < NR_SUPER ; i++)
-				if (super_block[i].s_imount == inode)
+				if (super_block[i].s_imount == inode) 			// 如果某个超级块安装到了这个 i 节点.
 					break;
 			if (i >= NR_SUPER) {
-				printk("Mounted inode hasn't got sb\n");
+				printk("Mounted inode hasn't got super block.\n");
 				if (empty)
 					iput(empty);
 				return inode;
@@ -462,7 +463,7 @@ static void read_inode(struct m_inode * inode)
 // 该函数把参数指定的 i 节点写入缓冲区相应的缓冲块中, 待缓冲区刷新时会写入盘中. 
 // 为了确定 i 节点所在的设备逻辑块号(或缓冲块), 必须首先读取相应设备上的超级块,
 // 以获取用于计算逻辑块号的每块 i 节点数信息 INODES_PER_BLOCK. 
-// 在计算出 i 节点所在的逻辑块号后, 就把该逻辑块读入一缓冲块中. 然后把 i 节点内容复制到缓冲块的相应位置处.
+// 在计算出 i 节点所在的逻辑块号后, 就把该逻辑块读入缓冲块中. 然后把 i 节点内容复制到缓冲块的相应位置处.
 static void write_inode(struct m_inode * inode)
 {
 	struct super_block * sb;

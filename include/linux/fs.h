@@ -56,8 +56,8 @@ void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 #define Z_MAP_SLOTS 8									// 逻辑块(区段块)位图槽数.
 #define SUPER_MAGIC 0x137F								// 文件系统魔数.
 
-#define NR_OPEN 		20								// 进程最多打开文件数.
-#define NR_INODE 		64								// 系统同时最多使用 i 节点个数.
+#define NR_OPEN 		20								// 进程能打开的最大文件数.
+#define NR_INODE 		64								// 系统同时能打开(使用)的最大 i 节点个数.
 #define NR_FILE 		64								// 系统能同时打开的最多文件个数(文件数组项数).
 #define NR_SUPER 		8								// 系统所含超级块个数(超级块数组项数).
 #define NR_HASH 		307								// 缓冲区 Hash 表数组项数值.
@@ -120,7 +120,7 @@ struct d_inode {
 											// 对于设备特殊文件的 i 节点, 其 zone[0] 中存放的是该文件名所指设备的设备号.
 };
 
-// 这时内存中的 i 节点结构. 前 7 项与 d_inode 完全一样.
+// 这是内存中的 i 节点结构. 前 7 项与 d_inode 完全一样.
 struct m_inode {
 	unsigned short i_mode;								// 文件类型和属性(rwx 位).
 	unsigned short i_uid;								// 文件宿主的用户 id(文件拥有者标识符).

@@ -6,6 +6,7 @@
         "blk.h": "c",
         "termios.h": "c",
         "times.h": "c",
-        "sched.h": "c"
+        "sched.h": "c",
+        "type_traits": "c"
     }
 }
