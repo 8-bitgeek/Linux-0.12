@@ -388,7 +388,7 @@ struct m_inode * iget(int dev, int nr)
 					break;
 			if (i >= NR_SUPER) { 										// 如果没有超级块(文件系统)安装到这个 i 节点.
 				printk("Mounted inode hasn't got super block.\n");
-				if (empty) 												// inode_table 中有空闲的 i 节点的情况下
+				if (empty) 												// inode_table 中有空闲的 i 节点的情况下.
 					iput(empty);
 				return inode;
 			}
@@ -439,14 +439,11 @@ static void read_inode(struct m_inode * inode)
 	// 因此在上面计算 i 节点号对应的 i 节点结构所在盘块时需要减 1, 即: B = (i 节点号 - 1) / 每块含有 i 节点结构数. 
 	// 例如, 节点号 16 的 i 节点结构应该在 B = (16 - 1) / 16 = 0 的块上. 
 	// 这里我们从设备上读取该 i 节点所在逻辑块, 并复制指定 i 节点内容到 inode 指针所指位置处.
-	block = 2 + sb->s_imap_blocks + sb->s_zmap_blocks +
-		(inode->i_num - 1) / INODES_PER_BLOCK;
+	block = 2 + sb->s_imap_blocks + sb->s_zmap_blocks + (inode->i_num - 1) / INODES_PER_BLOCK;
 	// 将 i 节点信息的那个逻辑块读取到高速缓存中
 	if (!(bh = bread(inode->i_dev, block)))
 		panic("unable to read i-node block");
-	*(struct d_inode *)inode =
-		((struct d_inode *)bh->b_data)
-			[(inode->i_num - 1) % INODES_PER_BLOCK];
+	*(struct d_inode *)inode = ((struct d_inode *)bh->b_data)[(inode->i_num - 1) % INODES_PER_BLOCK];
 	// 最后释放读入的缓冲块, 并解锁该 i 节点. 对于块设备文件, 还需要设置 i 节点的文件最大长度值.
 	brelse(bh);
 	if (S_ISBLK(inode->i_mode)) {
