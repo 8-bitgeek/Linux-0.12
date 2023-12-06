@@ -277,7 +277,7 @@ repeat:
 	return;
 }
 
-// 从 i 节点表(inode_table)中获取一个空闲 i 节点项.
+// 从 i 节点表(inode_table)中获取一个空闲 i 节点项(脏标志为 0, 且未上锁).
 // 寻找引用计数 count 为 0 的 i 节点, 并将其写盘后清零, 返回其指针. 引用计数被置 1.
 struct m_inode * get_empty_inode(void)
 {
@@ -359,10 +359,10 @@ struct m_inode * iget(int dev, int nr)
 	if (!dev)
 		panic("iget with dev==0");
 	empty = get_empty_inode();
-	// 接着扫描 i 节点表. 寻找参数指定设备 dev 及节点号 nr 的 i 节点. 并递增该节点的引用次数. 
-	// 如果当前扫描 i 节点的设备号不等于指定的设备号或者节点号不等于指定的节点号, 则继续扫描.
+	// 接着扫描 i 节点表. 寻找指定设备 dev 及节点号 nr 对应的 i 节点. 并递增该节点的引用次数. 
 	inode = inode_table;
 	while (inode < NR_INODE + inode_table) {
+		// 如果当前扫描 i 节点的设备号 dev 不等于指定的设备号或者节点号 nr 不等于指定的节点号, 则继续扫描.
 		if (inode->i_dev != dev || inode->i_num != nr) {
 			inode++;
 			continue;
@@ -375,7 +375,7 @@ struct m_inode * iget(int dev, int nr)
 			inode = inode_table;
 			continue;
 		}
-		// 到这里表示找到相应的 i 节点. 于是将该 i 节点引用计数增 1. 
+		// 到这里表示找到指定设备及节点号对应的 i 节点. 于是将该 i 节点引用计数增 1. 
 		// 然后再作进一步检查, 看它是否是某个文件系统的安装点. 若是则寻找被安装文件系统根节点并返回. 
 		// 如果该 i 节点的确是其他文件系统的安装点, 则在超级块表中搜寻安装在此 i 节点的超级块. 
 		// 如果没有找到, 则显示出错信息, 并放回本函数开始时获取的空闲节点 empty, 返回该 i 节点指针.
@@ -384,11 +384,11 @@ struct m_inode * iget(int dev, int nr)
 			int i;
 
 			for (i = 0 ; i < NR_SUPER ; i++)
-				if (super_block[i].s_imount == inode) 			// 如果某个超级块安装到了这个 i 节点.
+				if (super_block[i].s_imount == inode) 					// 如果某个超级块安装到了这个 i 节点.
 					break;
-			if (i >= NR_SUPER) {
+			if (i >= NR_SUPER) { 										// 如果没有超级块(文件系统)安装到这个 i 节点.
 				printk("Mounted inode hasn't got super block.\n");
-				if (empty)
+				if (empty) 												// 有空闲的 i 节点的情况下
 					iput(empty);
 				return inode;
 			}

@@ -173,7 +173,7 @@ struct super_block {
 	struct buffer_head * s_zmap[8];						// 逻辑块位图在高速缓冲块指针数组(占用 8 块).
 	unsigned short s_dev;								// 超级块所在设备号(比如 0x301 表示第一个硬盘的第一个分区).
 	struct m_inode * s_isup;							// 被安装的文件系统根目录的 i 节点. (isup-superi)
-	struct m_inode * s_imount;							// 该文件系统被安装到的 i 节点.
+	struct m_inode * s_imount;							// 该文件系统(超级块)被安装到哪个 i 节点.
 	unsigned long s_time;								// 修改时间.
 	struct task_struct * s_wait;						// 等待该超级块的进程指针.
 	unsigned char s_lock;								// 被锁定标志.
