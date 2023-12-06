@@ -374,7 +374,7 @@ void mount_root(void)
 	// 如果读根设备上超级块失败或取根节点失败, 则都显示信息并停机.
 	if (!(p = read_super(ROOT_DEV)))
 		panic("Unable to mount root");
-	if (!(mi = iget(ROOT_DEV, ROOT_INO)))							// 在 fs.h 中 ROOT_INO 定义为 1.
+	if (!(mi = iget(ROOT_DEV, ROOT_INO)))							// 在 include/linux/fs.h 中 ROOT_INO 定义为 1.
 		panic("Unable to read root i-node");
 	// 现在我们对超级块和根 i 节点进行设置. 把根 i 节点引用次数递增 3 次. 
 	// 因为下面 266 行上也引用了该 i 节点. 另外, iget() 函数中 i 节点引用计数已被设置为 1. 
