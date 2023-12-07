@@ -158,13 +158,13 @@ struct file {
 	off_t f_pos;										// 文件位置(读写偏移值).
 };
 
-// 内存中磁盘超级块结构.
+// 内存中磁盘超级块结构, 用于存放文件系统的结构信息, 并说明各部分的大小.
 struct super_block {
 	unsigned short s_ninodes;							// i 节点数.
 	unsigned short s_nzones;							// 逻辑块数(或称为区块数).
 	unsigned short s_imap_blocks;						// i 节点位图所占用的数据块数.
 	unsigned short s_zmap_blocks;						// 逻辑块位图所占用的数据块数.
-	unsigned short s_firstdatazone;						// 数据区中第一个逻辑块块号.
+	unsigned short s_firstdatazone;						// 数据区中第一个数据块的逻辑块号.
 	unsigned short s_log_zone_size;						// log(数据块数/逻辑块). (以 2 为底)
 	unsigned long s_max_size;							// 文件的最大长度.
 	unsigned short s_magic;								// 文件系统魔数(0x137f).
@@ -181,13 +181,13 @@ struct super_block {
 	unsigned char s_dirt;								// 已修改(脏)标志.
 };
 
-// 磁盘上超级块结构.
+// 磁盘上超级块结构, 用于存放文件系统的结构信息, 并说明各部分的大小.
 struct d_super_block {
-	unsigned short s_ninodes;							// 节点数.
-	unsigned short s_nzones;							// 逻辑块数
+	unsigned short s_ninodes;							// 该文件系统包含的 i 节点数.
+	unsigned short s_nzones;							// 该文件系统包含的逻辑块数.
 	unsigned short s_imap_blocks;						// i 节点位图所占用的数据块数.
 	unsigned short s_zmap_blocks;						// 逻辑块位图所占用的数据块数.
-	unsigned short s_firstdatazone;						// 第一个数据逻辑块号.
+	unsigned short s_firstdatazone;						// 数据区中第一个数据块的逻辑块号.
 	unsigned short s_log_zone_size;						// log(数据块数/逻辑块). (以 2 为底)
 	unsigned long s_max_size;							// 文件最大长度.
 	unsigned short s_magic;								// 文件系统魔数.

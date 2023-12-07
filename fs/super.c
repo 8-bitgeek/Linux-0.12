@@ -26,14 +26,13 @@ void wait_for_keypress(void);           					// 等待击键(kernel/chr_drv/tty_
 // 测试指定位偏移处位的值, 并返回该原位值(应该取名为 test_bit() 更妥帖).
 // 嵌入式汇编宏. 参数 bitnr 是位偏移值, addr 是测试位操作的起始地址.
 // %0 - ax(__res), %1 - 0, %2 - bitnr, %3 - addr
-// 第 23 行定义了一个局部寄存器变量. 该变量将被保存在 eax 寄存器中, 以便于高效访问和操作. 
-// 第 24 行上指令 bt 用于对位进行测试(Bit Test). 
+// __res 是定义了一个局部寄存器变量. 该变量将被保存在 eax 寄存器中, 以便于高效访问和操作. 
+// `bt` 指令用于对位进行测试(Bit Test). 
 // 它会把地址 addr(%3) 和位偏移量 bitnr(%2) 指定的位的值放入进位标志 CF 中. 
 // 指令 setb 用于根据进位标志 CF 设置操作数 %al. 如果 CF = 1 则 %al = 1, 否则 %al = 0.
 #define set_bit(bitnr, addr) ({ \
 register int __res; \
-__asm__("bt %2, %3; setb %%al":"=a" (__res):"a" (0),"r" (bitnr),"m" (*(addr))); \
-__res; })
+__asm__("bt %2, %3; setb %%al":"=a" (__res):"a" (0),"r" (bitnr),"m" (*(addr))); __res; })
 
 struct super_block super_block[NR_SUPER];					// 超级块结构表数组(NR_SUPER = 8)
 /* this is initialized in init/main.c */
