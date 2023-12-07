@@ -102,7 +102,7 @@ static inline long fork_for_process0() {
 		"int $0x80\n\t"  							/* 调用系统中断 0x80: system_call(kernel/sys_call.s) */
 		: "=a" (__res)  							/* 返回值 -> eax(__res) */  	// 返回值放入 __res 中
 		: "0" (2));  								/* 输入为系统中断调用号 __NR_name(2) */ 	// 输入寄存器为 eax(%0) = 2, 
-													/* 即调用 sys_call_table[2] 中的 sys_fork (kernel/sys_call.s) */
+													/* 即调用 sys_call_table[2](include/linux/sys.h) 中的 sys_fork (kernel/sys_call.s) */
 
 	// 从 fork_for_process0() 返回时, cs = 0xf = 0b-0000-1-1-11 ==> LDT 中第一项(代码段), CPL = 3.
 	if (__res >= 0)  								/* 如果返回值(新进程的 pid, 存放在 eax 中) >= 0, 则直接返回该值 */

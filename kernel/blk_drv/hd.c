@@ -238,7 +238,7 @@ int sys_setup(void * BIOS)
 		Log(LOG_INFO_TYPE, "<<<<< HD%d Info: cyl = %d, head = %d, sect = %d, ctl = %x >>>>>\n", hd_info[i].cyl, hd_info[i].head, hd_info[i].sect, hd_info[i].ctl);
 	rd_load();						// kernel/blk_drv/ramdisk.c
 	init_swapping();				// 初始化交换设备使用位图, 如果存在交换设备, 则在内存中申请一页物理内存(4KB)生成交换内存位图信息 swap_bitmap. (mm/swap.c)
-	mount_root();					// fs/super.c
+	mount_root();					// 安装根文件系统. fs/super.c
 	return (0);
 }
 

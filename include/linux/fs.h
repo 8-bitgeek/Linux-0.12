@@ -151,7 +151,7 @@ struct m_inode {
 
 // 文件结构(用于在文件句柄与 i 节点之间建立关系).
 struct file {
-	unsigned short f_mode;								// 文件操作模式(RW 位).
+	unsigned short f_mode;								// 文件操作模式(R/W 位).
 	unsigned short f_flags;								// 文件打开和控制的标志.
 	unsigned short f_count;								// 对应文件引用计数值.
 	struct m_inode * f_inode;							// 指向对应 i 节点.
@@ -160,7 +160,7 @@ struct file {
 
 // 内存中磁盘超级块结构, 用于存放文件系统的结构信息, 并说明各部分的大小.
 struct super_block {
-	unsigned short s_ninodes;							// i 节点数.
+	unsigned short s_ninodes;							// 该文件系统上的 i 节点总数.
 	unsigned short s_nzones;							// 逻辑块数(或称为区块数).
 	unsigned short s_imap_blocks;						// i 节点位图所占用的数据块数.
 	unsigned short s_zmap_blocks;						// 逻辑块位图所占用的数据块数.
@@ -183,7 +183,7 @@ struct super_block {
 
 // 磁盘上超级块结构, 用于存放文件系统的结构信息, 并说明各部分的大小.
 struct d_super_block {
-	unsigned short s_ninodes;							// 该文件系统包含的 i 节点数.
+	unsigned short s_ninodes;							// 该文件系统包含的 i 节点总数.
 	unsigned short s_nzones;							// 该文件系统包含的逻辑块数.
 	unsigned short s_imap_blocks;						// i 节点位图所占用的数据块数.
 	unsigned short s_zmap_blocks;						// 逻辑块位图所占用的数据块数.

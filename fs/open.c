@@ -249,7 +249,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 	return 0;
 }
 
-// 打开(或创建)文件系统调用.
+// 打开(或创建)文件的系统调用.
 // 参数 filename 是文件名, flag 是打开文件标志, 它可取值 :O_RDONLY(只读), O_WRONLY(只写) 或 O_RDWR(读写), 
 // 以及 O_CREAT(创建), O_EXCL(被创建文件必须不存在), O_APPEND(在文件尾添加数据) 等其他一些标志的组合, 
 // 如果本调用创建了一个新文件, 则 mode 就用于指定文件的许可属性. 
