@@ -250,7 +250,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 }
 
 // 打开(或创建)文件的系统调用.
-// 参数 filename 是文件名, flag 是打开文件标志, 它可取值 :O_RDONLY(只读), O_WRONLY(只写) 或 O_RDWR(读写), 
+// 参数 filename 是文件名, flag 是打开文件标志, 它可取值: O_RDONLY(只读), O_WRONLY(只写), O_RDWR(读写), 
 // 以及 O_CREAT(创建), O_EXCL(被创建文件必须不存在), O_APPEND(在文件尾添加数据) 等其他一些标志的组合, 
 // 如果本调用创建了一个新文件, 则 mode 就用于指定文件的许可属性. 
 // 这些属性有 S_IRWXU(文件宿主具有读, 写和执行权限), S_IRUSR(用户具有读文件权限), S_IRWXG(组成员有读, 写执行)等等. 
@@ -264,25 +264,25 @@ int sys_open(const char * filename, int flag, int mode)
 	struct file * f;
 	int i, fd;
 
-	// 首先对参数进行处理. 将用户设置的文件模式和进程模式屏蔽码相与, 产适配器的文件模式. 为了为打开文件建立一个文件句柄, 
+	// 首先对参数进行处理. 将用户设置的文件模式和进程模式屏蔽码相与, 产生许可的文件模式. 为了给打开文件建立一个文件句柄, 
 	// 需要搜索进程结构中文件结构指针数组, 以查找一个空闲项. 空闲项的索引号 fd 即是句柄值. 若已经没有空闲项, 则返回出错码(参数无效).
-	mode &= 0777 & ~current->umask;
+	mode &= (0777 & ~current->umask);
 	for(fd = 0 ; fd < NR_OPEN ; fd++)
 		if (!current->filp[fd])
 			break;          						// 找到空闲项.
-	if (fd >= NR_OPEN)
+	if (fd >= NR_OPEN) 								// 没找到.
 		return -EINVAL;
 	// 然后我们设置当前进程的执行时关闭文件句柄(close_on_exec)位图, 复位对应的位. close_on_exec 是一个进程所有文件句柄的位图标志.
-	// 每个位代表一个打开着的文件描述符, 用于确定调用系统调用 execve() 时需要关闭的文件句柄. 当程序使用 fork() 函数创建一个子进程时, 
+	// 每个位(置位)代表一个打开着的文件描述符, 用于确定调用系统调用 execve() 时需要关闭的文件句柄. 当程序使用 fork() 函数创建一个子进程时, 
 	// 通常会在该子进程中调用 execve() 函数加载执行另一个新程序. 此时子进程中开始执行新程序. 若一个文件句柄 close_on_exec 中的对应位被置位,
 	// 那么在执行 execve() 时该对应文件句柄将被关闭, 否则该文件句柄将始终处于打开状态. 当打开一个文件时, 默认情况下文件句柄在子进程中也处于打开状态. 
 	// 因此这里要复位对应位. 然后为打开文件在文件表中寻找一个空闲结构项. 我们令 f 指向文件表数组开始处. 
 	// 搜索空闲文件结构项(引用计数为 0 的项), 若已经没有空闲文件表结构项, 则返回出错码. 
-	// 另外, 第 184 行上的指针赋值 "0 + file_table" 等同于 "file_table" 和 "&file_table[0]" 不过这样写可能更能明了一些.
-	current->close_on_exec &= ~(1 << fd);           // 复位对应文件打开位
+	// 另外, 下面的指针赋值 "f = 0 + file_table" 等同于 "f = file_table" 和 "f = &file_table[0]", 不过这样写可能更能明了一些.
+	current->close_on_exec &= ~(1 << fd);           // 复位对应文件打开位.
 	f = 0 + file_table;
 	for (i = 0 ; i < NR_FILE ; i++, f++)
-		if (!f->f_count) break;         			// 在文件表中找到空闲结构项. 
+		if (!f->f_count) break;         			// 在文件表中找到空闲结构项(没有被引用的文件项). 
 	if (i >= NR_FILE)
 		return -EINVAL;
 	// 此时我们让进程对应文件句柄 fd 的文件结构指针指向搜索到的文件结构, 并令文件引用计数递增 1. 
