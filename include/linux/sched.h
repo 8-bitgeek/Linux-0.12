@@ -216,17 +216,17 @@ struct task_struct {
 	long start_time;					// 进程开始运行时刻.
 	struct rlimit rlim[RLIM_NLIMITS];	// 进程资源使用统计数组.
 	/* per process flags, defined below */
-	unsigned int flags;					// 各进程的标志
+	unsigned int flags;					// 各进程的标志.
 	unsigned short used_math;			// 标志: 是否使用了协处理器.
 
 	/* file system info */
 	/* -1 if no tty, so it must be signed */
-	int tty;							// 进程使用 tty 终端的子设备号. -1 表示没有使用
-	unsigned short umask;				// 文件创建属性屏蔽位
-	struct m_inode * pwd;				// 当前工作目录 i 节点结构指针
-	struct m_inode * root;				// 根目录 i 节点结构指针
-	struct m_inode * executable;		// 执行文件 i 节点结构指针
-	struct m_inode * library;			// 被加载库文件 i 节点结构指针
+	int tty;							// 进程使用 tty 终端的子设备号. -1 表示没有使用.
+	unsigned short umask;				// 文件创建属性屏蔽位.
+	struct m_inode * pwd;				// 当前工作目录 i 节点结构指针.
+	struct m_inode * root;				// 根目录 i 节点结构指针.
+	struct m_inode * executable;		// 执行文件 i 节点结构指针.
+	struct m_inode * library;			// 被加载库文件 i 节点结构指针.
 	unsigned long close_on_exec;		// 执行时关闭文件句柄位图标志. (include/fcntl.h) 见下面注释.
 	struct file * filp[NR_OPEN];		// 进程打开的文件结构指针表, 最多 32 项. 表项号即是文件描述符的值.
 	/* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
