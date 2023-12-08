@@ -151,7 +151,8 @@ static int match(int len, const char * name, struct dir_entry * de)
 // 查找指定目录和文件名的目录项.
 // 参数: *dir - 指定目录 i 节点的指针; name - 文件名; namelen - 文件名长度; 该函数在指定目录的数据(文件)中搜索指定文件名的目录项.
 // 并对指定文件名是 '..' 的情况根据当前进行的相关设置进行特殊处理.
-// 返回: 成功则返回高速缓冲区指针, 并在 *res_dir 处返回的目录项结构指针. 失败则返回空指针 NULL.
+// 返回: 成功则返回指定 name 的目录项所在数据块的高速缓冲区指针(比如 'dev/tty1' 则返回 'dev' 对应的目录项所在的数据块的高速缓冲区指针), 
+// 并在 *res_dir 处返回的目录项结构指针. 失败则返回空指针 NULL.
 static struct buffer_head * find_entry(struct m_inode ** dir, const char * name, int namelen, struct dir_entry ** res_dir)
 {
 	int entries;
@@ -169,7 +170,7 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 	if (namelen > NAME_LEN)
 		namelen = NAME_LEN;
 #endif
-	// 首先计算本目录中目录项项数 entries. 目录 i 节点 i_size 字段中含有本目录包含的数据长度, 
+	// 首先计算本目录中目录项数 entries. 目录 i 节点 i_size 字段中含有本目录包含的数据长度, 
 	// 因此其除以一个目录项的长度(16 字节)即可得到该目录中目录项数. 然后置空返回目录项结构指针.
 	entries = (*dir)->i_size / (sizeof (struct dir_entry));
 	*res_dir = NULL;
@@ -181,7 +182,7 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 	// 并且该 i 节点的引用数加 1. 即针对这种情况, 我们悄悄进行了 "偷梁换柱" 工程:)
 	/* check for '..', as we might have to do some "magic" for it */
 	/* 检查目录项 '..', 因为我们可能需要对其进行特殊处理 */
-	if (namelen == 2 && get_fs_byte(name) == '.' && get_fs_byte(name + 1) == '.') {
+	if (namelen == 2 && get_fs_byte(name) == '.' && get_fs_byte(name + 1) == '.') { 	// 如果 name 前两个字符都是 '.', 即 '..'
 		/* '..' in a pseudo-root results in a faked '.' (just change namelen) */
 		/* 伪根中的 '..' 如同一个假 '.'(只需改变名字长度) */
 		if ((*dir) == current->root)
@@ -199,7 +200,7 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 		}
 	}
 	// 现在我们开始正常操作, 查找指定文件名的目录项在什么地方. 因此我们需要读取目录的数据, 即取出目录 i 节点对应块设备数据区中的数据块(逻辑块)信息. 
-	// 这些逻辑块的块号保存在 i 节点结构的 i_zone[9] 数组中. 我们先取其中第 1 个块号. 如果目录 i 节点指向的第一个直接盘块号为 0, 
+	// 这些逻辑块的块号保存在 i 节点结构的 i_zone[] 数组中. 我们先取其中第 1 个块号. 如果目录 i 节点指向的第一个直接盘块号为 0, 
 	// 则说明该目录竟然不含数据, 这不正常. 于是返回 NULL 退出.
 	// 否则我们就从节点所在设备读取指定的目录项数据块. 当然, 如果不成功, 则也返回 NULL 退出.
 	if (!(block = (*dir)->i_zone[0]))
@@ -216,11 +217,10 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 		// 若该块不空, 就让 de 指向该数据块, 然后在其中继续搜索. 
 		// 其中 141 行上 i/DIR_ENTRIES_PER_BLOCK 可得到当前搜索的目录项所在目录文件中的块号, 
 		// 而 bmap() 函数(inode.c)则可计算出在设备上对应的逻辑块号.
-		if ((char *)de >= BLOCK_SIZE + bh->b_data) {
+		if ((char *)de >= (BLOCK_SIZE + bh->b_data)) { 			// 已搜索完该数据块.
 			brelse(bh);
 			bh = NULL;
-			if (!(block = bmap(*dir, i / DIR_ENTRIES_PER_BLOCK)) ||
-			    !(bh = bread((*dir)->i_dev, block))) {
+			if (!(block = bmap(*dir, i / DIR_ENTRIES_PER_BLOCK)) || !(bh = bread((*dir)->i_dev, block))) {
 				i += DIR_ENTRIES_PER_BLOCK;
 				continue;
 			}
@@ -229,10 +229,10 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 		// 如果找到匹配的目录项的话, 则返回目录项结构指针 de 和该目录项 i 节点指针 *dir 以及该目录项数据块指针 bh, 并退出函数. 
 		// 否则继续在目录项数据块中比较下一个目录项.
 		if (match(namelen, name, de)) {
-			*res_dir = de;
-			return bh;
+			*res_dir = de; 										// name 对应的目录项指针.
+			return bh; 											// 返回 name 对应的目录项所在数据块的高速缓冲区指针.
 		}
-		de++;
+		de++; 													// 指向下一个目录项继续匹配.
 		i++;
 	}
 	// 如果指定目录中的所有目录项都搜索赛后, 还没有找到相应的目录项, 则释放目录的数据块, 最后返回 NULL(失败).
@@ -409,15 +409,15 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 
 	// 首先判断参数有效性. 如果给出的指定目录的 i 节点指针 inode 为空, 则使用当前进程的工作目录 i 节点.
 	if (!inode) {
-		inode = current->pwd;									// 进程的当前工作目录 i 节点.
+		inode = current->pwd;									// 使用进程的当前工作目录 i 节点.
 		inode->i_count++;
 	}
 	// 如果用户指定路径名的第 1 个字符是 '/', 则说明路径名是绝对路径名. 则应该从当前进程任务结构中设置的根(或伪根) i 节点开始操作.
 	// 于是我们需要先放回参数指定的或者设定的目录 i 节点, 并取得进程使用的根 i 节点. 然后把该 i 节点的引用计数加 1,
 	// 并删除路径名的第 1 个字符 '/'. 这样就可以保证进程只能以其设定的根 i 节点作为搜索的起点.
-	if ((c = get_fs_byte(pathname)) == '/') {
+	if ((c = get_fs_byte(pathname)) == '/') { // 如果指定的 pathname 是以根目录开始的, 则放回指定的用户指定的 inode 或者上面指定的当前工作目录 inode, 使用根 i 节点.
 		iput(inode);											// 放回原 i 节点.
-		inode = current->root;									// 为进程指定的根 i 节点.
+		inode = current->root;									// 设置为进程指定的根 i 节点.
 		pathname++;
 		inode->i_count++;
 	}
@@ -427,11 +427,11 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 	// 或者是参数指定的某个搜索起始目录的 i 节点. 
 	while (1) {
 		thisname = pathname;
-		if (!S_ISDIR(inode->i_mode) || !permission(inode, MAY_EXEC)) { 	// 不是目录或者访问不被许可则放回 inode 并返回 NULL.
+		if (!S_ISDIR(inode->i_mode) || !permission(inode, MAY_EXEC)) { 	// 如果当前 inode 不是目录或者访问不被许可则放回 inode 并返回 NULL.
 			iput(inode);
 			return NULL;
 		}
-		// 每次循环我们处理路径名中一个目录名(或文件名)部分. 因此在每次循环中我们都要从路径名字符串中分离出一个目录名(或文件名). 
+		// 每次循环我们取路径名中一个目录名(或文件名)部分进行处理. 因此在每次循环中我们都要从路径名字符串中分离出一个目录名(或文件名). 
 		// 方法是从当前路径名指针 pathname 开始处搜索检测字符, 直到字符是一个结尾符(NULL)或者是一个 '/' 字符. 
 		// 此时变量 namelen 正好是当前处理目录名部分的长度, 而变量 thisname 正指向该目录名部分的开始处. 
 		// 此时如果字符是结尾符 NULL, 则表明已经搜索到路径名末尾, 并已到达最后指定目录名或文件名, 则返回该 i 节点指针退出.
@@ -439,7 +439,7 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 		// 例如: 对于路径 /usr/src/linux, 该函数将只返回 src/ 目录名的 i 节点.
 		for(namelen = 0; (c = get_fs_byte(pathname++)) && (c != '/'); namelen++)
 			/* nothing */ ;
-		if (!c) 												// 如果到达文件路径名末尾, 则直接返回该 inode.
+		if (!c) 												// 如果到达文件路径名末尾('\0'), 则直接返回该 inode.
 			return inode;
 		// 在得到当前目录名部分(或文件名)后, 我们调用查找目录项函数 find_entry() 在当前处理的目录中寻找指定名称的目录项. 
 		// 如果没有找到, 则放回该 i 节点, 并返回 NULL 退出. 如果找到, 则在找到的目录项中取出其 i 节点号 inr 和设备号 idev, 
@@ -450,8 +450,8 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 			iput(inode);
 			return NULL;
 		}
-		inr = de->inode;										// 当前目录名部分的 i 节点号.
-		brelse(bh);
+		inr = de->inode;										// 当前目录项指定(对应)的 i 节点号.
+		brelse(bh); 											// 释放当前目录项所在的高速缓冲区.
 		dir = inode;
 		if (!(inode = iget(dir->i_dev, inr))) {					// 取 i 节点内容.
 			iput(dir);
