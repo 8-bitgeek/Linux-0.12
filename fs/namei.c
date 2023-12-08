@@ -148,7 +148,7 @@ static int match(int len, const char * name, struct dir_entry * de)
  *
  * 由于有 '..' 目录项, 因此在操作期间也会对几种特殊情况分别处理 -- 比如横越一个伪根目录以及安装点.
  */
-// 查找指定目录和文件名的目录项.
+// 查找指定目录和文件名的目录项所在的数据块, 并返回该数据块对应的高速缓冲区指针.
 // 参数: *dir - 指定目录 i 节点的指针; name - 文件名; namelen - 文件名长度; 该函数在指定目录的数据(文件)中搜索指定文件名的目录项.
 // 并对指定文件名是 '..' 的情况根据当前进行的相关设置进行特殊处理.
 // 返回: 成功则返回指定 name 的目录项所在数据块的高速缓冲区指针(比如 'dev/tty1' 则返回 'dev' 对应的目录项所在的数据块的高速缓冲区指针), 
@@ -393,7 +393,7 @@ static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode
 /*
  *	get_dir()
  *
- * 该函数根据给出的路径名进行搜索, 直到达到最顶端(比如 /dev/tty1 -> tty1)的目录. 如果失败是返回 NULL.
+ * 该函数根据给出的路径名进行搜索, 直到达到最顶端(比如 /dev/tty1 -> /dev/ 为最顶端的目录)的目录. 如果失败是返回 NULL.
  */
 // 从指定目录开始搜寻指定路径名的目录(或文件名)的 i 节点.
 // 参数: pathname - 路径名; inode - 指定起始目录的 i 节点.
@@ -422,7 +422,7 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 		inode->i_count++;
 	}
 	// 然后针对路径名中的各个目录名部分和文件名进行循环处理. 在循环处理过程中, 我们先要对当前正在处理的目录名部分的 i 节点进行有效性判断, 
-	// 并且把变量 thisname 指向当前正在处理的目录名部分. 如果该 i 节点表明当前处理的目录名部分不是目录类型, 或者没有可进入该目录的访问许可, 
+	// 并且把变量 thisname 指向当前正在处理的目录名(文件名)部分. 如果该 i 节点表明当前处理的目录名部分不是目录类型, 或者没有可进入该目录的访问许可, 
 	// 则放回该 i 节点并返回 NULL 退出. 当然在刚进入循环时, 当前目录的 i 节点 inode 就是进程根 i 节点或者是当前工作目录的 i 节点, 
 	// 或者是参数指定的某个搜索起始目录的 i 节点. 
 	while (1) {
@@ -439,8 +439,8 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 		// 例如: 对于路径 /usr/src/linux, 该函数将只返回 src/ 目录名的 i 节点.
 		for(namelen = 0; (c = get_fs_byte(pathname++)) && (c != '/'); namelen++)
 			/* nothing */ ;
-		if (!c) 												// 如果到达文件路径名末尾('\0'), 则直接返回该 inode.
-			return inode;
+		if (!c) 												// 如果当前到达文件路径名末尾('\0'), 则直接返回之前得到的 inode.
+			return inode; 										// 比如 '/dev/tty1' -> 则返回的是 /dev/ 对应的 inode.
 		// 在得到当前目录名部分(或文件名)后, 我们调用查找目录项函数 find_entry() 在当前处理的目录中寻找指定名称的目录项. 
 		// 如果没有找到, 则放回该 i 节点, 并返回 NULL 退出. 如果找到, 则在找到的目录项中取出其 i 节点号 inr 和设备号 idev, 
 		// 释放包含该目录项的高速缓冲块并放回该 i 节点. 然后取节点号 inr 的 i 节点 inode, 
@@ -451,9 +451,9 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 			return NULL;
 		}
 		inr = de->inode;										// 当前目录项指定(对应)的 i 节点号.
-		brelse(bh); 											// 释放当前目录项所在的高速缓冲区.
+		brelse(bh);
 		dir = inode;
-		if (!(inode = iget(dir->i_dev, inr))) {					// 取 i 节点内容.
+		if (!(inode = iget(dir->i_dev, inr))) {					// 获取当前目录项对应的 i 节点内容.
 			iput(dir);
 			return NULL;
 		}
@@ -476,22 +476,22 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 // 参数: pathname - 目录路径名; namelen - 路径名长度; name - 返回的最顶层目录名.
 // base - 搜索起始目录的 i 节点.
 // 返回: 指定目录名最顶层的 i 节点指针和最顶层目录名称及长度. 出错时返回 NULL.
-// 注意!! 这里 "最顶层目录" 是指路径名中最靠近末端的目录.
+// 注意!! 这里 "最顶层目录" 是指路径名中最靠近末端的目录(比如 '/dev/tty1' 的最顶层目录为 '/dev/' 而不是 '/').
 static struct m_inode * dir_namei(const char * pathname, int * namelen, const char ** name, struct m_inode * base)
 {
 	char c;
 	const char * basename;
-	struct m_inode * dir;
+	struct m_inode * dir; 									// 最顶层的目录对应的 inode. 比如 '/dev/tty1' -> '/dev/' 对应的 inode.
 
 	// 首先取得指定路径名最顶层目录的 i 节点. 然后对路径名 pathname 进行搜索检测, 查出最后一个 '/' 字符后面的名字字符串, 计算其长度, 
 	// 并且返回最顶层目录的 i 节点指针. 注意! 如果路径名最后一个字符是斜杠字符 '/', 那么返回的目录名为空, 并且长度为 0. 
-	// 但返回的 i 节点指针仍然指向最后一个 '/' 字符前目录名的 i 节点.
+	// 但返回的 i 节点指针仍然指向最后一个 '/' 字符前目录名的 i 节点. 比如 '/dev/tty1' 则返回的是 '/dev/' 对应的 inode.
 	if (!(dir = get_dir(pathname, base)))					// base 是指定的起始目录 i 节点.
 		return NULL;
 	basename = pathname;
 	while (c = get_fs_byte(pathname++))
 		if (c == '/')
-			basename = pathname;
+			basename = pathname; 							// 得到最终的目录或文件名, 比如 '/dev/tty1' -> 'tty1'.
 	*namelen = pathname - basename - 1;
 	*name = basename;
 	return dir;
@@ -592,7 +592,7 @@ struct m_inode * namei(const char * pathname)
 // 		  S_IRWXG(组成员有读, 写执行) 等等. 
 //        对于新创建的文件, 这些属性只应用于将来对文件的访问, 创建了只读文件的打开调用也将返回一个读写的文件句柄. 
 // 如果调用操作成功, 则返回文件句柄(文件描述符), 否则返回出错码. 参见 sys/stat.h, include/fcntl.h.
-// res_inode - 文件路径名的 i 节点指针的指针.
+// res_inode - 文件路径名的 i 节点指针的指针(比如 '/dev/tty1' 则返回 'tty1' 对应的 inode).
 // 返回: 成功返回 0, 否则返回出错码; 
 int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_inode)
 {
@@ -610,12 +610,14 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 	// 该标志将用于打开的文件不存在而需要创建文件时, 作为新文件的默认属性.
 	mode &= (0777 & ~current->umask);
 	mode |= I_REGULAR;													// 常规文件标志. 参见 include/const.h 文件.
-	// 然后根据指定的路径名寻找到对应的 i 节点, 以及最顶端目录名及其长度. 此时如果最顶端目录名长度为 0(例如 '/usr/' 这种路径名的情况), 
-	// 那么若操作不是读写, 创建和文件长度截 0, 则表示是在打开一个目录名文件操作. 于是直接返回该目录的 i 节点并返回 0 退出. 
-	// 否则说明进程操作非法, 于是放回该 i 节点, 返回出错码.
-	if (!(dir = dir_namei(pathname, &namelen, &basename, NULL))) 		// 示例: pathname = '/dev/tty1' 时, 得到 basename = 'tty1'
+	// 然后根据指定的路径名寻找到对应的 i 节点(比如 '/dev/tty1' 则得到 '/dev/' 对应的 i 节点), 以及最顶端目录名及其长度. 
+	// 此时如果最顶端目录名长度为 0(例如 '/usr/' 这种路径名的情况), 那么如果操作不是读写, 创建和文件长度截 0, 
+	// 则表示是在打开一个目录名文件操作. 于是直接返回该目录的 i 节点并返回 0 退出. 
+	// 否则说明进程操作非法, 于是放回该 i 节点, 返回出错码. 
+	// 下面得到的 dir 为最顶层目录的 i 节点(比如 '/dev/tty1' 时得到 '/dev/' 的 inode).
+	if (!(dir = dir_namei(pathname, &namelen, &basename, NULL))) 		// 示例: pathname = '/dev/tty1' 时, 得到 basename = 'tty1'.
 		return -ENOENT;
-	// 文件名字为空, 则返回
+	// 文件名字为空, 则返回.
 	if (!namelen) {														/* special case: '/usr/' etc */
 		if (!(flag & (O_ACCMODE | O_CREAT | O_TRUNC))) {
 			*res_inode = dir;
@@ -666,8 +668,8 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 		*res_inode = inode;
 		return 0;
     }
-	// 若上面(411 行)在目录中取文件名对应目录项结构的操作成功(即 bh 不为 NULL), 则说明指定打开的文件已经存在. 
-	// 于是取出该目录项的 i 节点和其所在设备号, 并释放该高速缓冲区以及放回目录的 i 节点. 
+	// 若上面在目录中取文件名对应目录项结构的操作成功(即 bh 不为 NULL), 则说明指定打开的文件已经存在. 
+	// 于是取出该目录项的 i 节点和其所在设备号, 并释放该高速缓冲区以及放回这个文件所在目录的 i 节点(比如文件 tty1 所在的目录为 /dev/). 
 	// 如果此时独占操作标志 O_EXCL 置位, 但现在文件已经存在, 则返回文件已存在出错码退出.
 	inr = de->inode;
 	dev = dir->i_dev;
@@ -680,8 +682,7 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 	// 或者没有访问的许可权限, 则放回该 i 节点, 返回访问权限出错码退出.
 	if (!(inode = follow_link(dir, iget(dev, inr))))
 		return -EACCES;
-	if ((S_ISDIR(inode->i_mode) && (flag & O_ACCMODE)) ||
-	    !permission(inode, ACC_MODE(flag))) {
+	if ((S_ISDIR(inode->i_mode) && (flag & O_ACCMODE)) || !permission(inode, ACC_MODE(flag))) {
 		iput(inode);
 		return -EPERM;
 	}
