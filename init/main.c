@@ -313,7 +313,7 @@ void init(void)
 	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 这里再把它以读和写的方式分别打开是为了复制产生标准输出(写)句柄 stdout 和标准出错输出句柄 stderr.
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
 	(void) open("/dev/tty1", O_RDWR, 0);
-	(void) dup(0);													// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备.
+	(void) dup(0);													// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c)
 	(void) dup(0);													// 复制句柄, 产生句柄 2号 -- stderr 标准出错输出设备.
 	// 进程 1 执行的用户级代码的开始
 	printf("<<<<< Process 1 console fd = %d >>>>>\n", fd);

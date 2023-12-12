@@ -255,7 +255,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 // 如果本调用创建了一个新文件, 则 mode 就用于指定文件的许可属性. 
 // 这些属性有 S_IRWXU(文件宿主具有读, 写和执行权限), S_IRUSR(用户具有读文件权限), S_IRWXG(组成员有读, 写执行)等等. 
 // 对于新创建的文件, 这些属性只应用于将来对文件的访问, 创建了只读文件的打开调用也将返回一个读写的文件句柄. 
-// 如果调用操作成功, 则返回文件句柄(文件描述符), 否则返回出错码. 参见(sys/tat.h include/fcntl.h).
+// 如果调用操作成功, 则返回文件句柄(文件描述符 fd), 否则返回出错码. 参见(sys/tat.h include/fcntl.h).
 int sys_open(const char * filename, int flag, int mode)
 {
 	// 打开文件的系统调用的 Log

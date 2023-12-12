@@ -16,7 +16,7 @@
 extern int sys_close(int fd);
 
 // 复制文件句柄(文件描述符).
-// 参数 fd 是欲复制的文件句柄, arg 指定新文件句柄的最小数值.
+// 参数 fd 是要复制的文件句柄, arg 指定新文件句柄的最小数值.
 // 返回新文件句柄或出错码.
 static int dupfd(unsigned int fd, unsigned int arg)
 {
