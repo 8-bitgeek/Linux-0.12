@@ -21,7 +21,7 @@ struct stat {
 // 例如名称 S_IFMT 的每个字母分别代表单词 State, Inode, File, Mask 和 Type; 而名称 s_IFREG 则是 State, Inode, File 和 REGular 几个大写字母的组合;
 // 名称 S_IRWXU 是 State, Inode, Read, Write, Execute 和 User 的组合. 其他名称可以此类推.
 // 文件类型:
-#define S_IFMT  00170000	// 文件类型位屏蔽码(8 进制表示).
+#define S_IFMT   00170000	// 文件类型位屏蔽码(8 进制表示).
 #define S_IFLNK	 0120000	// 符号链接.
 #define S_IFREG  0100000	// 常规文件.
 #define S_IFBLK  0060000	// 块特殊(设备)文件, 如磁盘 dev/fd0.
@@ -37,7 +37,7 @@ struct stat {
 
 #define S_ISLNK(m)	(((m) & S_IFMT) == S_IFLNK)		// 测试是否为符号链接文件.
 #define S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)		// 测试是否为常规文件.
-#define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)		// 是否为目录文件.
+#define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)		// 是否为目录文件(imode 位 14 置位).
 #define S_ISCHR(m)	(((m) & S_IFMT) == S_IFCHR)		// 是否为字符设备文件.
 #define S_ISBLK(m)	(((m) & S_IFMT) == S_IFBLK)		// 是否为块设备文件.
 #define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)     // 是否为 FIFO 特殊文件。

@@ -341,10 +341,10 @@ int sys_mount(char * dev_name, char * dir_name, int rw_flag)
 }
 
 // 安装根文件系统.
-// 该函数属于系统初始化操作的一部分. 函数首先初始化文件表数组 file_table[] 和超级块表(数组), 
+// 该函数属于系统初始化操作的一部分. 函数首先初始化文件表数组 file_table[](fs/file_table.c) 和超级块表(数组), 
 // 然后读取根文件系统超级块, 并取得文件系统根 i 节点. 
 // 最后统计并显示出根文件系统上的可用资源(空闲块数和空闲 i 节点数 0. 
-// 该函数会在系统开机进行初始化设置时(sys_setup())调用(blk_drv/hd.c).
+// 该函数会在系统开机进行初始化设置时(sys_setup())调用(kernel/blk_drv/hd.c).
 void mount_root(void)
 {
 	int i, free;

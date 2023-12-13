@@ -395,7 +395,7 @@ static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode
  *
  * 该函数根据给出的路径名进行搜索, 直到达到最顶端(比如 /dev/tty1 -> /dev/ 为最顶端的目录)的目录. 如果失败是返回 NULL.
  */
-// 从指定目录开始搜寻指定路径名的目录(或文件名)的 i 节点.
+// 从指定目录开始搜寻指定路径名的顶端目录(或文件名[TODO: 存疑])的 i 节点. 
 // 参数: pathname - 路径名; inode - 指定起始目录的 i 节点.
 // 返回: 目录或文件的 i 节点指针. 失败时返回 NULL.
 static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
@@ -426,7 +426,7 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 	// 则放回该 i 节点并返回 NULL 退出. 当然在刚进入循环时, 当前目录的 i 节点 inode 就是进程根 i 节点或者是当前工作目录的 i 节点, 
 	// 或者是参数指定的某个搜索起始目录的 i 节点. 
 	while (1) {
-		thisname = pathname;
+		thisname = pathname; 									// thisname 指向当前正在处理的部分.
 		if (!S_ISDIR(inode->i_mode) || !permission(inode, MAY_EXEC)) { 	// 如果当前 inode 不是目录或者访问不被许可则放回 inode 并返回 NULL.
 			iput(inode);
 			return NULL;
@@ -591,7 +591,7 @@ struct m_inode * namei(const char * pathname)
 //	  	  这些属性有: S_IRWXU(文件宿主具有读, 写和执行权限), S_IRUSR(用户具有读文件权限), 
 // 		  S_IRWXG(组成员有读, 写执行) 等等. 
 //        对于新创建的文件, 这些属性只应用于将来对文件的访问, 创建了只读文件的打开调用也将返回一个读写的文件句柄. 
-// 如果调用操作成功, 则返回文件句柄(文件描述符), 否则返回出错码. 参见 sys/stat.h, include/fcntl.h.
+// 如果调用操作成功, 则返回文件句柄(文件描述符 fd), 否则返回出错码. 参见 (sys/stat.h, include/fcntl.h).
 // res_inode - 文件路径名的 i 节点指针的指针(比如 '/dev/tty1' 则返回 'tty1' 对应的 inode).
 // 返回: 成功返回 0, 否则返回出错码; 
 int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_inode)
@@ -602,18 +602,18 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 	struct buffer_head * bh;
 	struct dir_entry * de;
 
-	// 首先对函数参数进行合理的处理. 如果文件访问模式标志是只读(O), 但是文件截零标志 O_TRUNC 却置位了, 
+	// 首先对函数参数进行合理的处理. 如果文件访问模式标志是只读(O_RDONLY), 但是文件截零标志 O_TRUNC 却置位了, 
 	// 则在文件打开标志中添加只写标志 O_WRONLY. 这样做的原因是由于截零标志 O_TRUNC 必须在文件可写情况下有效.
 	if ((flag & O_TRUNC) && !(flag & O_ACCMODE))
 		flag |= O_WRONLY;
 	// 使用当前进程的文件访问许可屏蔽码, 屏蔽掉给定模式中的相应位, 并添上普通文件标志 I_REGULAR(include/const.h).
-	// 该标志将用于打开的文件不存在而需要创建文件时, 作为新文件的默认属性.
+	// 该标志将用于打开的文件不存在, 需要创建文件时, 作为*新文件的默认属性*.
 	mode &= (0777 & ~current->umask);
 	mode |= I_REGULAR;													// 常规文件标志. 参见 include/const.h 文件.
 	// 然后根据指定的路径名寻找到对应的 i 节点(比如 '/dev/tty1' 则得到 '/dev/' 对应的 i 节点), 以及最顶端目录名及其长度. 
-	// 此时如果最顶端目录名长度为 0(例如 '/usr/' 这种路径名的情况), 那么如果操作不是读写, 创建和文件长度截 0, 
+	// 此时如果最顶端目录名长度为 0(例如 '/usr/' 这种路径名的情况), 那么如果操作不是读/写/创建/文件长度截 0, 
 	// 则表示是在打开一个目录名文件操作. 于是直接返回该目录的 i 节点并返回 0 退出. 
-	// 否则说明进程操作非法, 于是放回该 i 节点, 返回出错码. 
+	// 如果是这四种操作之一, 则说明进程操作非法, 于是放回该 i 节点, 返回出错码. 
 	// 下面得到的 dir 为最顶层目录的 i 节点(比如 '/dev/tty1' 时得到 '/dev/' 的 inode).
 	if (!(dir = dir_namei(pathname, &namelen, &basename, NULL))) 		// 示例: pathname = '/dev/tty1' 时, 得到 basename = 'tty1'.
 		return -ENOENT;

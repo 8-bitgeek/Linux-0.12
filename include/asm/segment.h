@@ -3,7 +3,7 @@
 // 读取 fs 段中指定地址处的字节.
 // 参数: addr - 指定的内存地址.
 // %0 - (返回的字节 _v); %1 - (内存地址 addr).
-// 返回: 返回内存 fs[addr] 处的字节.
+// 返回: 返回内存 fs[addr] 处的字节值.
 static inline unsigned char get_fs_byte(const char * addr)
 {
 	unsigned register char _v;
