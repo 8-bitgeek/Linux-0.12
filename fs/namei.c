@@ -483,14 +483,14 @@ static struct m_inode * dir_namei(const char * pathname, int * namelen, const ch
 	struct m_inode * dir; 									// 最顶层的目录对应的 inode. 比如 '/dev/tty1' -> '/dev/' 对应的 inode.
 
 	// 首先取得指定路径名最顶层目录的 i 节点. 然后对路径名 pathname 进行搜索检测, 查出最后一个 '/' 字符后面的名字字符串, 计算其长度, 
-	// 并且返回最顶层目录的 i 节点指针. 注意! 如果路径名最后一个字符是斜杠字符 '/', 那么返回的目录名为空, 并且长度为 0. 
-	// 但返回的 i 节点指针仍然指向最后一个 '/' 字符前目录名的 i 节点. 比如 '/dev/tty1' 则返回的是 '/dev/' 对应的 inode.
+	// 并且返回最顶层目录的 i 节点指针. 注意! 如果路径名最后一个字符是斜杠字符 '/', 那么返回的文件名为空, 并且长度为 0. 
+	// 但返回的 i 节点指针仍然指向最后一个 '/' 字符前目录名的 i 节点. 比如 '/dev/tty1' 则返回的是 'dev/' 对应的 inode.
 	if (!(dir = get_dir(pathname, base)))					// base 是指定的起始目录 i 节点. (获取顶端目录的 inode 指针)
 		return NULL;
 	basename = pathname;
 	while (c = get_fs_byte(pathname++))
 		if (c == '/')
-			basename = pathname; 							// 得到最终的目录或文件名, 比如 '/dev/tty1' -> 'tty1'.
+			basename = pathname; 							// 得到最终的目录或文件名, 比如 '/dev/tty1' -> 'tty1', 如果是 '/dev/' 则 basename 为空.
 	*namelen = pathname - basename - 1;
 	*name = basename;
 	return dir;
@@ -619,15 +619,15 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 	// 如果文件名字为空(指定的 pathname 是一个目录路径, 比如: '/usr/'), 则返回.
 	if (!namelen) {														/* special case: '/usr/' etc */
 		if (!(flag & (O_ACCMODE | O_CREAT | O_TRUNC))) { 				// 如果 flag 不是其中的任何一个, 则表示是在执行打开目录的操作.
-			*res_inode = dir; 											// 返回该目录的 inode 指针.
+			*res_inode = dir; 											// 则直接返回该目录的 inode 指针.
 			return 0;
 		}
-		iput(dir);
+		iput(dir); 														// 否则表示出错.
 		return -EISDIR;
 	}
 	// 接着根据上面得到的最顶层目录名的 i 节点 dir, 在其中查找 pathname 中*文件名*(/dev/tty1 中的 tty1)对应的目录项结构 de, 
 	// 并同时得到该目录项所在的高速缓冲区指针. 如果该高速缓冲指针为 NULL, 则表示没有找到对应文件名的目录项, 因此只可能是创建文件操作. 
-	// 此时如果不是创建文件, 则放回该目录的 i 节点, 返回出错号退出. 如果用户在该目录没有写的权限, 则放回该目录的 i 节点, 返回出错号退出.
+	// 此时如果不是创建文件, 则放回该目录的 i 节点, 返回出错号退出. 如果用户在该目录没有写权限, 则也放回该目录的 i 节点, 返回出错号退出.
 	bh = find_entry(&dir, basename, namelen, &de);
 	if (!bh) { 															// 该目录下没有指定文件名的文件的情况下:
 		if (!(flag & O_CREAT)) {                						// 如果不是创建文件操作, 则放回 i 节点并返回错误号.
@@ -641,7 +641,7 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 		// 现在我们确定了是创建操作并且有写操作权限. 因此我们就在目录 i 节点对应设备上申请一个新的 i 节点给路径名上指定的文件使用. 
 		// 若失败则放回目录的 i 节点, 并返回没有空间出错码. 否则使用该新 i 节点, 对其进行初始设置: 置节点的用户 id; 对应节点访问模式; 
 		// 置已修改标志. 然后并在指定目录 dir 中添加一个新目录项. 
-		inode = new_inode(dir->i_dev);
+		inode = new_inode(dir->i_dev); 									// (fs/bitmap.c)
 		if (!inode) {
 			iput(dir);
 			return -ENOSPC;
@@ -668,7 +668,7 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 		return 0;
     }
 	// 若上面在目录中取文件名对应目录项结构的操作成功(即 bh 不为 NULL), 则说明指定打开的文件已经存在. 
-	// 于是取出该目录项的 i 节点和其所在设备号, 并释放该高速缓冲区以及放回这个文件所在目录的 i 节点(比如文件 tty1 所在的目录为 /dev/). 
+	// 于是取出该目录项的 i 节点和其所在设备号, 并释放该高速缓冲区以及放回这个文件所在目录的 i 节点(比如文件 'tty1' 所在的目录为 '/dev/'). 
 	// 如果此时独占操作标志 O_EXCL 置位, 但现在文件已经存在, 则返回文件已存在出错码退出.
 	inr = de->inode;
 	dev = dir->i_dev;

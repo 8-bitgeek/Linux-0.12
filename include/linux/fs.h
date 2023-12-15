@@ -132,7 +132,7 @@ struct m_inode {
 														// 其中, zone[0]-zone[6] 是直接块号;
 														// zone[7] 是一次间接块号; zone[8] 是二次(双重)间接块号.
 														// 注: zone 是区的意思, 可译成区块或逻辑块.
-														// 对于设备特殊文件的 i 节点, 其 zone[0] 中存放的是该文件名所指设备的设备号.
+														// 对于设备特殊文件(比如 '/dev/tty')的 i 节点, 其 zone[0] 中存放的是该文件名所指设备的设备号.
 	/* these are in memory also */
 	struct task_struct * i_wait;						// 等待该 i 节点的进程.
 	struct task_struct * i_wait2;						/* for pipes */

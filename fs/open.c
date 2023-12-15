@@ -209,7 +209,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 	// 只处理主设备号是 4(/dev/ttyxx 文件) 或 5(/dev/tty 文件) 的情况. /dev/tty 的子设备号是 0. 
 	// 如果一个进程有控制终端, 则它是进程控制终端设备的同义名. 
 	// 即 /dev/tty 设备是一个虚拟设备, 它对应到进程实际使用的 /dev/ttyxx 设备之一. 
-	// 对于一个进程来说, 若其有控制终端, 那么它的任务结构中的 tty 字段将是4号设备的某一个子设备号.
+	// 对于一个进程来说, 若其有控制终端, 那么它的任务结构中的 tty 字段将是 4 号设备的某一个子设备号.
 	// 如果打开操作的文件是 /dev/tty(即 MAJOR(dev) = 5), 那么我们令 min = 进程任务结构中的 tty 字段, 即取 4 号设备的子设备号. 
 	// 否则如果打开的是某个 4 号设备, 则直接取其子设备号. 如果得到的 4 号设备子设备号小于 0, 那么说明进程没有控制终端, 或者设备号错误, 
 	// 则返回 -1, 表示由于进程没有控制终端或者不能打开这个设备.
@@ -300,7 +300,7 @@ int sys_open(const char * filename, int flag, int mode)
 	// 如果允许(函数返回 0), 那么在 check_char_dev() 中会根据具体文件打开标志为进程设置控制终端. 
 	// 如果不允许打开使用该字符设备文件, 那么我们只能释放上面申请的文件项和句柄资源. 返回出错码.
 	/* ttys are somewhat special (ttyxx major==4, tty major==5) */
-	if (S_ISCHR(inode->i_mode))
+	if (S_ISCHR(inode->i_mode)) 					// 如果是字符设备文件.
 		if (check_char_dev(inode, inode->i_zone[0], flag)) {
 			iput(inode);
 			current->filp[fd] = NULL;
