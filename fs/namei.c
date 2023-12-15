@@ -60,7 +60,7 @@ static struct m_inode * _namei(const char * filename, struct m_inode * base, int
  */
 // 检测文件访问许可权限.
 // 参数: inode - 文件的 i 节点指针; mask - 访问属性屏蔽码.
-// 返回: 访问许可返回 1, 否则返回 0. (如果给定的 Inode 的 imode 宿主信息与 mask 指定的位[值]相同，则表示有权限).
+// 返回: 访问许可返回 1, 否则返回 0. (如果给定的 inode 的 imode 宿主信息与 mask 指定的位[值]相同，则表示有权限).
 static int permission(struct m_inode * inode, int mask)
 {
 	int mode = inode->i_mode;								// 文件访问属性.
