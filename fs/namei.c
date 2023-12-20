@@ -338,16 +338,16 @@ static struct buffer_head * add_entry(struct m_inode * dir, const char * name, i
 	return NULL;
 }
 
-// 查找符号链接的 i 节点.
+// 查找符号链接文件对应的真实的 i 节点.
 // 参数: dir - 目录 i 节点; inode - 目录项 i 节点.
-// 返回: 返回符号链接到文件的 i 节点指针. 出错返回 NULL.
+// 返回: 返回符号链接到的真实文件的 i 节点指针. 出错返回 NULL.
 static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode)
 {
 	unsigned short fs;													// 用于临时保存 fs 段寄存器值.
 	struct buffer_head * bh;
 
-	// 首先判断函数参数的有效性. 如果没有给出目录 i 节点, 我们就使用进程任务结构中设置的根 i 节点, 并把链接数增 1. 
-	// 如果没有给出目录项 i 节点, 则放回目录 i 节点后返回 NULL. 如果指定目录项不是一个符号链接, 就直接返回目录项对应的 i 节点 inode.
+	// 首先判断函数参数的有效性. 如果没有给出目录 i 节点(dir), 我们就使用进程任务结构中设置的根 i 节点, 并把链接数增 1. 
+	// 如果没有给出目录项 i 节点(inode), 则放回目录 i 节点后返回 NULL. 如果指定目录项不是一个符号链接, 就直接返回目录项对应的 i 节点 inode.
 	if (!dir) {
 		dir = current->root;
 		dir->i_count++;
