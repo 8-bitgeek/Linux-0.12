@@ -143,7 +143,7 @@ static int match(int len, const char * name, struct dir_entry * de)
 /*
  *	find_entry()
  *
- * 在指定目录中寻找一个与名字匹配的目录项. 返回一个含有找到目录项的高速缓冲块以及目录项本身(作为一个参数 -- res_dir). 
+ * 在指定目录中寻找一个与名字匹配的目录项. 返回一个含有找到目录项的高速缓冲块以及目录项本身(参数 -- res_dir). 
  * 该函数并不读取目录项的 i 节点 -- 如果需要的话则自己操作.
  *
  * 由于有 '..' 目录项, 因此在操作期间也会对几种特殊情况分别处理 -- 比如横越一个伪根目录以及安装点.
@@ -482,7 +482,7 @@ static struct m_inode * dir_namei(const char * pathname, int * namelen, const ch
 	const char * basename;
 	struct m_inode * dir; 									// 最顶层的目录对应的 inode. 比如 '/dev/tty1' -> '/dev/' 对应的 inode.
 
-	// 首先取得指定路径名最顶层目录的 i 节点. 然后对路径名 pathname 进行搜索检测, 查出最后一个 '/' 字符后面的名字字符串, 计算其长度, 
+	// 首先取得指定路径名最顶层目录的 i 节点. 然后对路径名 pathname 进行搜索检测, 查出最后一个 '/' 字符后面的文件名字符串, 计算其长度, 
 	// 并且返回最顶层目录的 i 节点指针. 注意! 如果路径名最后一个字符是斜杠字符 '/', 那么返回的文件名为空, 并且长度为 0. 
 	// 但返回的 i 节点指针仍然指向最后一个 '/' 字符前目录名的 i 节点. 比如 '/dev/tty1' 则返回的是 'dev/' 对应的 inode.
 	if (!(dir = get_dir(pathname, base)))					// base 是指定的起始目录 i 节点. (获取顶端目录的 inode 指针)
@@ -613,7 +613,7 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 	// 此时如果最顶端目录名长度为 0(例如 '/usr/' 这种路径名的情况), 那么如果操作不是读/写/创建/文件长度截 0, 
 	// 则表示是在打开一个目录名文件操作. 于是直接返回该目录的 i 节点并返回 0 退出. 
 	// 如果是这四种操作之一, 则说明进程操作非法, 于是放回该 i 节点, 返回出错码. 
-	// 下面得到的 dir 为最顶层目录的 i 节点(比如 '/dev/tty1' 时得到 '/dev/' 的 inode).
+	// 下面得到的 dir 为最顶层目录的 i 节点(比如 '/dev/tty1' 时得到 'dev/' 的 inode).
 	if (!(dir = dir_namei(pathname, &namelen, &basename, NULL))) 		// 示例: pathname = '/dev/tty1' 时, 得到 basename = 'tty1'.
 		return -ENOENT;
 	// 如果文件名字为空(指定的 pathname 是一个目录路径, 比如: '/usr/'), 则返回.
@@ -668,7 +668,7 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 		return 0;
     }
 	// 若上面在目录中取文件名对应目录项结构的操作成功(即 bh 不为 NULL), 则说明指定打开的文件已经存在. 
-	// 于是取出该目录项的 i 节点和其所在设备号, 并释放该高速缓冲区以及放回这个文件所在目录的 i 节点(比如文件 'tty1' 所在的目录为 '/dev/'). 
+	// 于是取出该目录项的 i 节点号和其所在设备号, 并释放该高速缓冲区以及放回这个文件所在目录的 i 节点(比如文件 'tty1' 所在的目录 i 节点为 '/dev/'). 
 	// 如果此时独占操作标志 O_EXCL 置位, 但现在文件已经存在, 则返回文件已存在出错码退出.
 	inr = de->inode;
 	dev = dir->i_dev;

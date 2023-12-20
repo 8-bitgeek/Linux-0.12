@@ -303,9 +303,8 @@ struct m_inode * get_empty_inode(void)
 		}
 		// 如果没有找到空闲 i 节点(inode = NULL), 则将 i 节点表打印出来供调试使用, 并停机.
 		if (!inode) {
-			for (i = 0 ; i < NR_INODE ; i++)
-				printk("%04x: %6d\t", inode_table[i].i_dev,
-					inode_table[i].i_num);
+			for (i = 0; i < NR_INODE; i++)
+				printk("%04x: %6d\t", inode_table[i].i_dev, inode_table[i].i_num);
 			panic("No free inodes in mem");
 		}
 		// 等待该 i 节点解锁(如果又被上锁的话). 如果该 i 节点已修改标志被置位的话, 则将该 i 节点刷新(同步). 
