@@ -310,11 +310,12 @@ void init(void)
 	// 该函数用 58 行上的宏定义, 对应函数是 sys_setup(), 在块设备子目录 (kernel/blk_drv/hd.c).
 	setup((void *) &drive_info);
 	// 下面以读写访问方式打开设备 "/dev/tty0", 它对应终端控制台. 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0.
-	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 这里再把它以读和写的方式分别打开是为了复制产生标准输出(写)句柄 stdout 和标准出错输出句柄 stderr.
+	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 
+	// 这里再把它以读和写的方式分别打开是为了复制产生标准输出(写)句柄 stdout 和标准出错输出句柄 stderr.
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
-	(void) open("/dev/tty1", O_RDWR, 0);
+	(void) open("/dev/tty1", O_RDWR, 0); 							// (fs/open.c)
 	(void) dup(0);													// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c)
-	(void) dup(0);													// 复制句柄, 产生句柄 2号 -- stderr 标准出错输出设备.
+	(void) dup(0);													// 复制句柄, 产生句柄 2 号 -- stderr 标准出错输出设备.
 	// 进程 1 执行的用户级代码的开始
 	printf("<<<<< Process 1 console fd = %d >>>>>\n", fd);
 	// 下面打印缓冲区块数和总字节数, 每块 1024 字节, 以及主内存区空闲内存字节数.

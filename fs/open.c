@@ -222,7 +222,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 			return -1;
 		// 主伪终端设备文件只能被进程独占使用. 如果子设备号表明这是一个主伪终端, 并且该打开文件 i 节点引用计数大于 1, 则说明该设备已被其他进程使用.
 		// 因此不能再打开该字符设备文件, 于是返回 -1. 否则, 我们让 tty 结构指针指向 tty 表中对应结构项.
-		// 若打开文件操作标志 flag 中没有表明不需要控制终端 O_NOCTTY, 并且进程是进程组首领, 并且当前进程没有控制终端, 
+		// 若打开文件操作标志 flag 中没有表明不需要控制终端 O_NOCTTY, 并且当前进程是进程组首领, 并且当前进程没有控制终端, 
 		// 并且 tty 结构中 session 字段为 0(表示该终端还不是任何进程组的控制终端), 那么就允许为进程设置这个终端设备 min 为其控制终端.
 		// 于是设置进程任务结构终端设备号字段 tty 值等于 min, 并且设置对应 tty 结构的会话号 session 和进程组号 pgrp 分别等于进程的会话号和进程组号.
 		if ((IS_A_PTY_MASTER(min)) && (inode->i_count > 1))
@@ -234,8 +234,9 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 			tty->session = current->session;
 			tty->pgrp = current->pgrp;
 		}
-		// 如果打开文件操作标志 flag 中含有 O_NONBLOCK(非阻塞) 标志, 则我们需要对该字符终端设备进行相关设置, 设置为满足读操作需要读取的最少字符数为 0,
-		// 设置超时定时值为 0, 并把终端设备设置成非规范模式. 非阻塞方式只能工作于非规范模式. 在此模式下当 VMIN 和 VTIME 均设置为 0 时, 
+		// 如果打开文件操作标志 flag 中含有 O_NONBLOCK(非阻塞)标志, 则我们需要对该字符终端设备进行相关设置, 
+		// 设置为满足读操作需要读取的最少字符数为 0, 设置超时定时值为 0, 并把终端设备设置成非规范模式. 
+		// 非阻塞方式只能工作于非规范模式. 在此模式下当 VMIN 和 VTIME 均设置为 0 时, 
 		// 辅助队列中有多少支进程就读取多少字符, 并立刻返回.
 		if (flag & O_NONBLOCK) {
 			TTY_TABLE(min)->termios.c_cc[VMIN] = 0;
@@ -252,7 +253,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 // 如果本调用创建了一个新文件, 则 mode 就用于指定文件的许可属性. 
 // 这些属性有 S_IRWXU(文件宿主具有读, 写和执行权限), S_IRUSR(用户具有读文件权限), S_IRWXG(组成员有读, 写执行)等等. 
 // 对于新创建的文件, 这些属性只应用于将来对文件的访问, 创建了只读文件的打开调用也将返回一个读写的文件句柄. 
-// 如果调用操作成功, 则返回文件句柄(文件描述符 fd), 否则返回出错码. 参见(sys/tat.h include/fcntl.h).
+// 如果调用操作成功, 则返回文件句柄(文件描述符 fd), 否则返回出错码. 参见(include/sys/stat.h include/fcntl.h).
 int sys_open(const char * filename, int flag, int mode)
 {
 	// 打开文件的系统调用的 Log

@@ -17,8 +17,8 @@ int open(const char * filename, int flag, ...)
 	register int res;
 	va_list arg;
 
-	// 利用 va_start() 宏函数, 取得 flag 后面参数的指针, 然后调用系统中断 int 0x80, 功能 open 进行.
-	// 文件打开操作.
+	// 利用 va_start() 宏函数, 取得 flag 后面参数的指针, 然后调用系统中断 int 0x80, 
+	// 功能 open 进行文件打开操作(fs/open.c).
 	// %0 - eax(返回的描述符或出错码); %1 - eax(系统中断调用功能号 __NR_open);
 	// %2 - ebx(文件名 filename); %3 - ecx(打开文件标志 flag); %4 - edx(后随参数文件属性 mode).
 	va_start(arg, flag);
