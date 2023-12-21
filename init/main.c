@@ -316,11 +316,8 @@ void init(void)
 	(void) open("/dev/tty1", O_RDWR, 0); 							// (fs/open.c)
 	(void) dup(0);													// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c)
 	(void) dup(0);													// 复制句柄, 产生句柄 2 号 -- stderr 标准出错输出设备.
-	// 进程 1 执行的用户级代码的开始
-	printf("<<<<< Process 1 console fd = %d >>>>>\n", fd);
 	// 下面打印缓冲区块数和总字节数, 每块 1024 字节, 以及主内存区空闲内存字节数.
-	printf("<<<<< %d buffers = %d bytes buffer space >>>>>\n\r", NR_BUFFERS,
-			NR_BUFFERS * BLOCK_SIZE);
+	printf("<<<<< %d buffers = %d bytes buffer space >>>>>\n\r", NR_BUFFERS, NR_BUFFERS * BLOCK_SIZE);
 	printf("<<<<< Free mem: %d bytes >>>>>\n\r", memory_end - main_memory_start);
 	// 下面 fork() 用于创建一个子进程(任务 2). 对于被创建的子进程, fork() 将返回 0 值, 对于原进程(父进程)则返回子进程的进程号 pid. 
 	// 所以第 202--206 行是子进程执行的内容. 该子进程关闭了句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 

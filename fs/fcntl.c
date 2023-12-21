@@ -20,8 +20,9 @@ extern int sys_close(int fd);
 // 返回新文件句柄或出错码.
 static int dupfd(unsigned int fd, unsigned int arg)
 {
-	// 首先检查函数参数的有效性. 如果文件句柄值大于一个程序最多打开文件数 NR_OPEN, 或者该句柄的文件结构不存在, 
-	// 则返回出错码并退出. 如果指定的新句柄值 arg 大于最多打开文件数, 也返回出错码并退出. 
+	// 首先检查函数参数的有效性. 
+	// 如果文件句柄值大于一个程序最多打开文件数 NR_OPEN, 或者该句柄的文件结构不存在, 则返回出错码并退出. 
+	// 如果指定的新句柄值 arg 大于最多打开文件数, 也返回出错码并退出. 
 	// 注意, 实际上文件句柄就是进程文件结构指针数组项索引号.
 	if (fd >= NR_OPEN || !current->filp[fd])
 		return -EBADF;
@@ -34,13 +35,13 @@ static int dupfd(unsigned int fd, unsigned int arg)
 			arg++;
 		else
 			break;
-	if (arg >= NR_OPEN)
+	if (arg >= NR_OPEN) 									// 如果没找到空闲项, 则返回出错码.
 		return -EMFILE;
-	// 否则针对找到的空闲项(句柄), 在执行时关闭标志位图 close_on_exec 中复位该句柄位. 
-	// 即在运行 exec() 类函数时, 不会关闭用 dup() 创建的的句柄. 
+	// 否则针对找到的空闲项(句柄), 在执行时关闭标志位图 close_on_exec 中复位(0)该句柄位. 
+	// 即在运行 exec() 类函数时, 不会关闭通过 dup() 创建的句柄. 
 	// 并令该文件结构指针等于原句柄 fd 的指针, 并且将文件引用数增 1. 最后返回新的文件句柄 arg.
-	current->close_on_exec &= ~(1 << arg);
-	(current->filp[arg] = current->filp[fd])->f_count++;
+	current->close_on_exec &= ~(1 << arg); 					// 将 arg 对应的位复位, 表示这个句柄在运行 exec() 类函数时不会被关闭.
+	(current->filp[arg] = current->filp[fd])->f_count++;	// 复制文件指针, 并增加文件引用计数值.
 	return arg;
 }
 
