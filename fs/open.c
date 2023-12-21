@@ -203,7 +203,7 @@ int sys_chown(const char * filename, int uid, int gid)
 // 返回 0 检测处理成功, 返回 -1 表示失败, 对应字符设备不能打开.
 static int check_char_dev(struct m_inode * inode, int dev, int flag)
 {
-	struct tty_struct *tty;
+	struct tty_struct * tty;
 	int min;										// 子设备号.
 
 	// 只处理主设备号是 4(/dev/ttyxx 文件) 或 5(/dev/tty 文件) 的情况. /dev/tty 的子设备号是 0. 
@@ -220,19 +220,16 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 			min = MINOR(dev);
 		if (min < 0)
 			return -1;
-		// 主伪终端设备文件只能被进程独占使用. 如果子设备号表明是一个主伪终端, 并且该打开文件 i 节点引用计数大于 1, 则说明该设备已被其他进程使用. 
-		// 因此不能再打开该字符设备文件, 于是返回 -1. 否则, 我们让 tty 结构指针 tty 指向 tty 表中对应结构项. 
-		// 若打开文件操作标志 flag 中不含无需控制终端标志 O_NOCTTY, 并且进程是进程组首领, 并且当前进程没有控制终端, 
+		// 主伪终端设备文件只能被进程独占使用. 如果子设备号表明这是一个主伪终端, 并且该打开文件 i 节点引用计数大于 1, 则说明该设备已被其他进程使用.
+		// 因此不能再打开该字符设备文件, 于是返回 -1. 否则, 我们让 tty 结构指针指向 tty 表中对应结构项.
+		// 若打开文件操作标志 flag 中没有表明不需要控制终端 O_NOCTTY, 并且进程是进程组首领, 并且当前进程没有控制终端, 
 		// 并且 tty 结构中 session 字段为 0(表示该终端还不是任何进程组的控制终端), 那么就允许为进程设置这个终端设备 min 为其控制终端.
 		// 于是设置进程任务结构终端设备号字段 tty 值等于 min, 并且设置对应 tty 结构的会话号 session 和进程组号 pgrp 分别等于进程的会话号和进程组号.
 		if ((IS_A_PTY_MASTER(min)) && (inode->i_count > 1))
 			return -1;
 		tty = TTY_TABLE(min);
 		// Log(LOG_INFO_TYPE, "<<<<< tty index = %d>>>>>\n", min);
-		if (!(flag & O_NOCTTY) &&
-		    current->leader &&
-		    current->tty < 0 &&
-		    tty->session == 0) {
+		if (!(flag & O_NOCTTY) && current->leader && current->tty < 0 && tty->session == 0) {
 			current->tty = min;
 			tty->session = current->session;
 			tty->pgrp = current->pgrp;
