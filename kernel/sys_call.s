@@ -266,8 +266,8 @@ device_not_available:
 	ret								# 这里的 ret 将跳转到 ret_from_sys_call.
 
 # int32 -- (int 0x20)时钟中断处理程序. 中断频率设置为 100Hz(include/linux/sched.h), 
-# 定时芯片 8253/8254 是在(kernel/sched.c)处初始化的. 因此这里 jiffies 每 10 毫秒加 1. 这段代码将 jiffies 增 1, 
-# 发送结束中断指令给8259控制器, 然后用当前特权级作为参数调用 C 函数 do_timer(long CPL). 当调用返回时转去检测并处理信号.
+# 定时芯片 8253/8254 是在(kernel/sched.c)处初始化的. 因此这里 jiffies 每 10 毫秒加 1. 这段代码将 jiffies 增加 1, 
+# 发送结束中断指令给 8259 控制器, 然后用当前特权级作为参数调用 C 函数 do_timer(long CPL). 当调用返回时转去检测并处理信号.
 .align 4
 timer_interrupt:
 	push %ds						# save ds, es and put kernel data space

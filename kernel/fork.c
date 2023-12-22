@@ -245,12 +245,14 @@ int find_empty_process(void)
 	// last_pid 是一个全局变量, 不用返回. 如果此时任务数组中 64 个项已经被全部占用, 则返回出错码.
 	repeat:
 		if ((++last_pid) < 0) last_pid = 1;
-		for(i = 0 ; i < NR_TASKS ; i++)
-			if (task[i] && 
-					((task[i]->pid == last_pid) || (task[i]->pgrp == last_pid))) 	// 如果这个 pid(last_pid) 已经被占用, 则重新生成 last_pid
+		for(i = 0 ; i < NR_TASKS ; i++) {
+			// 如果当前测试的 pid(last_pid) 已经被占用, 则重新生成一个 last_pid.
+			if (task[i] && ((task[i]->pid == last_pid) || (task[i]->pgrp == last_pid))) 
 				goto repeat;
-	for(i = 1 ; i < NR_TASKS ; i++)
+		}
+	for(i = 1 ; i < NR_TASKS ; i++) {
 		if (!task[i]) 					// 找到空闲的任务项
 			return i; 					// 返回空闲的任务项号
+	}
 	return -EAGAIN;
 }
