@@ -299,7 +299,7 @@ timer_interrupt:
 	jmp ret_from_sys_call
 
 # 这是 sys_execve() 系统调用. 取中断调用程序的代码指针作为参数调用 C 函数 do_execve().
-# do_execve() 在 fs/exec.c.
+# do_execve() 在 (fs/exec.c).
 .align 4
 sys_execve:
 	lea EIP(%esp), %eax				# eax 指向堆栈中保存用户程序 eip 指针处.
@@ -315,12 +315,12 @@ sys_execve:
 sys_fork:
 	call find_empty_process			# 为新进程取得进程号 last_pid(kernel/fork.c)
 	testl %eax, %eax				# 在 eax 中返回进程号. 若返回负数则退出.
-	js 1f 							# 如果为负数, 则直接返回 
+	js 1f 							# 如果为负数, 则直接返回.
 	push %gs
 	pushl %esi
 	pushl %edi
 	pushl %ebp
-	pushl %eax 						# eax 中是调用 copy_process 时的第一个参数 nr
+	pushl %eax 						# eax 中是调用 copy_process 时的第一个参数 nr.
 	call copy_process				# 调用 C 函数 copy_process()(kernel/fork.c)
 	addl $20, %esp					# 丢弃这里所有压栈内容.
 1:	ret 							# 返回值是新进程的 pid(last_pid), 存放在 eax 中.
