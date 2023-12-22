@@ -86,7 +86,7 @@ int copy_mem(int nr, struct task_struct * p)
 	// 正常情况下 copy_page_tables() 返回 0, 否则表示出错, 则释放刚申请的页表项.
 	new_data_base = new_code_base = nr * TASK_SIZE;
 	p->start_code = new_code_base; 							// nr = 1 时, start_code = 64 * 1024 * 1024
-	set_base(p->ldt[1], new_code_base); 					// 因为 Linux-0.12 中所有进程共用同一个页目录表, 所以, 共同同一个线性地址(虚拟地址是私有的)?
+	set_base(p->ldt[1], new_code_base); 					// 因为 Linux-0.12 中所有进程共用同一个页目录表, 所以, 共用同一个线性地址(虚拟地址是私有的)?
 	set_base(p->ldt[2], new_data_base);
 	if (copy_page_tables(old_data_base, new_data_base, data_limit)) {
 		free_page_tables(new_data_base, data_limit);
@@ -119,9 +119,9 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,
 		long fs, long es, long ds, 										// system_call 压入的段寄存器及通用寄存器
 		long eip, long cs, long eflags, long esp, long ss) 				// 用户态任务的 ss, esp, eflags, cs, eip
 {
-	struct task_struct *p;
+	struct task_struct * p;
 	int i;
-	struct file *f;
+	struct file * f;
 
 	// 首先为新任务数据结构分配内存. 如果内存分配出错, 则返回出错码并退出. 
 	// 然后将新任务结构指针放入任务数组的 nr 项中. 
