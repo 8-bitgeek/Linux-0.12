@@ -51,7 +51,7 @@
 // int pause() 系统调用: 暂停进程的执行, 直到收到一个信号.
 // int pause(void) __attribute__((always_inline));
 // fork() 系统调用函数的定义
-_syscall0(int, fork)
+_syscall0(int, fork)								// (kernel/sys_call.s)
 // pause() 系统调用函数的定义
 _syscall0(int, pause)
 // int setup(void * BIOS) 系统调用, 仅用于 linux 初始化(仅在这个程序中被调用).
