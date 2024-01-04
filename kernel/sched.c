@@ -110,17 +110,18 @@ struct task_struct *last_task_used_math = NULL;		// 使用过协处理器任务�
 // 定义任务指针数组. 第 1 项被初始化指向初始任务(任务 0)的任务数据结构.
 struct task_struct * task[NR_TASKS] = {&(init_task.task), };
 
-// 定义用户堆栈, 共 1K 项, 容量 4K 字节. 在内核初始化操作过程中被用作内核栈, 初始化完成以后将被用作任务 0 的用户堆栈. 
+// 定义用户堆栈, 共 1K 项, 容量为 4K 字节. 
+// 在内核初始化操作过程中被用作内核栈, 初始化完成以后将被用作任务 0 的用户堆栈. 
 // 在运行任务 0 之前它是内核栈, 以后用作任务 0 和 1 的用户态栈.
 // 下面结构用于设置堆栈 ss:esp(数据段选择符, 指针).
 // ss 被设置为内核数据段选择符(0x10), 指针 esp 指在 user_stack 数组最后一项后面. 
 // 这是因为 Interl CPU 执行堆栈操作时是先递减堆栈指针 sp 值, 然后在 sp 指针处保存入栈内容.
-long user_stack [ PAGE_SIZE >> 2 ] ;
+long user_stack[PAGE_SIZE >> 2]; 						// long 类型占 4 字节, 整个 user_stack 占 4096 字节.
 
 struct {
-	long * a;
-	short b;
-	} stack_start = { &user_stack [PAGE_SIZE >> 2], 0x10 };
+	long * a; 											// esp 指针. (long * 和 char * 占用的内存大小是一样和, 区别在于指针自增时, long 类型 +4, 而 char 类型 +1)
+	short b; 											// ss 选择符.
+} stack_start = {&user_stack[PAGE_SIZE >> 2], 0x10}; 	// 取 user_stack 的数组末尾处作为栈底. 
 
 /*
  *  'math_state_restore()' saves the current math information in the
@@ -148,7 +149,7 @@ void math_state_restore()
 		__asm__("frstor %0"::"m" (current->tss.i387));
 	} else {
 		__asm__("fninit"::);					// 向协处理器发初始化命令.
-		current->used_math=1;					// 设置已使用协处理器标志.
+		current->used_math = 1;					// 设置已使用协处理器标志.
 	}
 }
 
@@ -178,15 +179,16 @@ void schedule(void)
 	/* 检测 alarm(进程的报警定时值), 唤醒任何已得到信号的可中断任务 */
 
 	// 从任务数组中最后一个任务开始循环检测 alarm. 在循环时跳过空指针项.
-	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
+	for(p = &LAST_TASK; p > &FIRST_TASK; --p)
 		if (*p) { 									// 任务指针(*p 指向任务数组的某一项[任务指针])不为 0, 即任务不为空, 表示任务存在.
 			// 如果设置过任务超时定时 timeout, 并且已经超时(timeout < jiffies), 则复位超时定时值; 
 			// 并且如果任务处于可中断睡眠状态 TASK_INTERRUPTIBLE 下, 将其置为就绪状态(TASK_RUNNING).
 			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
 			if ((*p)->timeout && (*p)->timeout < jiffies) { 	// jiffies < timeout 表示已经超时
 				(*p)->timeout = 0;
-				if ((*p)->state == TASK_INTERRUPTIBLE)
+				if ((*p)->state == TASK_INTERRUPTIBLE) {
 					(*p)->state = TASK_RUNNING;
+				}
 			}
 			// 如果设置过任务的 alarm 定时值, 并且已经过期(alarm < jiffies), 
 			// 则在信号位图中置 SIGALRM 信号, 即向任务发送 SIGALARM 信号. 
@@ -197,8 +199,9 @@ void schedule(void)
 			}
 			// 如果信号位图中除被阻塞的信号外还有其他信号, 并且任务处于可中断状态, 则置任务为就绪状态.
 			// 其中 '~(_BLOCKABLE & (*p)->blocked)' 用于忽略被阻塞的信号, 但 SIGKILL 和 SIGSTOP 不能被阻塞.
-			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) && (*p)->state == TASK_INTERRUPTIBLE)
+			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) && (*p)->state == TASK_INTERRUPTIBLE) {
 				(*p)->state = TASK_RUNNING;
+			}
 		}
 
 	/* this is the scheduler proper: */
@@ -213,20 +216,23 @@ void schedule(void)
 		// 哪一个值大, 运行时间还不长, next 就指向哪个的任务号.
 		while (--i) {
 			// 当前索引没有进程指针则跳过当前循环
-			if (!*--p)
-				continue;
-			if ((*p)->state == TASK_RUNNING && (*p)->counter > c) 	// 找到 counter 更大的 RUNNING(正在运行或者已准备就绪)进程.
+			if (!*--p) continue;
+
+			if ((*p)->state == TASK_RUNNING && (*p)->counter > c) { // 找到 counter 更大的 RUNNING(正在运行或者已准备就绪)进程.
 				c = (*p)->counter, next = i;
+			}
 		}
 		// 如果比较得出有 counter 值不等于 0 的结果, 或者后方中没有一个可运行的任务存在(此时 c 仍然为 -1, next=0), 
 		// 则退出开始的循环, 执行任务切换操作(下面的 switch_to()). 
 		// 否则就根据每个任务的优先权值, 更新每一个任务的 counter 值, 然后重新循环比较. 
 		// counter 值的计算方式为 counter = counter/2 + priority.
 		// 注意, 这里计算过程不考虑进程的状态.
-		if (c) break; 					// 如果找到待运行的任务, 则跳出循环切换到其上执行.
-		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
-			if (*p)
+		if (c) break; 													// 如果找到待运行的任务, 则跳出循环切换到其上执行.
+		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
+			if (*p) {
 				(*p)->counter = ((*p)->counter >> 1) + (*p)->priority; 	// 重置 counter 值.
+			}
+		}
 	}
 	// 用下面的宏(定义在 sched.h 中)把当前任务指针 current 指向任务号为 next 的任务, 并切换到该任务中运行. 
 	// next 被初始化为 0. 因此若系统中没有任何其他任务可运行时, 则 next 始终为 0. 

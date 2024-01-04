@@ -13,17 +13,17 @@
  */
 /*
  *
- * head.s含有32位启动代码. 
+ * head.s 含有 32 位启动代码. 
  *
  * 注意!!! 32 位启动代码是从绝对地址 0x00000000 开始的, 这里也同样是页目录将存在的地方, 因此这里的启动代码将被页目录覆盖掉.
  *
  */
 .text
-.globl idt,gdt,pg_dir,tmp_floppy_area
+.globl idt, gdt, pg_dir, tmp_floppy_area
 pg_dir: 		# 页目录将会存放在这里.
  # 再次注意!!! 这里已经处于 32 位运行模式, 因此这里的 $0x10 并不是把地址 0x10 装入各个段寄存器, 它现在其实是全局段描述符表中的偏移值, 
- # 或者更准确地说是一个描述符表项的选择符. 这里 $0x10 的含义是请求特权级 0(位 0 - 1 = 0), 选择全局描述符表(位 2 = 0), 选择表中第 2 项(位 3 - 15 =2).
- # 它正好指向表中的数据段描述符项.
+ # 或者更准确地说是一个全局描述符表项的选择符. 这里 $0x10 的含义是请求特权级 0(位 0-1 = 0), 
+ # 选择全局描述符表(位 2 = 0), 选择表中第 2 项(位 3-15 = 2), 指向表中的数据段描述符项.
  # 下面的代码含义是: 设置 ds, es, fs, gs 为 setup.s 中构造的数据段(全局段描述符表第 2 项)的选择符 = 0x10, 
  # 并将堆栈放置在 stack_start 指向的 user_stack 数据区, 然后使用本程序后面定义的新中断描述符表和全局段描述符表. 
  # 新全局段描述表中初始内容与 setup.s 中的基本一样, 仅段限长从 8MB 修改成了 16MB.
@@ -31,12 +31,12 @@ pg_dir: 		# 页目录将会存放在这里.
  # 下面设置这里使用的栈, 姑且称为系统栈. 但在移动到任务 0 执行(init/main.c 中)以后该栈就被用作任务 0 和任务 1 共同使用的用户栈了.
 .globl startup_32
 startup_32:
-	movl $0x10, %eax	# 对于 GNU 汇编, 每个直接操作数要以 '$' 开始, 否则表示地址. 每个寄存器名都要以 '$' 开头, eax 表示是 32 位的 ax 寄存器.
+	movl $0x10, %eax	# 对于 GNU 汇编, 每个直接操作数要以 '$' 开始, 否则表示地址. 每个寄存器名都要以 '%' 开头, eax 表示是 32 位的 ax 寄存器.
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
 	mov %ax, %gs
-	lss stack_start, %esp				# 表示 stack_start -> ss:esp, 设置系统堆栈. stack_start 定义在 kernel/sched.c 中.
+	lss stack_start, %esp				# 表示将 stack_start 地址中的内容加载到 ss:esp, 设置系统堆栈. stack_start 定义在 kernel/sched.c 中. ss = 0x10.
 	call setup_idt						# 调用设置中断描述符表子程序.
 	call setup_gdt						# 调用设置全局描述符表子程序.
 	movl $0x10, %eax					# reload all the segment registers
@@ -135,7 +135,7 @@ check_x87:
  *  written by the page tables.
  */
 /*
- * 下面这段是设置中断描述符表子程序 setup_idt
+ * 下面这段是设置中断描述符表子程序 setup_idt: 
  *
  * 将中断描述符表 idt 设置成具有 256 个项, 并都指向 ignore_int 中断门. 然后加载中断描述符表寄存器(lidt 指令). 
  * 真正实用的中断门以后再安装. 当我们在其他地方认为一切都正常时再开启中断. 该子程序将会被页表覆盖掉.
@@ -143,10 +143,9 @@ check_x87:
 # 中断描述符表中的项虽然也是 8 字节组成, 但其格式与全局表中的不同, 被称为门描述符. 
 # 它的 0-1, 6-7 字节是偏移量, 2-3 字节是选择符, 4-5 字节是一些标志. 该描述符, 共 256 项. 
 # eax 含有描述符低 4 字节, edx 含有高 4 字节. 内核在随后的初始化过程中会替换安装那些真正实用的中断描述符项.
-
 setup_idt:
-	lea ignore_int, %edx			# 将 ignore_int 的有效地址(偏移值)值 -> eax 寄存器
-	movl $0x00080000, %eax			# 将选择符 0x0008 置入 eax 的高 16 位中.
+	lea ignore_int, %edx			# 将 ignore_int 的有效地址(偏移值)值加载到 eax 寄存器.
+	movl $0x00080000, %eax			# 将段选择符 0x08 置入 eax 的高 16 位中.
 	movw %dx, %ax					/* selector = 0x0008 = cs */	# 偏移值的低 16 位置入 eax 的低 16 位中. 此时 eax 含有门描述符低 4 字节的值.
 	movw $0x8E00, %dx				/* interrupt gate - dpl=0, present */	# 此时 edx 含有门描述符高 4 字节的值.
 
@@ -341,9 +340,9 @@ setup_paging:							# 首先对 5 页内存(1 页目录 + 4 页页表)清零.
 	xorl %eax, %eax						/* pg_dir is at 0x0000 */		# 页目录表在 0x0000 处.
 	movl %eax, %cr3						/* cr3 - page directory start */
 	 # 设置启动使用分页处理(cr0 的 PG 标志, 位 31)
-	movl %cr0, %eax
+	movl %cr0, %eax 					
 	orl $0x80000000, %eax				# 添上 PG 标志.
-	movl %eax, %cr0						/* set paging (PG) bit */
+	movl %eax, %cr0						/* set paging (PG) bit */ 		# 开启分页机制. 
 	ret									/* this also flushes prefetch-queue */
 
 # 在改变分页处理标志后要求使用转移指令刷新预取指令队列, 这里用的是返回指令 ret.
