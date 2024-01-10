@@ -183,7 +183,7 @@ static void time_init(void)
 
  // 下面定义一些局部变量.
 static long memory_end = 0;						// 机器具有的物理内存容量(字节数).
-static long buffer_memory_end = 0;				// 高速缓冲区(用于缓存块设备的数据)末端地址.
+static long buffer_memory_end = 0;				// 高速缓冲区(用于缓存块设备的数据, 比如硬盘)末端地址.
 static long main_memory_start = 0;				// 主内存(将用于分页)开始的位置.
 static char term[32];							// 终端设置字符串(环境参数). 在当前控制台显存末端处.
 
@@ -228,25 +228,25 @@ int main(void)										/* This really IS void, no error here. */
     drive_info = DRIVE_INFO;										// 复制内存 0x90080 处的硬盘参数表.
 
 	// 接着根据机器物理内存容量设置高速缓冲区和主内存的位置和范围.
-	// buffer_memory_end  	-> 高速缓存区末端地址
-	// memory_end 			-> 机器内存容量(内存末端地址) 
-	// main_memory_start 	-> 主内存开始地址
-	// 设置物理内存大小
+	// buffer_memory_end  	-> 高速缓存区末端地址.
+	// memory_end 			-> 机器内存容量(内存末端地址).
+	// main_memory_start 	-> 主内存开始地址.
+	// 设置物理内存大小.
 	memory_end = (1 << 20) + (EXT_MEM_K << 10);						// 内存大小 = 1MB + [扩展内存(k) * 1024] 字节.
 	memory_end &= 0xfffff000;										// 忽略不到 4KB(1 页)的内存数.
 	if (memory_end > 16 * 1024 * 1024)								// 如果内存量超过 16MB, 则按 16MB 计.
 		memory_end = 16 * 1024 * 1024;
-	// 根据物理内存的大小设置高速缓冲区的末端大小
+	// 根据物理内存的大小设置高速缓冲区的末端大小.
 	if (memory_end > 12 * 1024 * 1024) 								// 如果 16MB >= 内存 > 12MB, 则设置缓冲区末端 = 4MB.
 		buffer_memory_end = 4 * 1024 * 1024;
 	else if (memory_end > 6 * 1024 * 1024)							// 否则若 12MB >= 内存 > 6MB, 则设置缓冲区末端 = 2MB.
 		buffer_memory_end = 2 * 1024 * 1024;
 	else
 		buffer_memory_end = 1 * 1024 * 1024;						// 否则则设置缓冲区末端 = 1MB.
-	// 根据高速缓冲区的末端大小设置主内存区的起始地址，两者相同，即高速缓冲区末端为主内存起始端
+	// 根据高速缓冲区的末端大小设置主内存区的起始地址, 两者相同, 即高速缓冲区末端为主内存起始端.
 	main_memory_start = buffer_memory_end;							// 主内存起始位置 == 高速缓冲区末端.
 	// 如果在 Makefile 文件中定义了内存虚拟盘符号 RAMDISK, 则初始化虚拟盘. 此时主内存将减少.
-	// 参见 kernel/blk_drv/ramdisk.c.
+	// 参见 kernel/blk_drv/ramdisk.c
 #ifdef RAMDISK
 	main_memory_start += rd_init(main_memory_start, RAMDISK * 1024);
 #endif
@@ -258,10 +258,11 @@ int main(void)										/* This really IS void, no error here. */
  	tty_init();										// tty 初始化. (chr_drv/tty_io.c)
 	time_init();									// 设置开机启动时间.
  	sched_init();									// 调度程序初始化(加载任务 0 的 tr, ldtr). (kernel/sched.c)
-	buffer_init(buffer_memory_end);					// 高速缓冲区管理初始化, 建内存缓冲区链表等. 一页大小为 1KB. (fs/buffer.c)
+	// 高速缓冲区用于缓冲块设备(比如硬盘)中的数据.
+	buffer_init(buffer_memory_end);					// 高速缓冲区管理初始化, 建立内存缓冲区链表等. 一页大小为 1KB. (fs/buffer.c)
 	hd_init();										// 硬盘初始化. (blk_drv/hd.c)
 	floppy_init();									// 软驱初始化. (blk_drv/floppy.c)
-	sti();											// 所有初始化工作都完了, 于是开启中断.
+	sti();											// 所有初始化工作都完了, 于是开启中断(注意, 只能屏蔽硬件中断而不能屏蔽软件中断).
 	// 打印内核初始化完毕
 	Log(LOG_INFO_TYPE, "<<<<< Linux0.12 Kernel Init Finished, Ready Start Process0 >>>>>\n");
 	// 下面过程通过在堆栈中构建 IRET 指令的返回参数, 利用中断返回指令启动任务 0 执行(切换到用户特权级下执行).
