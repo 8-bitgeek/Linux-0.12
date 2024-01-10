@@ -102,8 +102,8 @@ static inline long fork_for_process0() {
 	long __res;
 	__asm__ volatile (
 		"int $0x80\n\t"  							/* 调用系统中断 0x80: system_call(kernel/sys_call.s) */
-		: "=a" (__res)  							/* 返回值 -> eax(__res) */  	// 返回值放入 __res 中
-		: "0" (2));  								/* 输入为系统中断调用号 __NR_name(2) */ 	// 输入寄存器为 eax(%0) = 2, 
+		: "=a" (__res)  							/* 返回值 -> eax(__res) */ // 返回值放入 __res 中.
+		: "0" (2));  								/* 输入为系统中断调用号 __NR_name(2) */ // 输入寄存器为 eax(%0) = 2, 
 													/* 即调用 sys_call_table[2](include/linux/sys.h) 中的 sys_fork (kernel/sys_call.s) */
 
 	// 从 fork_for_process0() 返回时, cs = 0xf = 0b-0000-1-1-11 ==> LDT 中第一项(代码段), CPL = 3.
@@ -133,12 +133,12 @@ static int sprintf(char * str, const char *fmt, ...)
  */
  // 下面三行分别将指定的线性地址强行转换为给定数据类型的指针, 并获取指针所指内容. 
  // 由于内核代码段被映射到从物理地址零开始的地方, 因此这些线性地址正好也是对应的物理地址.
-#define EXT_MEM_K (*(unsigned short *)0x90002)							// 获取 0x90002 中保存的 1MB 以后的扩展内存大小(KB).
-#define CON_ROWS ((*(unsigned short *)0x9000e) & 0xff)					// 选定的控制台屏幕行, 列数
+#define EXT_MEM_K (*(unsigned short *)0x90002)						// 获取 0x90002 中保存的 1MB 以后的扩展内存大小(KB).
+#define CON_ROWS ((*(unsigned short *)0x9000e) & 0xff)				// 选定的控制台屏幕行, 列数
 #define CON_COLS (((*(unsigned short *)0x9000e) & 0xff00) >> 8)
-#define DRIVE_INFO (*((struct drive_info *)0x90080))					// 硬盘参数表 32 字节内容.
-#define ORIG_ROOT_DEV (*(unsigned short *)0x901FC)						// 根文件系统所在设备号.
-#define ORIG_SWAP_DEV (*(unsigned short *)0x901FA)						// 交换文件所在设备号.
+#define DRIVE_INFO (*((struct drive_info *)0x90080))				// 硬盘参数表 32 字节内容.
+#define ORIG_ROOT_DEV (*(unsigned short *)0x901FC)					// 根文件系统所在设备号.
+#define ORIG_SWAP_DEV (*(unsigned short *)0x901FA)					// 交换文件所在设备号.
 
 /*
  * Yeah, yeah, it's ugly, but I cannot find how to do this correctly
@@ -146,7 +146,7 @@ static int sprintf(char * str, const char *fmt, ...)
  * clock I'd be interested. Most of this was trial and error, and some
  * bios-listing reading. Urghh.
  */
-// 这段宏读取 CMOS 实时时钟信息. outb_p 和 inb_p 是 include/asm/io.h 中定义的端口输入输出
+// 这段宏读取 CMOS 实时时钟信息. outb_p 和 inb_p 是 include/asm/io.h 中定义的端口输入输出.
 #define CMOS_READ(addr) ({ \
 	outb_p(0x80 | addr, 0x70); 					/* 0x70 是写地址端口号, 0x80|addr 是要读取的 CMOS 内存地址. */\
 	inb_p(0x71); 								/* 0x71 是读数据端口号. */\
