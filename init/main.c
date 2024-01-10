@@ -7,9 +7,10 @@
 #define EM
 // 定义宏 "__LIBRARY__" 是为了包括定义在 unistd.h 中的内嵌汇编代码等信息.
 #define __LIBRARY__
-// *.h 头文件所在的默认目录是 include/, 则在代码中就不必明确指明其位置. 如果不是 UNIX 的标准头文件, 则需要指明所在的目录, 
-// 并用双绰号括住. unitd.h 是标准符号常数与类型文件. 其中定义了各种符号常数和类型, 并声明了各种函数. 如果还定义了符号 __LIBRARY__, 
-// 则还会包含系统调用号和内嵌汇编代码 syscall0() 等.
+// *.h 头文件所在的默认目录是 include/, 则在代码中就不必明确指明其位置. 
+// 如果不是 UNIX 的标准头文件, 则需要指明所在的目录, 并用双绰号括住. 
+// unitd.h 是标准符号常数与类型文件. 其中定义了各种符号常数和类型, 并声明了各种函数. 
+// 如果还定义了符号 __LIBRARY__, 则还会包含系统调用号和内嵌汇编代码 syscall0() 等.
 #include <unistd.h>
 #include <time.h>			// 时间类型头文件. 其中主要定义了 tm 结构和一些有关时间的函数原形.
 
@@ -32,22 +33,23 @@
  *
  * 实际上只有 pause 和 fork 需要使用内嵌方式, 以保证从 main() 中不会弄乱堆栈, 但是我们同时还定义了其他一些函数.
  */
-// Linux 在内核空间创建进程时不使用写时复制技术(Copy on write). main() 在移动到用户模式(到任务 0)后执行内嵌方式的 fork() 和 pause(), 
-// 因此可保证不使用任务 0 的用户栈. 在执行 move_to_user_mode() 之后, 本程序 main() 就以任务 0 的身份在运行了. 
+// Linux 在内核空间创建进程时不使用写时复制技术(Copy on write). 
+// main() 在移动到用户模式(到任务 0)后执行内嵌方式的 fork() 和 pause(), 因此可保证不使用任务 0 的用户栈. 
+// 在执行 move_to_user_mode() 之后, 本程序 main() 就以任务 0 的身份(大部分代码还是在内核态下)在运行了. 
 // 而任务 0 是所有将创建子进程的父进程. 当字创建一个子进程时(init 进程), 由于任务1代码属于内核空间,
-// 因此没有使用写时复制功能. 此时任务 0 的用户栈就是任务 1 的用户栈, 即它们共同使用一个栈空间. 因此希望在 main.c 运行在
-// 任务 0 的环境下时不要有对堆栈的任何操作, 以免弄乱堆栈. 而在再次执行 fork() 并执行过 execve() 函数后, 
-// 被加载程序已不属于内核空间, 因此可以使用写时复制技术了.
+// 因此没有使用写时复制功能. 此时任务 0 的用户栈就是任务 1 的用户栈, 即它们共同使用一个栈空间. 
+// 因此希望在 main.c 运行在任务 0 的环境下时不要有对堆栈的任何操作, 以免弄乱堆栈. 
+// 而在再次执行 fork() 并执行过 execve() 函数后, 被加载程序已不属于内核空间, 因此可以使用写时复制技术了.
 
 // static inline 修饰的函数: 这个函数大部分表现和普通的 static 函数一样, 只不过在调用这种函数的时候, 
 // gcc 会在其调用处将其汇编码展开编译而不为这个函数生成独立的汇编码.
 
-// 下面的 _syscall0() 是 unistd.h 中的内嵌宏代码. 以嵌入汇编的形式调用 Linux 的系统调用中断 0x80. 该中断是所有系统调用的入口.
-// 该条语句实际上是 int fork() 创建进程系统调用. 可展开看之就会立刻明白. syscall0 名称中最后的 0 表示无参数, 1 表示 1 个参数.
+// 下面的 _syscall0() 是 unistd.h 中的内嵌宏代码. 以嵌入汇编的形式调用 Linux 的系统调用中断 0x80. 
+// 该中断是所有系统调用的入口. 该条语句实际上是 int fork() 创建进程系统调用. 可展开看之就会立刻明白. 
+// syscall0 名称中最后的 0 表示无参数, 1 表示 1 个参数.
 // __attribute__ 可以设置函数属性, 放于声明的尾部 “;” 之前.
 // 函数属性可以帮助开发者把一些特性添加到函数声明中，从而可以使编译器在错误检查方面的功能更强大.
-// __attribute__((always_inline)) 表示将函数强制设置为内联函数
-// int fork(void) __attribute__((always_inline));
+// __attribute__((always_inline)) 表示将函数强制设置为内联函数 int fork(void) __attribute__((always_inline));
 // int pause() 系统调用: 暂停进程的执行, 直到收到一个信号.
 // int pause(void) __attribute__((always_inline));
 // fork() 系统调用函数的定义
@@ -59,12 +61,12 @@ _syscall1(int, setup, void *, BIOS)
 // int sync() 系统调用: 更新文件系统.
 _syscall0(int, sync)
 
-#include <linux/tty.h>                  			// tty 头文件, 定义了有关 tty_io, 串行通信方面的参数, 常数
+#include <linux/tty.h>                  			// tty 头文件, 定义了有关 tty_io, 串行通信方面的参数, 常数.
 #include <linux/sched.h>							// 调度程序头文件, 定义了任务结构 task_struct, 第 1 个初始任务的数据. 
 													// 还有一些以宏的形式定义的有关描述符参数设置和获取的嵌入式汇编函数程序.
-//#include <linux/head.h>
+// # include <linux/head.h>
 #include <asm/system.h>								// 系统头文件. 定义了设置或修改描述符/中断门等的嵌入式汇编宏.
-#include <asm/io.h>									//　io 头文件. 以宏的嵌入汇编程序形式定义对 io 端口操作的函数.
+#include <asm/io.h>									//　I/O 头文件. 以宏的嵌入汇编程序形式定义对 I/O 端口操作的函数.
 
 #include <stddef.h>                     			// 标准定义头文件. 定义了 NULL, offsetof(TYPE, MEMBER).
 #include <stdarg.h>									// 标准参数头文件. 以宏的形式定义变量参数列表. 
@@ -76,22 +78,22 @@ _syscall0(int, sync)
 #include <linux/fs.h>								// 文件系统头文件. 定义文件表结构(file, buffer_head, m_inode 等).
 													// 其中有定义: extern int ROOT_DEV.
 
-#include <linux/kernel.h>							// 内核头文件
+#include <linux/kernel.h>							// 内核头文件.
 
 #include <string.h>									// 字符串头文件. 主要定义了一些有关内存或字符串操作的嵌入函数.
 
 static char printbuf[1024];							// 静态字符串数组, 用作内核显示信息的缓存.
 
 extern char *strcpy();
-extern int vsprintf();								// 送格式化输出到一字符串中(vsprintf.c)
-extern void init(void);								// 函数原型, 初始化
-extern void blk_dev_init(void);						// 块设备初始化子程序(blk_drv/ll_rw_blk.c)
-extern void chr_dev_init(void);						// 字符设备初始化(chr_drv/tty_io.c)
-extern void hd_init(void);							// 硬盘初始化程序(blk_drv/hd.c)
-extern void floppy_init(void);						// 软驱初始化程序(blk_drv/floppy.c)
-extern void mem_init(long start, long end);			// 内存管理初始化(mm/memory.c)
-extern long rd_init(long mem_start, int length);	// 虚拟盘初始化(blk_drv/ramdisk.c)
-extern long kernel_mktime(struct tm * tm);			// 计算系统开机启动时间(秒)
+extern int vsprintf();								// 送格式化输出到一字符串中(vsprintf.c).
+extern void init(void);								// 函数原型, 初始化.
+extern void blk_dev_init(void);						// 块设备初始化子程序(blk_drv/ll_rw_blk.c).
+extern void chr_dev_init(void);						// 字符设备初始化(chr_drv/tty_io.c).
+extern void hd_init(void);							// 硬盘初始化程序(blk_drv/hd.c).
+extern void floppy_init(void);						// 软驱初始化程序(blk_drv/floppy.c).
+extern void mem_init(long start, long end);			// 内存管理初始化(mm/memory.c).
+extern long rd_init(long mem_start, int length);	// 虚拟盘初始化(blk_drv/ramdisk.c).
+extern long kernel_mktime(struct tm * tm);			// 计算系统开机启动时间(秒).
 
 // fork 系统调用函数, 该函数作为 static inline 表示内联函数, 主要用来在进程 0 里面创建进程 1 的时候内联, 
 // 使进程 0 在生成进程 1 的时候不使用自己的用户堆栈.
