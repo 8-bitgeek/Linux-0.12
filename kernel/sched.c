@@ -625,7 +625,7 @@ void sched_init(void)
 	// 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址.
 	// 参见 include/asm/system.h
 	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 在 GDT 中设置任务 0 的任务状态段(TSS)地址
-	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 在 GET 中设置任务 0 的局部描述符表(LDT)地址
+	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 在 GDT 中设置任务 0 的局部描述符表(LDT)地址
 	// 清任务数组和描述符表项(注意 i = 1 开始, 所以初始任务的描述符还在). 描述符项结构定义在文件 include/linux/head.h 中.
 	// 此处 p 指向 GDT 中的描述符 6 (即 task1 的 tss, 从 0 开始)
 	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt+6 -> 指向任务 1 的描述符: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 

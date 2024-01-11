@@ -1,7 +1,7 @@
 // 该文件中定义了对硬件 I/O 端口访问的嵌入式汇编宏函数: outb(), inb() 以及 outb_p() 和 inb_p().
 
 //// 硬件端口字节输出函数.
-// 参数: value - 欲输出字节; port - 端口.  
+// 参数: value - 欲输出字节; port - 端口.
 #define outb(value,port) \
 __asm__ ("outb %%al,%%dx"::"a" (value), "d" (port))
 

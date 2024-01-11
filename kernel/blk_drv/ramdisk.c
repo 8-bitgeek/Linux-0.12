@@ -6,13 +6,14 @@
 /*
  * 由 Theodore Ts'o 编制, 12/2/91
  */
-// Theodore Ts'o(Ted Ts'0) 是 Linux 社区中的著名人物. Linux 在世界范围内的流行也有他很大的功劳. 早在 Linux 操作系统刚问世时, 
-// 他就怀着极大的热情为 Linux 的发展提供了电子邮件列表服务 maillist, 并在北美地区最早设立了 Linux 的 ftp 服务器站点(tsx-11.mit.edu), 
-// 而且至今仍为广大 Linux 用户提供服务. 他对 Linux 作出的最大贡献之一是提出并实现了 ext2 文件系统. 
-// 该文件系统已成为 Linux 世界中事实上的文件系统标准. 后来他又推出了 ext3 文件系统, 大大提高了文件系统的稳定性, 可恢复性和访问效率. 
-// 作为对他的推崇, 第 97 期(2002 年 5 月)的 LinuxJournal 期弄将他作为了封面人物, 并对他行了采访. 目前他为 IMBLinux 技术中心工作, 
-// 并从事着有关 LSB(Linux Standard Base) 等方面的工作. (他的个人主页是: http://thunk.org/tytso/)
-
+// Theodore Ts'o(Ted Ts'0) 是 Linux 社区中的著名人物. Linux 在世界范围内的流行也有他很大的功劳. 
+// 早在 Linux 操作系统刚问世时, 他就怀着极大的热情为 Linux 的发展提供了电子邮件列表服务 maillist, 
+// 并在北美地区最早设立了 Linux 的 ftp 服务器站点(tsx-11.mit.edu), 而且至今仍为广大 Linux 用户提供服务. 
+// 他对 Linux 作出的最大贡献之一是提出并实现了 ext2 文件系统. 该文件系统已成为 Linux 世界中事实上的文件系统标准. 
+// 后来他又推出了 ext3 文件系统, 大大提高了文件系统的稳定性, 可恢复性和访问效率. 
+// 作为对他的推崇, 第 97 期(2002 年 5 月)的 LinuxJournal 期弄将他作为了封面人物, 并对他行了采访. 
+// 目前他为 IMBLinux 技术中心工作, 并从事着有关 LSB(Linux Standard Base) 等方面的工作. 
+// (他的个人主页是: http://thunk.org/tytso/)
 #include <string.h>								// 字符串头文件.主要定义了一些有关字符串操作的嵌入函数.
 
 // #include <linux/config.h>					// 内核配置头文件. 定义键盘语言和硬盘类型(HD_TYPE)可选项.
@@ -34,9 +35,9 @@
 char	*rd_start;								// 虚拟盘在内存中的开始地址.
 int	rd_length = 0;								// 虚拟盘所占内存大小(字节).
 
-// 虚拟盘当前请求项操作函数。
+// 虚拟盘当前请求项操作函数.
 // 该函数的程序结构与硬盘的 do_hd_request() 函数类似. 
-// 在低级块设备接口函数 ll_rw_block() 建立起虚拟盘(rd)的请求项并添加到 rd 的链表中之后, 就会调用该函数对rd当前请求项进行处理.
+// 在低级块设备接口函数 ll_rw_block() 建立起虚拟盘(rd)的请求项并添加到 rd 的链表中之后, 就会调用该函数对 rd 当前请求项进行处理.
 // 该函数首先计算当前请求项中指定起始扇区对应虚拟盘所处内存的起始位置 addr 和要求的扇区数对应的字节长度值 len, 
 // 然后根据请求项中的命令进行操作. 若是写命令 WRITE, 就把请求项所指缓冲区中的数据直接复制到内存位置 addr 处. 
 // 若是读操作作反之. 数据复制完成后即可直接调用 end_request() 对本次请求项作结束处理. 
@@ -53,7 +54,7 @@ void do_rd_request(void)
 	INIT_REQUEST;
 	addr = rd_start + (CURRENT->sector << 9);
 	len = CURRENT->nr_sectors << 9;
-	// 如果当前请求项中子设备号不为1或者对应内存起始位置大于虚拟盘末尾, 则结束该请求项, 并跳转到repeat处去处理下一个虚拟盘请求项. 
+	// 如果当前请求项中子设备号不为 1 或者对应内存起始位置大于虚拟盘末尾, 则结束该请求项, 并跳转到 repeat 处去处理下一个虚拟盘请求项. 
 	// 标号 repeat 定义在宏 INIT_REQUEST 内, 位于宏的开始处, 参见 blk.h 文件. 
 	if ((MINOR(CURRENT->dev) != 1) || (addr + len > rd_start + rd_length)) {
 		end_request(0);
@@ -129,7 +130,7 @@ void rd_load(void)
 	// 然后读根文件系统的基本参数. 即读软盘块 256 + 1, 256 和 256 + 2. 这里 block + 1 是指磁盘上的超级块. 
 	// breada() 用于读取指定的数据块, 并标出还需要读的块, 然后返回含有数据块的缓冲区指针. 
 	// 如果返回 NULL, 则表示数据块不可读(fs/buffer.c). 
-	// 然后把缓冲区中的磁盘超级块(d_super_block 是磁盘超级块结构)复制到s变量中, 并释放缓冲区. 
+	// 然后把缓冲区中的磁盘超级块(d_super_block 是磁盘超级块结构)复制到 s 变量中, 并释放缓冲区. 
 	// 接着我们开始对超级块的有效性进行判断. 超级块中文件系统魔数不对, 则说明加载的数据块不是 MINIX 文件系统, 于是退出.
 	bh = breada(ROOT_DEV, block + 1, block, block + 2, -1);
 	if (!bh) {
