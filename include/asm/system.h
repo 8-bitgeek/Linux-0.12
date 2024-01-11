@@ -44,25 +44,25 @@
 // 		!!! 在前面的 sched_init() 函数中已经将 TASK0 的 ldt 和 tss 分别加载到 ldtr 和 tr 寄存器中了.
 #define move_to_user_mode() \
 __asm__ (\
-	"movl %%esp, %%eax\n\t"  										/* 保存堆栈指针 esp 到 eax 寄存器中. */\
-	"pushl $0x17\n\t"  												/* 首先将堆栈段选择符(SS)入栈: 0x17 -> LDT 中项 2(数据段) */\
-	"pushl %%eax\n\t"  												/* 然后将保存的堆栈指针值(esp)入栈 */\
-	"pushfl\n\t"  													/* 将标志寄存器(eflags)内容入栈 */\
-	"pushl $0x0f\n\t"  												/* 将 task0 代码段选择符(cs)入栈. 0x0f -> LDT 中项 1(代码段) CPL = 3 */\
-	"pushl $1f\n\t"  												/* 将下面标号 1 的偏移地址(eip)入栈. */\
-	"iret\n"  														/* 执行中断返回指令(此处只是实现了特权级切换, 而不是真正的任务切换), 则会跳转到下面标号 1 处. */\
-	"1:\tmovl $0x17, %%eax\n\t"  									/* 此时开始执行任务 0 */ /* 任务 0 使用 LDT 中的数据空间了 */\
-	"mov %%ax, %%ds\n\t"  											/* 初始化段寄存器指向本局部表数据段, 此时 ds 指向 TASK0 的数据段 */\
-	"mov %%ax, %%es\n\t" 											/* 初始化段寄存器指向本局部表数据段, 此时 es 指向 TASK0 的数据段 */\
-	"mov %%ax, %%fs\n\t" 											/* 初始化段寄存器指向本局部表数据段, 此时 fs 指向 TASK0 的数据段 */\
-	"mov %%ax, %%gs" 												/* 初始化段寄存器指向本局部表数据段, 此时 gs 指向 TASK0 的数据段 */\
-	:::"ax") 														// 输出寄存器, 输入寄存器为空, 修改过寄存器 eax 中的值.
+	"movl %%esp, %%eax\n\t"  				/* 保存堆栈指针 esp 到 eax 寄存器中. */\
+	"pushl $0x17\n\t"  						/* 首先将堆栈段选择符(SS)入栈: 0x17 -> LDT 中项 2(数据段) */\
+	"pushl %%eax\n\t"  						/* 然后将保存的堆栈指针值(esp)入栈 */\
+	"pushfl\n\t"  							/* 将标志寄存器(eflags)内容入栈 */\
+	"pushl $0x0f\n\t"  						/* 将 task0 代码段选择符(cs)入栈. 0x0f -> LDT 中项 1(代码段) CPL = 3 */\
+	"pushl $1f\n\t"  						/* 将下面标号 1 的偏移地址(eip)入栈. */\
+	"iret\n"  								/* 执行中断返回指令(此处只是实现了特权级切换, 而不是真正的任务切换), 则会跳转到下面标号 1 处. */\
+	"1:\tmovl $0x17, %%eax\n\t"  			/* 此时开始执行任务 0 */ /* 任务 0 使用 LDT 中的数据空间了 */\
+	"mov %%ax, %%ds\n\t"  					/* 初始化段寄存器指向本局部表数据段, 此时 ds 指向 TASK0 的数据段 */\
+	"mov %%ax, %%es\n\t" 					/* 初始化段寄存器指向本局部表数据段, 此时 es 指向 TASK0 的数据段 */\
+	"mov %%ax, %%fs\n\t" 					/* 初始化段寄存器指向本局部表数据段, 此时 fs 指向 TASK0 的数据段 */\
+	"mov %%ax, %%gs" 						/* 初始化段寄存器指向本局部表数据段, 此时 gs 指向 TASK0 的数据段 */\
+	:::"ax") 								// 输出寄存器, 输入寄存器为空, 修改过寄存器 eax 中的值.
 
-#define sti() __asm__ ("sti"::)										// 开中断嵌入汇编宏函数.
-#define cli() __asm__ ("cli"::)										// 关中断.
-#define nop() __asm__ ("nop"::)										// 空操作.
+#define sti() __asm__ ("sti"::)				// 开中断嵌入汇编宏函数.
+#define cli() __asm__ ("cli"::)				// 关中断.
+#define nop() __asm__ ("nop"::)				// 空操作.
 
-#define iret() __asm__ ("iret"::)									// 中断返回
+#define iret() __asm__ ("iret"::)			// 中断返回
 
 // 设置门描述符宏.
 // 门描述符中的 2-3 字节是存放处理程序的段选择符.
@@ -73,15 +73,15 @@ __asm__ (\
 // %2 - (描述符高4字节地址); %3 - edx(程序偏移地址 addr); %4 - eax(高字中含有内核代码段选择符 0x8).
 #define _set_gate(gate_addr, type, dpl, addr) \
 __asm__ (\
-	"movw %%dx, %%ax\n\t"  											/* 将处理程序偏移地址低字选择符组合成描述符低 4 字节(eax) */\
-	"movw %0, %%dx\n\t"  											/* 将类型标志字与偏移高字组合成描述符高 4 字节(edx) */\
-	"movl %%eax, %1\n\t"  											/* 分别设置门描述符的低 4 字节和高 4 字节 */\
+	"movw %%dx, %%ax\n\t"  					/* 将处理程序偏移地址低字选择符组合成描述符低 4 字节(eax) */\
+	"movw %0, %%dx\n\t"  					/* 将类型标志字与偏移高字组合成描述符高 4 字节(edx) */\
+	"movl %%eax, %1\n\t"  					/* 分别设置门描述符的低 4 字节和高 4 字节 */\
 	"movl %%edx, %2" \
 	: \
 	: "i" ((short) (0x8000 + (dpl << 13) + (type << 8))), \
 	"o" (*((char *) (gate_addr))), \
 	"o" (*(4+(char *) (gate_addr))), \
-	"d" ((char *) (addr)),"a" (0x00080000))                         /* d -> edx, a -> eax */
+	"d" ((char *) (addr)),"a" (0x00080000))	/* d -> edx, a -> eax */
 
 // 设置中断门函数(自动屏蔽随后的中断). 
 // 中断门和陷阱门描述符有一个长指针(即段选择符和偏移值)，
@@ -141,7 +141,7 @@ __asm__ (\
 
 // 在全局表中设置任务状态段描述符.
 // n - 是该描述符的指针; addr - 是描述符项中段的基地址值. // 任务状态段的 DPL 是 0.
-#define set_tss_desc(n, addr) _set_tssldt_desc(((char *) (n)), addr, "0x89") 			// 0x89 - 0b-1000-1001
+#define set_tss_desc(n, addr) _set_tssldt_desc(((char *) (n)), addr, "0x89") 	// 0x89 - 0b-1000-1001
 // 在全局表中设置局部表描述符.
-// n - 是该描述符的指针; addr - 是描述符项中段的基地址值. 局部表段描述符的类型是 0x82 // DPL 是 0
-#define set_ldt_desc(n, addr) _set_tssldt_desc(((char *) (n)), addr, "0x82") 			// 0x82 - 0b-1000-0010
+// n - 是该描述符的指针; addr - 是描述符项中段的基地址值. 局部表段描述符的类型是 0x82. 	   // DPL 是 0.
+#define set_ldt_desc(n, addr) _set_tssldt_desc(((char *) (n)), addr, "0x82") 	// 0x82 - 0b-1000-0010

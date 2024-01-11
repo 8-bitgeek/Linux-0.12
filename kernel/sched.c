@@ -7,14 +7,13 @@
 /*
  * 'sched.c' is the main kernel file. It contains scheduling primitives
  * (sleep_on, wakeup, schedule etc) as well as a number of simple system
- * call functions (type getpid(), which just extracts a field from
- * current-task
+ * call functions (type getpid(), which just extracts a field from current-task.
  */
 /*
  * 'sched.c' 是主要的内核文件. 
  * 其中包括有关高度的基本函数(sleep_on, wakeup, schedule 等)以及一些简单的系统调用函数(比如 getpid(), 仅从当前任务中获取一个字段).
  */
-// 下面是调度程序头文件. 定义了任务结构task_struct, 第 1 个初始任务的数据. 
+// 下面是调度程序头文件. 定义了任务结构 task_struct, 第 1 个初始任务的数据. 
 // 还有一些以宏的形式定义的有关描述符参数设置和获取的嵌入式汇编函数程序.
 #include <linux/sched.h>
 #include <linux/kernel.h>					// 内核头文件. 含有一些内核常用函数的原形定义.
@@ -26,7 +25,8 @@
 
 #include <signal.h>
 
-// 该宏取信号 nr 在信号位图中对应位的二进制数值. 信号编号 1-32. 比如信号 5 的位图数值等于 1<<(5-1)=16=00010000.
+// 该宏取信号 nr 在信号位图中对应位的二进制数值. 信号编号 1-32. 
+// 比如信号 5 的位图数值等于 1<<(5-1) = 16 = 00010000.
 #define _S(nr) (1 << ((nr) - 1))
 // 除了 SIGKILL 和 SIGSTOP 信号以外其他信号都是可阻塞的.
 #define _BLOCKABLE (~(_S(SIGKILL) | _S(SIGSTOP)))
@@ -74,7 +74,8 @@ extern int timer_interrupt(void);			// 时钟中断处理程序(kernel/sys_call.
 extern int system_call(void);				// 系统调用中断处理程序(kernel/sys_call.s)
 
 // 每个任务(进程)在内核态运行时都有自己的内核态堆栈. 这里定义了任务的内核态堆栈结构.
-// 这里定义任务联合(任务结构成员和 stack 字符数组成员). 因为一个任务的数据结构与其内核态堆栈放在同一内存页中, 
+// 这里定义任务联合(任务结构成员和 stack 字符数组成员). 
+// 因为一个任务的数据结构与其内核态堆栈放在同一内存页中, 
 // 所以从堆栈段寄存器 ss 可以获得其数据段选择符.
 union task_union {
 	struct task_struct task;
@@ -91,7 +92,8 @@ static union task_union init_task = {INIT_TASK, };
 // 当 CPU 把其值放到 ebx 中后一般就不会再关心该变量对应内存位置中的内容. 
 // 若此时其他程序(例如内核程序或一个中断过程)修改了内存中该变量的值, ebx 中的值并不会随之更新. 
 // 为了解决这种情况就创建了 volatile 限定符, 让代码在引用该变量时一定要从指定内存位置中取得其值. 
-// 这里即是要求 gcc 不要对 jiffies 进行优化处理, 也不要挪动位置, 并且需要从内存中取其值. 因为时钟中断处理过程等程序会修改它的值.
+// 这里即是要求 gcc 不要对 jiffies 进行优化处理, 也不要挪动位置, 并且需要从内存中取其值. 
+// 因为时钟中断处理过程等程序会修改它的值.
 unsigned long volatile jiffies = 0;
 unsigned long startup_time = 0;						// 开机时间. 从 1970:0:0:0:0 开始计时的秒数.(kernel/sched.c)
 // 这个变量用于累计需要调整的时间滴答数.
@@ -115,11 +117,11 @@ struct task_struct * task[NR_TASKS] = {&(init_task.task), };
 // 在运行任务 0 之前它是内核栈, 以后用作任务 0 和 1 的用户态栈.
 // 下面结构用于设置堆栈 ss:esp(数据段选择符, 指针).
 // ss 被设置为内核数据段选择符(0x10), 指针 esp 指在 user_stack 数组最后一项后面. 
-// 这是因为 Interl CPU 执行堆栈操作时是先递减堆栈指针 sp 值, 然后在 sp 指针处保存入栈内容.
+// 这是因为 Intel CPU 执行堆栈操作时是先递减堆栈指针 sp 值, 然后在 sp 指针处保存入栈内容.
 long user_stack[PAGE_SIZE >> 2]; 						// long 类型占 4 字节, 整个 user_stack 占 4096 字节.
 
 struct {
-	long * a; 											// esp 指针. (long * 和 char * 占用的内存大小是一样和, 区别在于指针自增时, long 类型 +4, 而 char 类型 +1)
+	long * a; // esp 指针. (long * 和 char * 占用的内存大小是一样和, 区别在于指针自增时, long 类型 +4, 而 char 类型 +1)
 	short b; 											// ss 选择符.
 } stack_start = {&user_stack[PAGE_SIZE >> 2], 0x10}; 	// 取 user_stack 的数组末尾处作为栈底. 
 
@@ -159,16 +161,17 @@ void math_state_restore()
  * in all circumstances (ie gives IO-bound processes good response etc).
  * The one thing you might take a look at is the signal-handler code here.
  *
- *   NOTE!!  Task 0 is the 'idle' task, which gets called when no other
+ * NOTE!!  Task 0 is the 'idle' task, which gets called when no other
  * tasks can run. It can not be killed, and it cannot sleep. The 'state'
  * information in task[0] is never used.
  */
 /*
  * 'schedule()' 是调度函数. 这是个很好的代码! 没有任何理由对它进行修改, 
- * 因为它可以在所有的环境下工作(比如能够对 IO 边界下得很好的响应等). 只有一件事值得留意, 那就是这里的信号处理代码.
+ * 因为它可以在所有的环境下工作(比如能够对 IO 边界下得很好的响应等). 
+ * 只有一件事值得留意, 那就是这里的信号处理代码.
  *
- * 注意!! 任务 0 是个闲置('idle')任务, 只有当没有其他任务可以运行时才调用它. 它不能被杀死, 也不睡眠. 
- * 任务 0 中的状态信息 'state' 是从来不用的.
+ * 注意!! 任务 0 是个闲置('idle')任务, 只有当没有其他任务可以运行时才调用它.
+ * 它不能被杀死, 也不睡眠. 任务 0 中的状态信息 'state' 是从来不用的.
  */
 void schedule(void)
 {
@@ -180,7 +183,7 @@ void schedule(void)
 
 	// 从任务数组中最后一个任务开始循环检测 alarm. 在循环时跳过空指针项.
 	for(p = &LAST_TASK; p > &FIRST_TASK; --p)
-		if (*p) { 									// 任务指针(*p 指向任务数组的某一项[任务指针])不为 0, 即任务不为空, 表示任务存在.
+		if (*p) { 	// 任务指针(*p 指向任务数组的某一项[任务指针])不为 0, 即任务不为空, 表示任务存在.
 			// 如果设置过任务超时定时 timeout, 并且已经超时(timeout < jiffies), 则复位超时定时值; 
 			// 并且如果任务处于可中断睡眠状态 TASK_INTERRUPTIBLE 下, 将其置为就绪状态(TASK_RUNNING).
 			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
@@ -253,9 +256,10 @@ int sys_pause(void)
 
 // 把当前任务置为指定的睡眠状态(可中断的或不可中断的), 并让睡眠队列头指针指向当前任务. 
 // 函数参数 p 是等待任务队列头指针. 指针是含有一个变量地址的变量.
-// 这里参数 p 使用了指针的指针形式 '**p', 这是因为 C 函数参数只能传值, 没有直接的方式让被调用函数改变调用该函数程序中变量的值. 
-// 但是指针 '*p' 指向的目标(这里是任务结构)会改变, 因此为了能修改调用该函数程序中原来就是指针变量的值, 
-// 就需要传递指针 '*p' 的指针, 即 '**p'.
+// 这里参数 p 使用了指针的指针形式 '**p', 这是因为 C 函数参数只能传值, 
+// 没有直接的方式让被调用函数改变调用该函数程序中变量的值. 
+// 但是指针 '*p' 指向的目标(这里是任务结构)会改变, 
+// 因此为了能修改调用该函数程序中原来就是指针变量的值, 就需要传递指针 '*p' 的指针, 即 '**p'.
 // 参数 state 是任务睡眠使用的状态: TASK_INTERRUPTIBLE 或 TASK_INTERRUPTIBLE. 
 // 处于不可中断睡眠状态(TASK_UNINTERRUPTIBLE)的任务需要内核程序利用 wake_up() 函数明确唤醒之. 
 // 处于可中断睡眠状态(TASK_INTERRUPTIBLE)可以通过信号, 任务起时等手段唤醒(置为就绪状态 TASK_RUNNING).
@@ -289,8 +293,10 @@ repeat:	schedule();
 		current->state = TASK_UNINTERRUPTIBLE;
 		goto repeat;
 	}
-	// 执行到这里, 说明本任务真正被唤醒执行. 此时等待队列头指针应该指向本任务, 若它为空, 则表明调度有问题, 于是显示警告信息. 
-	// 最后我们让头指针指向在我们前面进入队列的任务(*p = tmp). 若确实存在这样一个任务, 即队列中还有任务(tmp 不为空), 就唤醒之. 
+	// 执行到这里, 说明本任务真正被唤醒执行. 
+	// 此时等待队列头指针应该指向本任务, 若它为空, 则表明调度有问题, 于是显示警告信息. 
+	// 最后我们让头指针指向在我们前面进入队列的任务(*p = tmp). 
+	// 若确实存在这样一个任务, 即队列中还有任务(tmp 不为空), 就唤醒之. 
 	// 最先进入队列的任务在唤醒后运行时最终会把等待队列头指针置成 NULL.
 	if (!*p)
 		printk("Warning: *P = NULL\n\r");
@@ -304,14 +310,16 @@ void interruptible_sleep_on(struct task_struct **p)
 	__sleep_on(p, TASK_INTERRUPTIBLE);
 }
 
-// 把当前任务置为不可中断的等待状态(TASK_UNINTERRUPTIBLE), 并让睡眠队列头指针指向当前任务. 只有明确地唤醒时才会返回. 
+// 把当前任务置为不可中断的等待状态(TASK_UNINTERRUPTIBLE), 
+// 并让睡眠队列头指针指向当前任务. 只有明确地唤醒时才会返回. 
 // 该函数提供了进程与中断处理程序之间的同步机制.
 void sleep_on(struct task_struct **p)
 {
 	__sleep_on(p, TASK_UNINTERRUPTIBLE);
 }
 
-// 唤醒 *p 指向的任务. *p 是任务等待队列头指针. 由于新等待任务是插入在等待队列头指针处的, 因此唤醒的是最后进入等待队列的任务. 
+// 唤醒 *p 指向的任务. *p 是任务等待队列头指针. 
+// 由于新等待任务是插入在等待队列头指针处的, 因此唤醒的是最后进入等待队列的任务. 
 // 若该任务已经处于停止或僵死状态, 则显示警告信息.
 void wake_up(struct task_struct **p)
 {
@@ -330,10 +338,11 @@ void wake_up(struct task_struct **p)
  * was the easiest way of doing it.
  */
 /*
- * 好了, 从这里开始是一些有关软盘的子程序, 本不应该放在内核的主要部分中的. 将它们放在这里是因为软驱需要定时处理, 而放在这里是最方便的.
+ * 好了, 从这里开始是一些有关软盘的子程序, 本不应该放在内核的主要部分中的. 
+ * 将它们放在这里是因为软驱需要定时处理, 而放在这里是最方便的.
  */
-// 下面的数组 wait_motor[] 用于存放等待软驱马达启动到正常转速的进程指针. 数组索引 0-3 分别对应软驱 A--D. 
-// 数组 mon_timer[] 存放各软驱马达启动所需要的滴答数.
+// 下面的数组 wait_motor[] 用于存放等待软驱马达启动到正常转速的进程指针. 
+// 数组索引 0-3 分别对应软驱 A--D. 数组 mon_timer[] 存放各软驱马达启动所需要的滴答数.
 // 程序中默认启动时间为 50 个滴答(0.5 秒). 
 // 数组 moff_timer[] 存放各软驱在马达停转之前需维持的时间. 程序中设定为 1000 个滴答(100 秒).
 static struct task_struct * wait_motor[4] = {NULL, NULL, NULL, NULL};
@@ -369,8 +378,8 @@ int ticks_to_floppy_on(unsigned int nr)
 		mask &= 0xFC;
 		mask |= nr;
 	}
-	// 如果数字输出寄存器的当前值与要求的值不同, 则向 FDC 数字输出端口输出新值(mask), 并且如果要求启动的马达还没有启动, 
-	// 则置相应软驱的马达启动定时器值(HZ/2 = 0.5 秒或 50 个滴答). 
+	// 如果数字输出寄存器的当前值与要求的值不同, 则向 FDC 数字输出端口输出新值(mask), 
+	// 并且如果要求启动的马达还没有启动, 则置相应软驱的马达启动定时器值(HZ/2 = 0.5 秒或 50 个滴答). 
 	// 若已经启动, 则再设置启动定时为 2 个滴答, 能满足下面 do_floppy_timer() 中先递减后判断的要求.
 	// 执行本次定时代码的要求即可. 此后更新当前数字输出寄存器 current_DOR.
 	if (mask != current_DOR) {
@@ -495,7 +504,8 @@ void do_timer(long cpl)
 
 	// 首先判断是否经过了一定时间而让屏幕黑屏(blankcount). 
 	// 如果 blankcount 计数不为零, 或者黑屏延时间隔时间 blankinterval 为 0 的话,
-	// 那么若已经处理黑屏状态(黑屏标志 blanked=1), 则让屏幕恢复显示. 若 blnkcount 计数不为零, 则递减之, 并且复位黑屏标志.
+	// 那么若已经处理黑屏状态(黑屏标志 blanked=1), 则让屏幕恢复显示. 
+	// 若 blnkcount 计数不为零, 则递减之, 并且复位黑屏标志.
 	if (blankcount || !blankinterval) {
 		if (blanked)
 			unblank_screen();
@@ -512,7 +522,8 @@ void do_timer(long cpl)
 		if (!--hd_timeout)
 			hd_times_out();							// 硬盘访问超时处理(blk_drv/hd.c).
 
-	// 如果发声计数次数到, 则关闭发声.(向 0x61 口发送命令, 复位位 0 和 1. 位 0 控制 8253 计数器 2 的工作, 位 1 控制扬声器.
+	// 如果发声计数次数到, 则关闭发声.(向 0x61 口发送命令, 复位位 0 和 1. 
+	// 位 0 控制 8253 计数器 2 的工作, 位 1 控制扬声器.
 	if (beepcount)									// 扬声器发声时间滴答数(chr_drv/console.c)
 		if (!--beepcount)
 			sysbeepstop();
@@ -530,7 +541,7 @@ void do_timer(long cpl)
 	if (next_timer) {
 		next_timer->jiffies--;
 		while (next_timer && next_timer->jiffies <= 0) {
-			void (*fn)(void);						// 这里插入了一个函数指针定义!!
+			void (*fn)(void);						// 这里插入了一个函数指针定义!!!
 
 			fn = next_timer->fn;
 			next_timer->fn = NULL;
@@ -541,7 +552,8 @@ void do_timer(long cpl)
 	// 如果当前软盘控制器 FDC 的数字输出寄存器中马达启动位有置位的, 则执行软盘定时程序.
 	if (current_DOR & 0xf0)
 		do_floppy_timer();
-	// 如果进程运行时间还没完, 则退出. 否则置当前任务运行计数值为 0. 并且若发生时钟中断时正在内核代码中运行则返回, 否则调用执行调试函数.
+	// 如果进程运行时间还没完, 则退出. 否则置当前任务运行计数值为 0. 
+	// 并且若发生时钟中断时正在内核代码中运行则返回, 否则调用执行调试函数.
 	if ((--current->counter) > 0) return;
 	current->counter = 0;
 	if (!cpl) return;								// 对于内核态程序, 不信赖 counter 值进行调试.
@@ -550,8 +562,9 @@ void do_timer(long cpl)
 
 // 系统调用功能 - 设置报警定时时间值(秒).
 // 若参数 seconds 大于 0, 则设置新定时值, 并返回原定时时刻还剩余的间隔时间. 否则返回 0.
-// 进程数据结构中报警定时值ala)m的单位是系统滴答(1 滴答为 10 毫秒), 它是系统开机起到设置定时操作时系统滴答值 jiffies 和转换成滴答
-// 单位的定时值之和, 即 'jiffies + HZ * 定时秒值'. 而参数给出的是以秒为单位的定时值, 因此本函数的主要操作是进行两个单位的转换.
+// 进程数据结构中报警定时值ala)m的单位是系统滴答(1 滴答为 10 毫秒), 
+// 它是系统开机起到设置定时操作时系统滴答值 jiffies 和转换成滴答单位的定时值之和, 即 'jiffies + HZ * 定时秒值'. 
+// 而参数给出的是以秒为单位的定时值, 因此本函数的主要操作是进行两个单位的转换.
 // 其中常数 HZ = 100, 是内核系统运行频率. 定义在 inlucde/sched.h 上.
 // 参数 seconds 是新的定时时间值, 单位是秒.
 int sys_alarm(long seconds)
@@ -609,13 +622,14 @@ int sys_nice(long increment)
 	return 0;
 }
 
-// 内核调度程序的初始化子程序
+// 内核调度程序的初始化子程序.
 void sched_init(void)
 {
 	int i;
-	struct desc_struct * p;										// 描述符表结构指针
+	struct desc_struct * p;										// 描述符表结构指针.
 
-	// Linux 系统开发之初, 内核不成熟. 内核代码会被经常修改. Linus 怕无意中修改了这些关键性的数据结构, 造成与 POSIX 标准的不兼容. 
+	// Linux 系统开发之初, 内核不成熟. 
+	// 内核代码会被经常修改. Linus 怕无意中修改了这些关键性的数据结构, 造成与 POSIX 标准的不兼容. 
 	// 这里加入下面这个判断语句并无必要, 纯粹是为了提醒自己以及其他修改内核代码的人.
 	if (sizeof(struct sigaction) != 16)							// sigaction 是存放有关信号状态的结构.
 		panic("Struct sigaction MUST be 16 bytes");
@@ -624,22 +638,22 @@ void sched_init(void)
 	// gdt 是一个描述符表数组(include/linux/head.h), 实际上对应程序 head.s 中的全局描述符表基址(gdt). 
 	// 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址.
 	// 参见 include/asm/system.h
-	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 在 GDT 中设置任务 0 的任务状态段(TSS)地址
-	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 在 GDT 中设置任务 0 的局部描述符表(LDT)地址
+	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 在 GDT 中设置任务 0 的任务状态段(TSS)地址.
+	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 在 GDT 中设置任务 0 的局部描述符表(LDT)地址.
 	// 清任务数组和描述符表项(注意 i = 1 开始, 所以初始任务的描述符还在). 描述符项结构定义在文件 include/linux/head.h 中.
-	// 此处 p 指向 GDT 中的描述符 6 (即 task1 的 tss, 从 0 开始)
+	// 此处 p 指向 GDT 中的描述符 6(即 task1 的 tss, 从 0 开始).
 	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt+6 -> 指向任务 1 的描述符: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 
 									// 3 - 系统段 syscall, 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
-	// 初始化除 task0 以外的其他进程指针及描述符表
+	// 初始化除 task0 以外的其他进程指针及描述符表.
 	for(i = 1; i < NR_TASKS; i++) {
-		task[i] = NULL; 			// task0 已经初始化过了, 不需要再初始化, 此处从 task1 开始依次初始化每个任务的 tss 和 ldt
+		task[i] = NULL; 			// task0 已经初始化过了, 不需要再初始化, 此处从 task1 开始依次初始化每个任务的 tss 和 ldt.
 		p->a = p->b = 0; 			// 初始化 tss_i. tss_i 中的 i 表示任务号.
 		p++;
 		p->a = p->b = 0; 			// 初始化 ldt_i. i 表示任务号.
 		p++;
 	}
 	/* Clear NT, so that we won't have troubles with that later on */
-	/* 清除标志寄存器中的位 NT, 这样以后就不会有麻烦 */
+	/* 清除标志寄存器中的位 NT, 这样以后就不会有麻烦. */
 	// EFLAGS 中的 NT 标志位用于控制任务的嵌套调用. 
 	// ** NOTE: 当 NT 位置位时, 那么当前中断任务执行 IRET 指令时就会引起任务切换. **
 	// NT 指出 TSS 中的 back_link 字段是否有效. NT = 0 时无效.
@@ -661,8 +675,7 @@ void sched_init(void)
 	set_intr_gate(0x20, &timer_interrupt); 		// timer_interrupt 在 kernel/sys_call.s 中.
 	outb(inb_p(0x21) & ~0x01, 0x21);
     // int 0x80 中断是陷阱门, 陷阱门属于调用门, 描述符中含有中断/异常处理程序的段选择符, 该选择符的 RPL = 0.
-    // 用户代码调用中断时(int 0x80)时, 
-    // 会通过这个选择符来定位到中断/异常处理程序(同时得到目标代码段[中断处理程序]的 DPL).
+    // 用户代码调用中断时(int 0x80)时, 会通过这个选择符来定位到中断/异常处理程序(同时得到目标代码段[中断处理程序]的 DPL).
     // 重点看 Chapter 4.5.33
 	set_system_gate(0x80, &system_call); 		// (系统陷阱门 DPL = 3) system_call 也在 kernel/sys_call.s 中.
 }
