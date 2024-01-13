@@ -267,7 +267,10 @@ int main(void)										/* This really IS void, no error here. */
 	Log(LOG_INFO_TYPE, "<<<<< Linux0.12 Kernel Init Finished, Ready Start Process0 >>>>>\n");
 	// 下面过程通过在堆栈中构建 IRET 指令的返回参数, 利用中断返回指令切换到任务 0 中执行(在用户特权级下执行).
 	// NOTE: 并不是通过任务切换来实现的, 只是通过 iret 来自动加载用户态下的各个段描述符来实现特权级的切换.
-	move_to_user_mode();							// 移到用户模式下执行. (include/asm/system.h)
+	// cs 由 0x8 切换成 0xf 即由 0b-0000-1000 切换成 0b-0000-1111 即由 GDT 中的代码段切换为 LDT 中的代码段. 
+	// 特权级 CPL 由 0 切换成 3, 在用户态下执行.
+	move_to_user_mode();							// 切换到用户态(CPL = 3)下执行. (include/asm/system.h)
+	// fork 一个子进程 TASK-1, 并通过时钟中断切换到任务 1 中执行 init() 函数, 执行初始化操作.
 	if (!fork_for_process0()) {						/* we count on this going ok */
 		// TASK-0 中不会进入到这里, 但是子进程 TASK-1 会进入到这里来执行.
 		init();										// 在新建的子进程(TASK-1 即 init 进程)中执行.

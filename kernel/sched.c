@@ -628,8 +628,8 @@ void sched_init(void)
 	int i;
 	struct desc_struct * p;										// 描述符表结构指针.
 
-	// Linux 系统开发之初, 内核不成熟. 
-	// 内核代码会被经常修改. Linus 怕无意中修改了这些关键性的数据结构, 造成与 POSIX 标准的不兼容. 
+	// 由于 Linux 系统开发之初, 内核不成熟. 内核代码会被经常修改. 
+	// Linus 怕无意中修改了这些关键性的数据结构, 造成与 POSIX 标准的不兼容. 
 	// 这里加入下面这个判断语句并无必要, 纯粹是为了提醒自己以及其他修改内核代码的人.
 	if (sizeof(struct sigaction) != 16)							// sigaction 是存放有关信号状态的结构.
 		panic("Struct sigaction MUST be 16 bytes");

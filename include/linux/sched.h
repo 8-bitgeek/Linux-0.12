@@ -247,7 +247,7 @@ struct task_struct {
 
 /*
  *  INIT_TASK is used to set up the first task table, touch at
- * your own risk!. Base=0, limit=0x9ffff (=640kB)
+ * your own risk!. Base=0, limit=0x9ffff(= 640kB)
  */
 /*
  * INIT_TASK 用于设置第 1 个任务表, 若想修改, 责任自负!
@@ -272,15 +272,15 @@ struct task_struct {
 	/* filp */		{NULL,}, \
 	/* ldt */ \
 					{ \
-						{0,0}, \
-						{0x9f,0xc0fa00}, \
-						{0x9f,0xc0f200}, \
+						{0, 0}, \
+						{0x9f, 0xc0fa00}, \
+						{0x9f, 0xc0f200}, \
 					}, \
 	/*tss*/ \
-					{0, PAGE_SIZE + (long)&init_task, 0x10, 0, 0, 0, 0, (long)&pg_dir,\
-		 				0,0,0,0,0,0,0,0, \
-		 				0,0,0x17,0x17,0x17,0x17,0x17,0x17, \
-		 				_LDT(0),0x80000000, \
+					{0, PAGE_SIZE + (long) &init_task, 0x10, 0, 0, 0, 0, (long)&pg_dir,\
+		 				0, 0, 0, 0, 0, 0, 0, 0, \
+		 				0, 0, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, \
+		 				_LDT(0), 0x80000000, \
 						{} \
 					}, \
 }
