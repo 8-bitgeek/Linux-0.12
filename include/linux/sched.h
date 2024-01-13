@@ -90,7 +90,8 @@ struct i387_struct {
 // 分为静态字段和动态字段, 静态字段的值是在任务被创建时设置的, 通过不会改变它们. 
 // 动态字段在当任务切换而被挂起时，处理器会动态更新动态字段的内容.
 struct tss_struct {
-	long	back_link;			/* 16 high bits zero */ // 前一任务链接(TSS 选择符). 在任务切换时更新. 该字段允许任务使用 iret 指令切换到前一个任务. [动态字段]
+	// 在任务切换时更新. 该字段允许任务使用 iret 指令切换到前一个任务. 
+	long	back_link;			/* 16 high bits zero */ // 前一任务链接(TSS 选择符). 				   [动态字段]
 	long	esp0; 										// 特权级 0 (内核态)使用的堆栈指针. 			[静态字段]
 	long	ss0;				/* 16 high bits zero */ // 特权级 0 (内核态)使用的堆栈选择符. 			[静态字段]
 	long	esp1; 										// 特权级 1 (内核态)使用的堆栈指针. 			[静态字段]
@@ -273,11 +274,11 @@ struct task_struct {
 	/* ldt */ \
 					{ \
 						{0, 0}, \
-						{0x9f, 0xc0fa00}, \
-						{0x9f, 0xc0f200}, \
+						{0x9f, 0xc0fa00}, /* 段基地址 0x0; 段限长 636KB; 特权级 DPL = 3; 代码段, 可读/可执行 */\
+						{0x9f, 0xc0f200}, /* 段基地址 0x0; 段限长 636KB; 特权级 DPL = 3; 数据段, 可读/可写 */\
 					}, \
 	/*tss*/ \
-					{0, PAGE_SIZE + (long) &init_task, 0x10, 0, 0, 0, 0, (long)&pg_dir,\
+					{0, PAGE_SIZE + (long) &init_task, 0x10, 0, 0, 0, 0, (long) &pg_dir,\
 		 				0, 0, 0, 0, 0, 0, 0, 0, \
 		 				0, 0, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, \
 		 				_LDT(0), 0x80000000, \
@@ -285,8 +286,12 @@ struct task_struct {
 					}, \
 }
 // 上面 tss 中的第二个 0x17 表示 cs 的段选择符, 0x17 = 0b-0001-0111 表示 LDT 中的第 1 个(从 0 开始)段描述符. RPL = 3.
-// 至于 DPL 要去对应的 LDT 中看, 即上面的 ldt 字段中的 0x9f,0xc0fa00 = 0xc0fa009f 对应的 DPL = 0xf = 0b1-11-1  对应的 DPL = 11 = 3, 即 DPL 为 3.
-// tss 结构中的第二项为 esp0 = PAGE_SIZE+(long)&init_task, ss0 = 0x10.
+// 至于 DPL 要去对应的 LDT 中看, 
+// 即上面的 ldt 字段中的 (0x9f,0xc0fa00) = 0x00c0[f]a00-0000009f 对应的 DPL = 0xf = 0b1-11-1 对应的 DPL = 11 = 3, 即 DPL 为 3.
+// tss 结构中的第二/三项分别为 esp0 = PAGE_SIZE + (long) &init_task, 即指向该内存页(4K)的末尾处, ss0 = 0x10, 即内核数据段.
+// 0x00c0fa00-0000009f:	段基地址 = 0x00000000; 段限长 = 0x0009f(0x9f*4=636KB); DPL = 0b11(特权级为 3); 
+// 						P = 1(段存在); S = 1(描述符类型: 代码或数据); TYPE = 0b1010(代码段: 可读/可执行); 
+// 						G = 0b1(颗粒度: 4KB 为单位); D/B = 0b1; AVL = 0b1; 
 
 extern struct task_struct *task[NR_TASKS];								// 任务指针数组.
 extern struct task_struct *last_task_used_math;							// 上一个使用过协处理器的进程
@@ -298,7 +303,7 @@ extern int jiffies_offset;												// 用于累计需要调整的时间滴答
 
 #define CURRENT_TIME (startup_time + (jiffies + jiffies_offset) / HZ)	// 当前时间(秒数).
 
-// 添加定时器函数(定时时间 jiffies 嘀嗒数，定时到时调用函数 *fn()).(kernel/sched.c)
+// 添加定时器函数(定时时间 jiffies 嘀嗒数, 定时到时调用函数 *fn()). (kernel/sched.c)
 extern void add_timer(long jiffies, void (*fn)(void));
 // 不可中断的等待睡眠.(kernel/sched.c)
 extern void sleep_on(struct task_struct ** p);
@@ -326,7 +331,8 @@ extern int in_group_p(gid_t grp);
 // 宏定义, 计算在全局表中第 n 个任务的 TSS 段描述符的选择符值(偏移量, 偏移字节数).
 // 因每个描述符占 8 字节, 因此 FIRST_TSS_ENTRY << 3 (*8) 表示描述符在 GDT 表中的起始偏移位置.
 // 因为每个任务使用 1 个 TSS 和 1 个 LDT 描述符, 共占用 16 字节, 因此需要 n << 4 (n*16) 来表示对应 TSS 起始位置. 
-// 该宏得到的值正好也是该 TSS 的选择符值. [比如 TASK1: (1<<4 + 4<<3) = 48 = 0b-00110-000(低三位为其它标志) 对应用索引值为 110 = 6(即第 6 个段描述符)].
+// 该宏得到的值正好也是该 TSS 的选择符值. 
+// [比如 TASK1: (1<<4 + 4<<3) = 48 = 0b-00110-000(低三位为其它标志) 对应用索引值为 110 = 6(即第 6 个段描述符)].
 #define _TSS(n) ((((unsigned long) n) << 4) + (FIRST_TSS_ENTRY << 3))
 // 宏定义, 计算在全局表中第 n 个任务的 LDT 段描述符的选择符值(偏移量)
 #define _LDT(n) ((((unsigned long) n) << 4) + (FIRST_LDT_ENTRY << 3))
@@ -357,14 +363,16 @@ __asm__(\
 // 跳转到一个任务的 TSS 段选择符组成的地址处会造成 CPU 进行任务切换操作.
 // 输入: %0 - 指向 __tmp;		     %1 - 指向 __tmp.b 处, 用于存放新 TSS 选择符.
 //      dx - 新任务 n 的 TSS 选择符;  ecx - 新任务 n 的任务结构指针 task[n].
-// 其中临时数据结构 __tmp 用于组建远跳转(far jump)指令的操作数. 该操作数由 4 字节偏移地址和 2 字节的段选择符组成. 
+// 其中临时数据结构 __tmp 用于组建远跳转(far jump)指令的操作数. 
+// 该操作数由 4 字节偏移地址和 2 字节的段选择符组成. 
 // 因此 __tmp 中 a 的值是 32 位偏移值, 而的低 2 字节是新 TSS 段的选择符(高 2 字节不用). 
 // 中转与 TSS 段选择符会造成任务切换到该 TSS 对应的进程.
 // 对于造成任务切换的长跳转, a 值无用. 内存间接跳转指令(`ljmp *%0`)使用 6 字节操作数作为跳转目的地的长指针, 
 // 其格式为: jmp 16 位段选择符 : 32 位偏移值. 但在内存中操作数的表示顺序与这里正好相反. 
 // 任务切换回来之后, 在判断原任务上次执行是否使用过协处理器时,
 // 是通过将原任务指针与保存在 last_task_used_math 变更中的上次使用过协处理器指针进行比较而作出的, 
-// 参见文件 kernel/sched.c 中有关 math_state_restore() 函数的说明. 唯一的调用方是 schedule() 方法, 也即系统启动后只有 schedule 会进行任务切换.
+// 参见文件 kernel/sched.c 中有关 math_state_restore() 函数的说明. 
+// 唯一的调用方是 schedule() 方法, 也即系统启动后只有 schedule 会进行任务切换.
 #define switch_to(n) { \
 struct {long a, b;} __tmp; 					/* long 占 4bytes */\
 __asm__(\
