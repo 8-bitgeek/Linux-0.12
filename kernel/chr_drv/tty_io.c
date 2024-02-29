@@ -611,7 +611,7 @@ void tty_init(void)
 	// 该值被用于随后的控制 tty 结构初始化循环中. 
 	// 对于控制台的 tty 结构, tty 结构中包含的 termios 结构字段中输入模式标志集被初始化为 ICRNL 标志;
 	// 输出模式标志被初始化含有后处理标志 OPOST 和把 NL 转换成 CRNL 的标志 ONLCR; 
-	// 本地模式标志集被初始化含有 IXON, ICAON, ECHO,ECHOCTL 和 ECHOKE 标志; 
+	// 本地模式标志集被初始化含有 IXON, ICAON, ECHO, ECHOCTL 和 ECHOKE 标志; 
 	// 控制字符数组 c_cc[] 被设置含有初始值 INIT_C_CC.
 	// 最后是初始化控制台终端 tty 结构中的读缓冲, 写缓冲和辅助缓冲队列结构, 
 	// 它们分别指向 tty 缓冲队列结构数组 tty_table[] 中的相应结构项.

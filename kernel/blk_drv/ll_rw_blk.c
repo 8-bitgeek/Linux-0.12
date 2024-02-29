@@ -303,7 +303,7 @@ void blk_dev_init(void)
 	int i;
 
 	for (i = 0; i < NR_REQUEST; i++) {
-		request[i].dev = -1; 					// 请求的设备号, -1 表示没有请求
+		request[i].dev = -1; 					// 请求对应的设备号, -1 表示没有请求.
 		request[i].next = NULL;
 	}
 }

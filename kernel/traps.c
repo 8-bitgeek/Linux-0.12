@@ -207,20 +207,20 @@ void do_reserved(long esp, long error_code)
 // set_trap_gate() 与 set_system_gate() 都使用了中断描述符表 IDT 中的陷阱门(Trap Gate), 
 // 它们之间的主要区别在于前者设置的特权级为 0, 后者是 3. 
 // 因此断点陷阱中断 int3, 溢出中断 overflow 和边界出错中断 bounds 可以由任何程序调用. 
-// 这两个函数均是嵌入式汇编宏程序, 参见 include/asm/system.h
+// 这两个函数均是嵌入式汇编宏程序, 参见 include/asm/system.h;
 // 一个中断描述符(IDT 项)占 8 个字节.
 void trap_init(void)
 {
 	int i;
-
+	// 陷阱门和中断门是调用门的特殊类. 调用门用于在不同特权级之间实现受控的程序控制转移.
 	set_trap_gate(0, &divide_error);							// 设置除操作出错的中断向量值.
 	set_trap_gate(1, &debug);
 	set_trap_gate(2, &nmi);
-	set_system_gate(3, &int3);									/* int3-5 can be called from all */
+	set_system_gate(3, &int3);									/* int 3-5 can be called from all */
 	set_system_gate(4, &overflow);
 	set_system_gate(5, &bounds);
 	set_trap_gate(6, &invalid_op);
-	set_trap_gate(7, &device_not_available);					// 函数未实现
+	set_trap_gate(7, &device_not_available);					// 函数未实现.
 	set_trap_gate(8, &double_fault);
 	set_trap_gate(9, &coprocessor_segment_overrun);
 	set_trap_gate(10, &invalid_TSS);

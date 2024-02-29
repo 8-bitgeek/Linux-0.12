@@ -82,7 +82,7 @@ union task_union {
 	char stack[PAGE_SIZE]; 					// 任务内核态堆栈
 };
 
-// 设置初始任务的数据. 初始数据在 include/kernel/sched.h 中.
+// 设置初始任务的数据. 初始数据在 ../include/linux/sched.h 中.
 static union task_union init_task = {INIT_TASK, };
 
 // 从开机开始算起的滴答数时间值全局变量(10ms/滴答). 系统时钟中断每发生一次即一个滴答. 
