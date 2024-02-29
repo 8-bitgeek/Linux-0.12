@@ -134,8 +134,8 @@ static int sprintf(char * str, const char *fmt, ...)
  // 下面三行分别将指定的线性地址强行转换为给定数据类型的指针, 并获取指针所指内容. 
  // 由于内核代码段被映射到从物理地址零开始的地方, 因此这些线性地址正好也是对应的物理地址.
 #define EXT_MEM_K (*(unsigned short *)0x90002)						// 获取 0x90002 中保存的 1MB 以后的扩展内存大小(KB).
-#define CON_ROWS ((*(unsigned short *)0x9000e) & 0xff)				// 选定的控制台屏幕行, 列数
-#define CON_COLS (((*(unsigned short *)0x9000e) & 0xff00) >> 8)
+#define CON_ROWS ((*(unsigned short *)0x9000e) & 0xff)				// 选定的控制台屏幕的行数
+#define CON_COLS (((*(unsigned short *)0x9000e) & 0xff00) >> 8)     // 选定的控制台屏幕的列数
 #define DRIVE_INFO (*((struct drive_info *)0x90080))				// 硬盘参数表 32 字节内容.
 #define ORIG_ROOT_DEV (*(unsigned short *)0x901FC)					// 根文件系统所在设备号.
 #define ORIG_SWAP_DEV (*(unsigned short *)0x901FA)					// 交换文件所在设备号.
@@ -219,26 +219,29 @@ int main(void)										/* This really IS void, no error here. */
 	// 其中 ROOT_DEV 已在前面包含进的 include/linux/fs.h 文件上被声明为 extern_int, 
 	// 而 SWAP_DEV 在 include/linux/mm.h 文件内也作了相同声明.
 	// 这里 mm.h 文件并没有显式地列在本程序前部, 因为前面包含进的 include/linux/sched.h 文件中已经含有它.
- 	ROOT_DEV = ORIG_ROOT_DEV;										// ROOT_DEV 定义在 fs/super.c
- 	SWAP_DEV = ORIG_SWAP_DEV;										// SWAP_DEV 定义在 mm/swap.c
+	// ROOT_DEV = 0x301(769): 表示第一个硬盘(0x300)的第一个分区(0x001). SWAP_DEV = 0x304(772): 第一个硬盘的第四个分区.
+ 	ROOT_DEV = ORIG_ROOT_DEV;										// ROOT_DEV 定义在 fs/super.c; 
+ 	SWAP_DEV = ORIG_SWAP_DEV;										// SWAP_DEV 定义在 mm/swap.c;
    	sprintf(term, "TERM=con%dx%d", CON_COLS, CON_ROWS);
 	envp[1] = term;
 	envp_rc[1] = term;
     drive_info = DRIVE_INFO;										// 复制内存 0x90080 处的硬盘参数表(由之前的汇编代码读取并记录).
 
 	// 接着根据机器物理内存容量设置高速缓冲区和主内存的位置和范围.
-	// buffer_memory_end  	-> 高速缓存区末端地址.
+	// buffer_memory_end  	-> 高速缓存区末端地址(字节数).
 	// memory_end 			-> 机器内存容量(内存末端地址).
 	// main_memory_start 	-> 主内存开始地址.
-	// 设置物理内存大小.
+	// 高速缓冲区主要用于缓存硬盘或软盘等块设备中的数据, 当一个进程需要硬盘或软盘中的数据时, 系统会首先把数据读取到高速缓冲区内存中.
+	// 当有数据需要写到块设备上时, 系统也是将数据先写入到高速缓冲区中, 然后由块设备驱动程序写到对应的设备上.
+	// 主内存区是供所有程序可以随时申请和使用的内存区域.
 	memory_end = (1 << 20) + (EXT_MEM_K << 10);						// 内存大小 = 1MB + [扩展内存(k) * 1024] 字节.
 	memory_end &= 0xfffff000;										// 忽略不到 4KB(1 页)的内存数.
 	if (memory_end > 16 * 1024 * 1024)								// 如果内存量超过 16MB, 则按 16MB 计.
 		memory_end = 16 * 1024 * 1024;
 	// 根据物理内存的大小设置高速缓冲区的末端大小.
-	if (memory_end > 12 * 1024 * 1024) 								// 如果 16MB >= 内存 > 12MB, 则设置缓冲区末端 = 4MB.
+	if (memory_end > 12 * 1024 * 1024) 								// 如果 16MB >= 内存 > 12MB, 则设置高速缓冲区末端 = 4MB.
 		buffer_memory_end = 4 * 1024 * 1024;
-	else if (memory_end > 6 * 1024 * 1024)							// 否则若 12MB >= 内存 > 6MB, 则设置缓冲区末端 = 2MB.
+	else if (memory_end > 6 * 1024 * 1024)							// 否则若 12MB >= 内存 > 6MB, 则设置高速缓冲区末端 = 2MB.
 		buffer_memory_end = 2 * 1024 * 1024;
 	else
 		buffer_memory_end = 1 * 1024 * 1024;						// 否则则设置缓冲区末端 = 1MB.
