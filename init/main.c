@@ -212,7 +212,7 @@ int main(void)										/* This really IS void, no error here. */
 	 * Interrupts are still disabled. Do necessary setups, then enable them
 	 */
 	/*
-	 * 此时中断仍被禁止着, 做完必要的设置后就将其开启.
+	 * 此时中断仍被禁止着, 做完必要的设置后再将其开启.
 	 */
 	// 首先保存根文件系统设备和交换文件设备号, 并根据 setup.s 程序中获取的信息设置控制台终端屏幕行, 列数环境变量 TERM, 
 	// 并用其设置初始 init 进程中执行 etc/rc 文件和 shell 程序使用的环境变量, 以及复制内存 0x90080 处的硬盘表.
@@ -224,7 +224,7 @@ int main(void)										/* This really IS void, no error here. */
    	sprintf(term, "TERM=con%dx%d", CON_COLS, CON_ROWS);
 	envp[1] = term;
 	envp_rc[1] = term;
-    drive_info = DRIVE_INFO;										// 复制内存 0x90080 处的硬盘参数表.
+    drive_info = DRIVE_INFO;										// 复制内存 0x90080 处的硬盘参数表(由之前的汇编代码读取并记录).
 
 	// 接着根据机器物理内存容量设置高速缓冲区和主内存的位置和范围.
 	// buffer_memory_end  	-> 高速缓存区末端地址.
