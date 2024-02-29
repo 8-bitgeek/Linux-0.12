@@ -209,8 +209,7 @@ int main(void)										/* This really IS void, no error here. */
 	        "movl %eax,%cr0");
 #endif
 	/*
-	 * Interrupts are still disabled. Do necessary setups, then
-	 * enable them
+	 * Interrupts are still disabled. Do necessary setups, then enable them
 	 */
 	/*
 	 * 此时中断仍被禁止着, 做完必要的设置后就将其开启.
