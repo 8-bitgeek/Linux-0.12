@@ -675,7 +675,7 @@ void sched_init(void)
 	set_intr_gate(0x20, &timer_interrupt); 		// timer_interrupt 在 kernel/sys_call.s 中.
 	outb(inb_p(0x21) & ~0x01, 0x21);
     // int 0x80 中断是陷阱门, 陷阱门属于调用门, 描述符中含有中断/异常处理程序的段选择符, 该选择符的 RPL = 0.
-    // 用户代码调用中断时(int 0x80)时, 会通过这个选择符来定位到中断/异常处理程序(同时得到目标代码段[中断处理程序]的 DPL).
+    // 用户代码调用中断时(int 0x80)时, 会通过这个选择符来定位到中断/异常处理程序(用户态的代码可以使用这个门来实现对系统代码的调用, 即实现系统调用).
     // 重点看 Chapter 4.5.33; system_call 在 kernel/sys_call.s 中.
 	set_system_gate(0x80, &system_call); 		// (系统陷阱门 DPL = 3, 即用户态的代码可以调用陷阱门来实现对系统代码的调用) 
 }

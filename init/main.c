@@ -231,7 +231,8 @@ int main(void)										/* This really IS void, no error here. */
 	// buffer_memory_end  	-> 高速缓存区末端地址(字节数).
 	// memory_end 			-> 机器内存容量(内存末端地址).
 	// main_memory_start 	-> 主内存开始地址.
-	// 高速缓冲区主要用于缓存硬盘或软盘等块设备中的数据, 当一个进程需要硬盘或软盘中的数据时, 系统会首先把数据读取到高速缓冲区内存中.
+	// 高速缓冲区主要用于缓存硬盘或软盘等块设备中的数据(数据块大小为 1KB), 
+	// 当一个进程需要硬盘或软盘中的数据时, 系统会首先把数据读取到高速缓冲区内存中.
 	// 当有数据需要写到块设备上时, 系统也是将数据先写入到高速缓冲区中, 然后由块设备驱动程序写到对应的设备上.
 	// 主内存区是供所有程序可以随时申请和使用的内存区域.
 	memory_end = (1 << 20) + (EXT_MEM_K << 10);						// 内存大小 = 1MB + [扩展内存(k) * 1024] 字节.
@@ -260,13 +261,13 @@ int main(void)										/* This really IS void, no error here. */
  	tty_init();										// tty 初始化. (chr_drv/tty_io.c)
 	time_init();									// 设置开机启动时间.
  	sched_init();									// 调度程序初始化(加载任务 0 的 tr, ldtr). (kernel/sched.c)
-	// 高速缓冲区用于缓冲块设备(比如硬盘)中的数据.
+	// 高速缓冲区用于缓冲读/写块设备(比如硬盘)中的数据.
 	buffer_init(buffer_memory_end);					// 高速缓冲区管理初始化, 建立内存缓冲区链表等. 一页大小为 1KB. (fs/buffer.c)
 	hd_init();										// 硬盘初始化. (blk_drv/hd.c)
 	floppy_init();									// 软驱初始化. (blk_drv/floppy.c)
 	sti();											// 所有初始化工作都完了, 于是开启中断(注意, 只能屏蔽硬件中断而不能屏蔽软件中断).
 	// 打印内核初始化完毕
-	Log(LOG_INFO_TYPE, "<<<<< Linux0.12 Kernel Init Finished, Ready Start Process0 >>>>>\n");
+	// Log(LOG_INFO_TYPE, "<<<<< Linux0.12 Kernel Init Finished, Ready Start Process0 >>>>>\n");
 	// 下面过程通过在堆栈中构建 IRET 指令的返回参数, 利用中断返回指令切换到任务 0 中执行(在用户特权级下执行).
 	// NOTE: 并不是通过任务切换来实现的, 只是通过 iret 来自动加载用户态下的各个段描述符来实现特权级的切换.
 	// cs 由 0x8 切换成 0xf 即由 0b-0000-1000 切换成 0b-0000-1111 即由 GDT 中的代码段切换为 LDT 中的代码段. 
