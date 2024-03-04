@@ -199,6 +199,7 @@ static char * envp[] = { "HOME=/usr/root", NULL, NULL };
 
 struct drive_info { char dummy[32]; } drive_info;	// 用于存放硬盘参数表信息.
 
+// 分页机制已经在 head.s 的 setup_paging 中开启. 
 // 内核初始化主程序. 初始化结束后将以任务 0(idle 任务即空闲任务)的身份运行.
 // 英文注释含义是 "这里确实是 void, 没错. 在 startup 程序(head.s)中就是这样假设的". 参见 head.h 程序代码.
 int main(void)										/* This really IS void, no error here. */
@@ -274,9 +275,9 @@ int main(void)										/* This really IS void, no error here. */
 	// cs 由 0x8 切换成 0xf 即由 0b-0000-1000 切换成 0b-0000-1111 即由 GDT 中的代码段切换为 LDT 中的代码段. 
 	// 特权级 CPL 由 0 切换成 3, 在用户态下执行.
 	move_to_user_mode();							// 切换到用户态(CPL = 3)下执行. (include/asm/system.h)
-	// fork 一个子进程 TASK-1, 并通过时钟中断切换到任务 1 中执行 init() 函数, 执行初始化操作.
+	// fork 一个子进程 TASK-1, 并通过时钟中断切换到 TASK-1 中执行 init() 函数, 执行初始化操作.
 	if (!fork_for_process0()) {						/* we count on this going ok */
-		// TASK-0 中不会进入到这里, 但是子进程 TASK-1 会进入到这里来执行.
+		// TASK-0 中不会进入到这里(返回值不为 0), 但是子进程 TASK-1 (返回值 eax 为 0, 在创建进程的时候设置的 eax = 0)会进入到这里来执行.
 		init();										// 在新建的子进程(TASK-1 即 init 进程)中执行.
 	}
 	/*
