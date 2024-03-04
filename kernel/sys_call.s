@@ -106,7 +106,7 @@ reschedule:
 # RPL(Request Privilege Level): 请求特权级, 存放在选择符的位 0/1 上.
 # RPL 和 CPL 会与 DPL 进行对比, 如果大于(特权级低)则不允许调用.
 
-# 在 TASK0 调用该中断创建 TASK1 时, task0 的 CPL = 3, 用户态代码通过陷阱门(调用门)来调用该中断代码.
+# 在 TASK-0 调用该中断创建 TASK1 时, TASK-0 的 CPL = 3, 用户态代码通过陷阱门(调用门)来调用该中断代码.
 # 该中断的 DPL = 0, 需要进行特权级切换, 中断和任务使用不同的堆栈(中断处理程序使用任务 ss0, sp0 字段指定的堆栈).
 
 # int 0x80 -- Linux 系统调用入口点(调用中断 int 0x80, eax 中是调用号).
@@ -131,18 +131,18 @@ system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	mov %dx, %es
 	movl $0x17, %edx				# fs points to local data space.
 	mov %dx, %fs 					# fs 指向局部数据段.
-	cmpl NR_syscalls, %eax
-	jae bad_sys_call 				# 调用号如果超出范围的话就跳转.
+	cmpl NR_syscalls, %eax 			# 如果 eax 中的值大于 NR_syscalls 则表示超出调用号范围(>=87).
+	jae bad_sys_call 				# 调用号如果超出范围(>=87)的话就跳转.
 
-    mov sys_call_table(, %eax, 4), %ebx 		# 把 sys_call_table[4 * %eax] 确定的内存地址处的内容(系统调用程序的地址)放入 ebx 中
-    cmpl $0, %ebx 								# 如果地址不为 0 则进行系统调用.
-    jne sys_call
+    mov sys_call_table(, %eax, 4), %ebx 	# 把 sys_call_table[4 * %eax] 确定的内存地址处的内容(系统调用程序的地址)放入 ebx 中
+    cmpl $0, %ebx 							# 判断该系统调用入口地址是否为 0. 
+    jne sys_call 							# 不为 0 则执行系统调用.
 	#	pushl %eax
     call sys_default
 	# 下面这句操作数的含义是: 调用地址 = (sys_call_table + %eax * 4).
 	# sys_call_table[] 是一个指针数组, 定义在 include/linux/sys.h 中, 该数组中设置了内核所有 82 个系统调用 C 处理函数的地址.
 sys_call:
-	call *%ebx 							# ebx 中含有被调用函数的地址. 调用 eax 中对应的系统调用函数.
+	call *%ebx 							# ebx 中含有被调用函数的地址. 调用 eax 中对应的系统调用函数. (此处不会发生特权级切换)
 	# call *sys_call_table(, %eax, 4)	# 间接调用指定功能 C 函数.
 	pushl %eax							# 把系统调用返回值入栈.
 

@@ -113,11 +113,11 @@ int copy_mem(int nr, struct task_struct * p)
 // 3. 调用 sys_call_table 中 sys_fork 函数入栈的返回地址(参数 none 表示); system_call 中的 call *%ebx 入栈了该数据.
 // 4. 调用 copy_process() 之前入栈的 gs, esi, edi, ebp 和 eax(nr).
 // 其中参数 nr 是调用 find_empty_process() 分配的任务数组项号.
-int copy_process(int nr, long ebp, long edi, long esi, long gs, 
-		long none, 														// system_call 中的 `call *%ebx` 指令入栈了该数据(下一行代码 `push %eax` 的地址).
+int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个参数在 sys_fork 程序中手动压入栈中.
+		long none, 														// system_call 中的 `call *%ebx` 指令入栈了该数据(下一行代码 `pushl %eax` 的地址).
 		long ebx, long ecx, long edx, long orig_eax, 					// system-call 中入栈的数据
 		long fs, long es, long ds, 										// system_call 压入的段寄存器及通用寄存器
-		long eip, long cs, long eflags, long esp, long ss) 				// 用户态任务的 ss, esp, eflags, cs, eip
+		long eip, long cs, long eflags, long esp, long ss) 				// 用户态任务通过 int 指令调用 0x80 中断时, cpu 自动压入栈中的用户态下的 ss, esp, eflags, cs, eip
 {
 	struct task_struct * p;
 	int i;
@@ -239,20 +239,22 @@ int find_empty_process(void)
 	int i;
 
 	// 首先获取新的进程号. 如果 last_pid 增加 1 后超出进程号的正数表示范围, 则重新从 1 开始使用 pid 号. 
-	// 然后在任务数组中搜索刚设置的 pid 号是否已经被某个任务使用. 
-	// 如果是则跳转到函数开始处理重新获得一个 pid 号. 
+	// 然后在任务数组(task[])中搜索刚生成的 pid 号是否已经被某个任务使用. 
+	// 如果是则跳转到函数开始处重新生成一个 pid 号. 
 	// 如果找到一个没被占用的 pid 号, 则接着在任务数组中为新任务寻找一个空闲项, 并返回项号. 
-	// last_pid 是一个全局变量, 不用返回. 如果此时任务数组中 64 个项已经被全部占用, 则返回出错码.
+	// last_pid 是一个全局变量, 不用作为返回值返回. 如果此时任务数组中 64 个项已经被全部占用, 则返回出错码.
 	repeat:
 		if ((++last_pid) < 0) last_pid = 1;
 		for(i = 0 ; i < NR_TASKS ; i++) {
 			// 如果当前测试的 pid(last_pid) 已经被占用, 则重新生成一个 last_pid.
 			if (task[i] && ((task[i]->pid == last_pid) || (task[i]->pgrp == last_pid))) 
-				goto repeat;
+				goto repeat; 			// 重新生成一个 last_pid.
 		}
+	// 如果找到一个未被占用的进程号, 则查找任务数组中的空闲项. 
 	for(i = 1 ; i < NR_TASKS ; i++) {
-		if (!task[i]) 					// 找到空闲的任务项
-			return i; 					// 返回空闲的任务项号
+		if (!task[i]) 					// 如果找到一个空闲的任务项.
+			return i; 					// 返回空闲的任务项号.
 	}
+	// 如果没有找到空闲项, 则返回出错码.
 	return -EAGAIN;
 }

@@ -264,7 +264,7 @@ struct task_struct {
 	/* proc links*/ &init_task.task, 0, 0, 0, \
 	/* uid etc */	0, 0, 0, 0, 0, 0, \
 	/* timeout */	0, 0, 0, 0, 0, 0, 0, \
-	/* rlimits */   { {0x7fffffff, 0x7fffffff}, {0x7fffffff, 0x7fffffff},  \
+	/* rlimits */   { {0x7fffffff, 0x7fffffff}, {0x7fffffff, 0x7fffffff}, \
 		  			{0x7fffffff, 0x7fffffff}, {0x7fffffff, 0x7fffffff}, \
 		  			{0x7fffffff, 0x7fffffff}, {0x7fffffff, 0x7fffffff}}, \
 	/* flags */		0, \

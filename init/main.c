@@ -95,8 +95,9 @@ extern void mem_init(long start, long end);			// 内存管理初始化(mm/memory
 extern long rd_init(long mem_start, int length);	// 虚拟盘初始化(blk_drv/ramdisk.c).
 extern long kernel_mktime(struct tm * tm);			// 计算系统开机启动时间(秒).
 
-// fork 系统调用函数, 该函数作为 static inline 表示内联函数, 主要用来在进程 0 里面创建进程 1 的时候内联, 
-// 使进程 0 在生成进程 1 的时候不使用自己的用户堆栈.
+// fork 系统调用函数, 该函数作为 static inline 表示内联函数, 主要用来在 TASK-0 里面创建 TASK-1 的时候内联, 
+// TASK-0 使用 int 0x80 指令调用内核代码创建 TASK-1 时会发生特权级的变化, 所以不会使用自己的用户堆栈, 
+// 而是使用 tss 中指定的内核态堆栈(特权级 CPL[3 -> 0] 变化引起堆栈切换).
 // 该内联函数返回值为新进程的 pid(last_pid) 或者 -1(获取不到正确的新进程号时).
 static inline long fork_for_process0() {
 	long __res;
