@@ -277,7 +277,7 @@ struct task_struct {
 						{0x9f, 0xc0fa00}, /* 段基地址 0x0; 段限长 636KB; 特权级 DPL = 3; 代码段, 可读/可执行 */\
 						{0x9f, 0xc0f200}, /* 段基地址 0x0; 段限长 636KB; 特权级 DPL = 3; 数据段, 可读/可写 */\
 					}, \
-	/*tss*/ \ 		
+	/*tss*/ \
 					/* 前一任务链接的 tss 段选择符,             esp0, */ \
 					{        0,                   PAGE_SIZE + (long) &init_task, \
 					/*  ss0,  esp1, ss1,  esp2,  ss2,    cr3(页目录基地址寄存器, pdbr) */ \
