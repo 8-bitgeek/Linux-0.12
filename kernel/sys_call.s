@@ -142,6 +142,7 @@ system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	# 下面这句操作数的含义是: 调用地址 = (sys_call_table + %eax * 4).
 	# sys_call_table[] 是一个指针数组, 定义在 include/linux/sys.h 中, 该数组中设置了内核所有 82 个系统调用 C 处理函数的地址.
 sys_call:
+	# call 指令会将下一行代码的地址(pushl %eax)压入栈中.
 	call *%ebx 							# ebx 中含有被调用函数的地址. 调用 eax 中对应的系统调用函数. (此处不会发生特权级切换)
 	# call *sys_call_table(, %eax, 4)	# 间接调用指定功能 C 函数.
 	pushl %eax							# 把系统调用返回值入栈.
@@ -314,7 +315,7 @@ sys_execve:
 .align 4
 sys_fork:
 	call find_empty_process			# 为新进程取得进程号 last_pid(kernel/fork.c)
-	testl %eax, %eax				# 在 eax 中返回进程号. 若返回负数则退出.
+	testl %eax, %eax				# 在 eax 中返回进程号(last_pid). 若返回负数则退出.
 	js 1f 							# 如果为负数, 则直接返回.
 	push %gs
 	pushl %esi

@@ -115,7 +115,7 @@ struct tss_struct {
 	long	ds;					/* 16 high bits zero */ // 数据段选择符字段, 保存当前任务的数据段选择符. 					[动态字段]
 	long	fs;					/* 16 high bits zero */ // 段选择符字段, 保存段寄存器的中的内容(可见部分, 见p96 图4-12). 	[动态字段]
 	long	gs;					/* 16 high bits zero */ // 段选择符字段, 保存段寄存器的中的内容(可见部分, 见p96 图4-12). 	[动态字段]
-	long	ldt;				/* 16 high bits zero */ // LDT 段选择符, 含有当前任务的 LDT 段的选择符.					  [静态字段]
+	long	ldt;				/* 16 high bits zero */ // LDT 段选择符, 保存当前任务的 LDT 段选择符.					  [静态字段]
 	long	trace_bitmap;		/* bits: trace 0, bitmap 16-31 */
 	struct i387_struct i387;
 };
