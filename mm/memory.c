@@ -199,7 +199,7 @@ int free_page_tables(unsigned long from, unsigned long size)
 // 参数 from, to 是 **线性地址**, size 是需要复制(共享)的内存长度, 单位是 byte.
 int copy_page_tables(unsigned long from, unsigned long to, long size)
 {
-	unsigned long * from_page_table;
+	unsigned long * from_page_table; 						// long 类型占 4 个字节, 正好是一个页目录/页表项的大小.
 	unsigned long * to_page_table;
 	unsigned long this_page;
 	unsigned long * from_dir, * to_dir;
@@ -221,28 +221,29 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
  	// 要拷贝的数据段(父进程也即当前进程)占用的页目录项数(之所以要 + 0x3fffff 是因为确保至少要占一项 0x3fffff >> 22 = 0, 
 	// 比如 size == 1 时, (1 + 0x3fffff) >> 22 = 1, 即 size == 1 时也可以占一个目录项).
 	size = ((unsigned) (size + 0x3fffff)) >> 22;
-	// 在得到了源起始目录项指针 from_dir 和目的起始目录项指针 to_dir 以及需要复制的页表个数 size 后, 下面开始对每个页目录项依次申请 1 页内存来保存对应的面表,
+	// 在得到了源起始目录项指针 from_dir 和目的起始目录项指针 to_dir 以及需要复制的页表个数 size 后, 下面开始对每个页目录项依次申请 1 页内存来保存对应的页表,
 	// 并且开始页表项复制操作. 如果目的目录项指定的页表已经存在(P = 1), 则出错死机. 如果源目录项无效, 即指定的页表不存在(P = 0), 则继续循环处理下一个页目录项.
-	for( ; size-- > 0 ; from_dir++, to_dir++) {
+	for( ; size-- > 0; from_dir++, to_dir++) {
 		if (1 & *to_dir) 												// 不允许在目的页目录项有内容存在(P=1)时覆盖
 			panic("copy_page_tables: already exist");
 		if (!(1 & *from_dir)) 											// 如果源页目录项中没有内容(P=0), 则继续操作下一个页目录项
 			continue;
-		// 在验证了当前源目录项和目的项正常之后, 取源目录项中页表地址 from_page_table. 为了保存目的目录项对应的页表, 需要在主内存区中申请1页空闲内存页. 
-		// 如果取空闲页面函数 get_free_page() 返回 0, 则说明没有申请到空闲内存页面, 可能是内存不够. 于是返回 -1 值退出.
-		from_page_table = (unsigned long *) (0xfffff000 & *from_dir); 	// 将源页目录项低 12 位置 0; 得到页表的起始地址.
+		// 在验证了当前源目录项和目的项正常之后, 取源目录项中页表地址 from_page_table. 为了保存目的目录项对应的页表, 需要在主内存区中申请 1 页空闲内存页. 
+		// 如果取空闲页面函数 get_free_page() 返回 0, 则说明没有申请到空闲内存页面, 可能是内存不够. 于是返回 -1 并退出.
+		from_page_table = (unsigned long *) (0xfffff000 & *from_dir); 	// 将源页目录项低 12 位(属性位)置 0; 得到页表的起始地址.
 		if (!(to_page_table = (unsigned long *) get_free_page())) 		// 再申请一页物理内存
 			return -1;													/* Out of memory, see freeing */
-		// 否则我们设置目的目录项信息, 把最后 3 位置位, 即当前目的目录项 "或" 上 7, 表示对应页表映射的内存页面是用户级的, 并且可读写, 
-		// 存在(User, R/W, Present). | 7 ==> 0b-0111 => U/S = 1, R/W = 1, P = 1.
+		// 如果申请到空闲页面, 则开始设置目的目录项信息, 把最后 3 位置位, 即当前目的目录项 "或" 上 7, 
+		// 表示对应页表映射的内存页面是用户级的, 并且可读写, 存在(User, R/W, Present). | 7 ==> 0b-0111 => U/S = 1, R/W = 1, P = 1.
 		// (如果 U/S 位是 0, 则 R/W 就没有作用. 如果 U/S 是 1, 而 R/W 是 0, 那么运行在用户层的代码就只能读页面. 如果 U/S 和 R/W 都置位, 则就有读写的权限).
-		*to_dir = ((unsigned long) to_page_table) | 7; 					// `to_page_table | 7 ==> 0b-0111` 生成目的页表对应的页目录项, 并放到页目录表中.
+		// !!!可以看到, 页目录项中的页表地址都是物理地址, 同样, 页表项中的页面地址也是物理地址!!!
+		*to_dir = ((unsigned long) to_page_table) | 7; 					// `to_page_table | 7 => 0b-0111` 生成目的页表对应的页目录项信息, 并写入页目录表中.
 		// 然后针对当前处理的页目录项对应的页表, 设置需要复制的页面项数. 
 		// 如果是在内核空间, 则仅需复制前 160 页对应的页表项(nr = 160), 对应于开始 640KB 物理内存. 
 		// 否则需要复制一个页表中的所有 1024 个页表项(nr = 1024), 可映射 4MB 物理内存.(一个页目录项[一张页表]可以映射 4MB 物理内存)
 		nr = (from == 0) ? 0xA0 : 1024; 								// from == 0 说明是第一次 fork 内核空间, 只需要复制页表的前 160 项.
 		// 此时对于当前页表, 开始循环复制指定的 nr 个内存页表项. 先取出源页表项内容, 如果当前源页面没有使用(项内容为 0), 则不用复制该页表项, 继续处理下一项.
-		for ( ; nr-- > 0 ; from_page_table++, to_page_table++) { 		// 开始拷贝各个页表项
+		for ( ; nr-- > 0; from_page_table++, to_page_table++) { 		// 开始拷贝各个页表项
 			this_page = *from_page_table; 								// 取出源页表项的值
 			// 如果源页表不存在, 则直接拷贝下一页表
 			if (!this_page)
