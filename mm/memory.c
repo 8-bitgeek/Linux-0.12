@@ -200,9 +200,9 @@ int free_page_tables(unsigned long from, unsigned long size)
 int copy_page_tables(unsigned long from, unsigned long to, long size)
 {
 	unsigned long * from_page_table; 						// long 类型占 4 个字节, 正好是一个页目录/页表项的大小.
-	unsigned long * to_page_table;
-	unsigned long this_page;
-	unsigned long * from_dir, * to_dir;
+	unsigned long * to_page_table; 							// 子进程的页表地址.
+	unsigned long this_page; 								// 存放页表项的内容.
+	unsigned long * from_dir, * to_dir; 					// 父进程的页目录项地址和子进程的页目录项地址.
 	unsigned long new_page;
 	unsigned long nr;
 
@@ -230,8 +230,8 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 			continue;
 		// 在验证了当前源目录项和目的项正常之后, 取源目录项中页表地址 from_page_table. 为了保存目的目录项对应的页表, 需要在主内存区中申请 1 页空闲内存页. 
 		// 如果取空闲页面函数 get_free_page() 返回 0, 则说明没有申请到空闲内存页面, 可能是内存不够. 于是返回 -1 并退出.
-		from_page_table = (unsigned long *) (0xfffff000 & *from_dir); 	// 将源页目录项低 12 位(属性位)置 0; 得到页表的起始地址.
-		if (!(to_page_table = (unsigned long *) get_free_page())) 		// 再申请一页物理内存
+		from_page_table = (unsigned long *) (0xfffff000 & *from_dir); 	// 将源页目录项低 12 位(属性位)置 0; 得到父进程页表的起始地址.
+		if (!(to_page_table = (unsigned long *) get_free_page())) 		// 再申请一页物理内存用于存放子进程的页表.
 			return -1;													/* Out of memory, see freeing */
 		// 如果申请到空闲页面, 则开始设置目的目录项信息, 把最后 3 位置位, 即当前目的目录项 "或" 上 7, 
 		// 表示对应页表映射的内存页面是用户级的, 并且可读写, 存在(User, R/W, Present). | 7 ==> 0b-0111 => U/S = 1, R/W = 1, P = 1.
@@ -243,15 +243,15 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 		// 否则需要复制一个页表中的所有 1024 个页表项(nr = 1024), 可映射 4MB 物理内存.(一个页目录项[一张页表]可以映射 4MB 物理内存)
 		nr = (from == 0) ? 0xA0 : 1024; 								// from == 0 说明是第一次 fork 内核空间, 只需要复制页表的前 160 项.
 		// 此时对于当前页表, 开始循环复制指定的 nr 个内存页表项. 先取出源页表项内容, 如果当前源页面没有使用(项内容为 0), 则不用复制该页表项, 继续处理下一项.
-		for ( ; nr-- > 0; from_page_table++, to_page_table++) { 		// 开始拷贝各个页表项
-			this_page = *from_page_table; 								// 取出源页表项的值
-			// 如果源页表不存在, 则直接拷贝下一页表
+		for ( ; nr-- > 0; from_page_table++, to_page_table++) { 		// 开始拷贝各个页表项.
+			this_page = *from_page_table; 								// 取出源(父进程)页表项的值.
+			// 如果源页表项为空, 则直接拷贝下一页表项.
 			if (!this_page)
 				continue;
 			// 如果该表项有内容, 但是其存在位 P = 0, 则该表项对应的页面可能在交换设备中. 
 			// 于是先申请 1 页内存, 并从交换设备中读入该页面(若交换设备中有的话). 
 			// 然后将该页表项复制到目的页表项中. 并修改源页表项内容指向该新申请的内存页.
-			if (!(1 & this_page)) { 									// 如果当前表项存在位 P = 0
+			if (!(1 & this_page)) { 									// 如果当前页表项存在位 P = 0.
 				// 申请一页新的内存然后将交换设备中的数据读取到该页面中
 				if (!(new_page = get_free_page()))
 					return -1;
@@ -265,20 +265,20 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 				continue;
 			}
 			// 复位页表项中 R/W 标志(位 1 置 0), 即让页表项对应的内存页面只读, 然后将该源页表项复制到目的页表中
-			this_page &= ~2; 								// `& 0b-11111...111-1101`: 即将位 1 置 0(只读); 其它位不变
-			*to_page_table = this_page; 					// 复制源页表表项, 设置目标页表表项
-			// 如果该页表项所指物理页面的地址在 1MB 以上, 则需要设置内存页面映射数组 mem_map[], 于是计算页面号, 并以它为索引在页面同数组相应项中增加引用次数. 
-			// 而对于位于 1MB 以下的页面, 说明是内核页面, 因此不需要对 mem_map[] 进行设置. 因为 mem_map[] 仅用于管理主内存区中的页面使用请问. 
+			this_page &= ~2; 								// `& 0b-1111...1111-1101`: 将位 1 置 0(只读); 其它位不变.
+			*to_page_table = this_page; 					// 复制源页表表项, 设置目标页表表项.
+			// 如果该页表项所指物理页面的地址在 1MB 以上, 则需要设置内存页面映射数组 mem_map[], 于是计算页面号(索引号), 并在 mem_map[] 中增加引用次数. 
+			// 而对于位于 1MB 以下的页面, 说明是内核页面, 因此不需要对 mem_map[] 进行设置. 因为 mem_map[] 仅用于管理主内存区中的页面使用情况. 
 			// 因此对于内核移动到任务 0 中并且调用 fork() 创建任务 1 时(用于运行 init()), 
 			// 由于此时复制的页面还仍然都在内核代码区域, 因此以下判断中的语句不会执行, 任务 0 的页面仍然可以随时读写. 
-			// 只有当调用 fork() 的父进程代码处于主内存(页面位置大于 1MB)时才会执行. 这种情况需要在进程调用 execve(), 并装载执行了新程序代码时才会出现.
+			// 只有当调用 fork() 的父进程代码处于主内存(页面位置大于 1MB)时才会执行. 这种情况只有在进程调用 execve(), 并装载执行了新程序代码时才会出现.
 			// 语句 `*from_page_table = this_page` 含义是让源页表项所指内存页也为只读. 因为现在开始已有两个进程共用内存区了. 
-			// **若其中 1 个进程需要进行操作, 则可以通过页异常写保护处理为执行写操作的进程分配 1 页新空闲页面**, 也即进行写时复制(copy_on_write)操作.
+			// **若其中 1 个进程需要进行操作, 则可以通过页面写异常保护处理程序为执行写操作的进程分配 1 页新的空闲页面**, 也即进行写时复制(copy_on_write)操作.
 			if (this_page > LOW_MEM) {
 				*from_page_table = this_page;		// 让源页表项也只读.
 				this_page -= LOW_MEM;
 				this_page >>= 12;
-				mem_map[this_page]++;
+				mem_map[this_page]++; 				// 增加页面引用计数.
 			}
         }
     }
