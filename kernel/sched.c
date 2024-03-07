@@ -79,7 +79,7 @@ extern int system_call(void);				// 系统调用中断处理程序(kernel/sys_ca
 // 所以从堆栈段寄存器 ss 可以获得其数据段选择符.
 union task_union {
 	struct task_struct task;
-	char stack[PAGE_SIZE]; 					// 任务内核态堆栈
+	char stack[PAGE_SIZE]; 					// 任务内核态堆栈.
 };
 
 // 设置初始任务的数据. 初始数据在 ../include/linux/sched.h 中.

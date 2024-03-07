@@ -34,7 +34,7 @@
  * sys_call.s 文件包含系统调用(system-call)底层处理子程序. 由于有些代码比较类似, 所以同时也包括时钟处理(timer-interrupt)句柄.
  * 硬盘和软盘的中断处理程序也在这里.
  *
- * 注意: 这段代码处理信号(signal)识别, 在每次时钟中断和系统调用之后都会进行识别. 一般断过程并不处理信号识别, 因为会给系统造成混乱.
+ * 注意: 这段代码处理信号(signal)识别, 在每次时钟中断和系统调用之后都会进行识别. 一般中断过程并不处理信号识别, 因为会给系统造成混乱.
  *
  * 从系统调用返回(ret_from_system_call)时堆栈的内容见上面.
  */
@@ -153,39 +153,40 @@ sys_call:
 # 导致进程组中所有进程处于停止状态. 而当前进程则会立刻返回.
 2:
 	movl current, %eax				# 取当前任务(进程)数据结构指针 -> eax.
-	cmpl $0, state(%eax)			# state, 如果当前进程的状态不是 0 就绪状态则重新进行调度进程执行
+	cmpl $0, state(%eax)			# state(%eax): task_struct->state, 如果当前进程的状态不是 0 就绪状态则重新进行调度进程执行.
 	jne reschedule
-	cmpl $0, counter(%eax)			# counter, 如果当前进程剩余的执行时间为 0 则重新进行调度进程执行
+	cmpl $0, counter(%eax)			# counter, 如果当前进程剩余的执行时间为 0 则重新进行调度进程执行.
 	je reschedule
 
 # 以下这段代码执行从系统调用 C 函数返回后, 对信号进行识别处理. 
 # 其它中断服务程序退出时也将跳转到这里进行处理后才退出中断过程, 例如后面的处理器出错中断 int 16.
-# 首先判断当前任务是不是初始任务 task0, 如果是则不必对其进行信号量方面的处理, 直接返回.
+# 首先判断当前任务是不是初始任务 TASK-0, 如果是则不必对其进行信号量方面的处理, 直接返回.
 # task 对应 C 程序中的 task[] 数组, 直接引用 task 相当于引用 task[0].
 ret_from_sys_call:
 	movl current, %eax
 	cmpl task, %eax					# task[0] cannot have signals
 	je 3f							# 向前(forward)跳转到标号 3 处退出中断处理.
-	# 通过对原调用程序代码选择符的检查来判断调用程序是不是用户任务. 如果不是则直接既出中断.
+	# 通过对原调用程序代码选择符的检查来判断调用程序是不是用户任务. 如果不是则直接退出中断.
 	# 这是因为任务在内核态执行时不可抢占. 否则对任务进行信号量处理. 
 	# 这里通过比较选择符是否为用户代码段选择符 0x000f(RPL = 3, 局部表, 代码段)来判断是否为用户任务.
 	# 如果不是则说明是某个中断服务程序(例如中断 16)跳转到第 107 行执行到此, 于是跳转退出中断程序. 
 	# 另外, 如果原堆栈段选择符不为 0x17(即原堆栈不在用户段中), 也说明本次系统调用的调用者不是用户任务, 则也退出.
-	cmpw $0x0f, CS(%esp)			# was old code segment supervisor ?
-	jne 3f
-	cmpw $0x17, OLDSS(%esp)			# was stack segment = 0x17 ?
-	jne 3f
+	cmpw $0x0f, CS(%esp)			# was old code segment supervisor?
+	jne 3f 							# 如果原代码段不是用户态代码段, 则直接准备返回. 
+	cmpw $0x17, OLDSS(%esp)			# was stack segment = 0x17?
+	jne 3f 							# 如果原堆栈不是用户态堆栈段, 则直接准备返回.
 
-# 下面这段代码用于处理当前任务中的信号. 首先取当前任务结构中的信号位图(32 位, 每位代表 1 种信号), 然后用任务结构中的信号阻塞(屏蔽)码, 
-# 阻塞不允许的信号位, 取得数值最小的信号值, 再把原信号位图中该信号对应的位复位(置 0), 最后将该信号值作为参数之一调用 do_signal().
-# do_signal() 在(kernel/signal.c)中, 其参数包括 13 个入栈信息. 在 do_signal() 或信号处理函数返回之后, 
-# 若返回值不为 0 则再看看是否需要切换进程或继续处理其他信号.
+	# 如果当前任务是进程是用户进程(且不是 TASK-0), 则用下面这段代码处理当前任务中的信号. 
+	# 首先取当前任务结构中的信号位图(32 位, 每位代表 1 种信号), 然后用任务结构中的信号阻塞(屏蔽)码, 
+	# 阻塞不允许的信号位, 取得数值最小的信号值, 再把原信号位图中该信号对应的位复位(置 0), 最后将该信号值作为参数之一调用 do_signal().
+	# do_signal()在(kernel/signal.c)中, 其参数包括 13 个入栈信息. 在 do_signal() 或信号处理函数返回之后, 
+	# 若返回值不为 0 则再看看是否需要切换进程或继续处理其他信号.
 	movl signal(%eax), %ebx			# 取信号位图 -> ebx, 每 1 位代表 1 种信号, 共 32 个信号.
-	movl blocked(%eax), %ecx		# 取阻塞(屏蔽)信号位图 -> ecx.
+	movl blocked(%eax), %ecx		# 取阻塞(屏蔽)信号位图 -> ecx. 阻塞信号位图用于指明哪些信号不需要处理.
 	notl %ecx						# 每位取反.
-	andl %ebx, %ecx					# 获取许可的信号位图.
+	andl %ebx, %ecx					# 获取许可的(屏蔽后剩余的需要处理的)信号位图.
 	bsfl %ecx, %ecx					# 从低位(位 0)开始扫描位图, 看是否有 1 的位, 若有, 则 ecx 保留该位的偏移值(即地址位 0--31).
-	je 3f							# 如果没有信号则向前跳转既出.
+	je 3f							# 如果没有信号则向前跳转退出.
 	btrl %ecx, %ebx					# 复位该信号(ebx 含有原 signal 位图).
 	movl %ebx, signal(%eax)			# 重新保存 signal 位图信息 -> current -> signal.
 	incl %ecx						# 将信号调整为从 1 开始的数(1--32).
@@ -194,7 +195,7 @@ ret_from_sys_call:
 	popl %ecx						# 弹出入栈信号值.
 	testl %eax, %eax				# 测试返回值, 若不为 0 则跳转到前面标号 2 处.
 	jne 2b							# see if we need to switch tasks, or do more signals
-3:	popl %eax						# eax 中含有第 147 行(`pushl %eax`)入栈的系统调用返回值.
+3:	popl %eax						# eax 中含有第 148 行(`pushl %eax`)入栈的系统调用返回值.
 	popl %ebx
 	popl %ecx
 	popl %edx

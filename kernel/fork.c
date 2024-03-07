@@ -111,7 +111,7 @@ int copy_mem(int nr, struct task_struct * p)
  */
 // 复制进程.
 // 该函数的参数是进入系统调用中断处理过程(sys_call.s)开始, 
-// 直到调用本系统调用处理过程和调用本函数前逐步压入进程内核态栈的各寄存器的值.
+// 直至调用本系统调用处理过程前逐步压入进程内核态栈的各寄存器的值.
 // 这些在 sys_call.s 程序中逐步压入内核栈的值(参数)包括:
 // 1. CPU执行中断指令时发生堆栈切换时自动压入的用户态的栈地址 ss 和 esp, 标志 eflags 和返回地址 cs 和 eip;
 // 		在执行中断处理过程时如果发生特权级变化, int 指令会依次入栈: ss, esp, eflags, cs, eip(图 4-29)
@@ -216,10 +216,10 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	// 若当前进程确实还有其他子进程, 则让比邻老兄进程的最年轻进程指针 p_yspter 指向新进程. 
 	// 最后把当前进程的最新子进程指针指向这个新进程. 然后把新进程设置成就绪态. 最后返回新进程号.
 	// 另外, set_tss_desc() 和 set_ldt_desc() 定义在 include/asm/system.h 文件中. 
-	// "gdt+(nr<<1)+FIRST_TSS_ENTRY" 是任务 nr 的 TSS 描述符项在全局表中的地址.
-	// 因为每个任务占用 GDT 表中 2 项, 因此上式中要包括 '(nr<<1)'.
+	// "gdt + (nr << 1) + FIRST_TSS_ENTRY" 是任务 nr 的 TSS 描述符项在全局表中的地址.
+	// 因为每个任务占用 GDT 表中 2 项, 因此上式中要包括 '(nr << 1)'.
 	// 请注意, 在任务切换时, 任务寄存器 tr 会由 CPU 自动加载.
-	set_tss_desc(gdt + (nr << 1) + FIRST_TSS_ENTRY, &(p->tss)); 		// 在 GDT 中设置新进程的 tss 和 ldt 描述符
+	set_tss_desc(gdt + (nr << 1) + FIRST_TSS_ENTRY, &(p->tss)); 		// 在 GDT 中设置新进程的 tss 和 ldt 描述符.
 	set_ldt_desc(gdt + (nr << 1) + FIRST_LDT_ENTRY, &(p->ldt));
 	p->p_pptr = current;				// 设置新进程的父进程指针.
 	p->p_cptr = 0;						// 复位新进程的最新子进程指针.
@@ -230,7 +230,7 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	current->p_cptr = p;				// 让当前进程最新子进程指针指向新进程.
 	p->state = TASK_RUNNING;			/* do this last, just in case */  /* 设置进程状态为待运行状态 */
 	Log(LOG_INFO_TYPE, "<<<<< fork new process current_pid = %d, child_pid = %d, nr = %d >>>>>\n", current->pid, p->pid, nr);
-	return last_pid;        			// 返回新进程号
+	return last_pid;        			// 返回新进程号.
 }
 
 // 为新进程取得不重复的进程号 last_pid(并不需要返回这个 last_pid, 因为它是全局变量, 而是只返回任务号).
