@@ -229,7 +229,7 @@ struct task_struct {
 	struct m_inode * executable;		// 执行文件 i 节点结构指针.
 	struct m_inode * library;			// 被加载库文件 i 节点结构指针.
 	unsigned long close_on_exec;		// 执行时关闭文件句柄位图标志. (include/fcntl.h) 见下面注释.
-	struct file * filp[NR_OPEN];		// 进程打开的文件结构指针表, 最多 32 项. 表项号(索引值)即是文件描述符的值.
+	struct file * filp[NR_OPEN];		// 进程打开的文件结构指针表, 最多 20 项. 表项号(索引值)即是文件描述符的值.
 	/* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
 	struct desc_struct ldt[3];			// 局部描述符表, 0 - 空, 1 - 代码段 cs, 2 - 数据和堆栈段 ds 和 ss.
 	/* tss for this task */
