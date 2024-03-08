@@ -185,14 +185,14 @@ ret_from_sys_call:
 	movl blocked(%eax), %ecx		# 取阻塞(屏蔽)信号位图 -> ecx. 阻塞信号位图用于指明哪些信号不需要处理.
 	notl %ecx						# 每位取反.
 	andl %ebx, %ecx					# 获取许可的(屏蔽后剩余的需要处理的)信号位图.
-	bsfl %ecx, %ecx					# 从低位(位 0)开始扫描位图, 看是否有 1 的位, 若有, 则 ecx 保留该位的偏移值(即地址位 0--31).
-	je 3f							# 如果没有信号则向前跳转退出.
-	btrl %ecx, %ebx					# 复位该信号(ebx 含有原 signal 位图).
-	movl %ebx, signal(%eax)			# 重新保存 signal 位图信息 -> current -> signal.
+	bsfl %ecx, %ecx					# 从低位(位 0)开始扫描位图, 看是否有置 1 的位, 若有, 则 ecx 保留该位的偏移值(即地址位 0--31).
+	je 3f							# 如果没有信号要处理则向前跳转退出.
+	btrl %ecx, %ebx					# 如果有要处理的信号, 则复位该信号(ebx 含有原 signal 位图).
+	movl %ebx, signal(%eax)			# 重新将 signal 位图信息保存到 current -> signal.
 	incl %ecx						# 将信号调整为从 1 开始的数(1--32).
 	pushl %ecx						# 信号值入栈作为调用 do_signal 的参数之一.
 	call do_signal					# 调用 C 函数信号处理程序(kernel/signal.c)
-	popl %ecx						# 弹出入栈信号值.
+	popl %ecx						# 弹出入栈的信号值.
 	testl %eax, %eax				# 测试返回值, 若不为 0 则跳转到前面标号 2 处.
 	jne 2b							# see if we need to switch tasks, or do more signals
 3:	popl %eax						# eax 中含有第 148 行(`pushl %eax`)入栈的系统调用返回值.
