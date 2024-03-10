@@ -199,12 +199,12 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 {
 	unsigned long sa_handler;
 	long old_eip = eip;
-	struct sigaction * sa = current->sigaction + signr - 1;			// 得到对应信号的处理数据结构
+	struct sigaction * sa = current->sigaction + signr - 1;			// 得到对应信号的处理数据结构.
 	int longs;                      								// 即 current->sigaction[signr-1]. 
 
 	unsigned long * tmp_esp;
 
-	// 以下是调试语句. 当定义了 notdef 时会打印相关信息. 
+// 以下是调试语句. 当定义了 notdef 时会打印相关信息. 
 #ifdef notdef
 	printk("pid: %d, signr: %d, eax=%d, oeax = %d, int=%d\n",
 		current->pid, signr, eax, orig_eax,
@@ -230,9 +230,9 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 		// 否则就恢复进程寄存器 eax 在调用系统调用之前的值, 并且把源程序指令指针回调 2 个字节. 
 		// 即当返回用户程序时, 让程序重新启动执行被信号中断的系统调用. 
 		else {
-			*(&eax) = orig_eax;     				// orig_eax 系统调用号
+			*(&eax) = orig_eax;     				// orig_eax 系统调用号.
 			//*(&eip) = old_eip -= 2;
-			// 系统调用返回到用户态的时候再次执行本次系统调用
+			// 系统调用返回到用户态的时候再次执行本次系统调用.
 			old_eip -= 2;
 			__asm__ ("movl %%eax, %0\n\t" \
 					: \
@@ -246,7 +246,7 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 	// 如果句柄为 SIG_DFL(0, 默认处理), 则根据具体的信号进行分别处理. 
 	if (!sa_handler) {
 		switch (signr) {
-		// 如果信号是以下两个则也忽略之, 并返回
+		// 如果信号是以下两个则也忽略之, 并返回.
 		case SIGCONT:
 		case SIGCHLD:
 			return(1);  							/* Ignore, ... */
@@ -284,13 +284,14 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 	/*
 	 * OK, we're invoking a handler
 	 */
-        /*
-         * OK, 现在我们准备对信号句柄调用的设置
-         */
+	/*
+	* OK, 现在我们准备对信号句柄调用的设置.
+	*/
 	// 如果该信号句柄只需被调用一次, 则将该句柄置空. 注意, 该信号句柄前面已经保存在 sa_handler 指针中. 
 	// 在系统调用进程内核时, 用户程序返回地址(eip, cs)被保存在内核态栈中. 
 	// 下面这段代码修改内核态堆栈上用户调用时的代码指针 eip 为指向信号处理句柄, 
-	// 同时也将 sa_restorer, signr, 进程屏蔽码(如果 SA_NOMASK 没置位), eax, ecx, edx 作为参数以及原调用系统调用的程序返回指针及标志寄存器值压入用户堆栈. 
+	// 同时也将 sa_restorer, signr, 进程屏蔽码(如果 SA_NOMASK 没置位), eax, ecx, edx 
+	// 作为参数以及原调用系统调用的程序返回指针及标志寄存器值压入用户堆栈. 
 	// 因此在本次系统调用中断返回用户程序时会首先执行用户信号句柄程序, 然后继续执行用户程序. 
 	if (sa->sa_flags & SA_ONESHOT)
 		sa->sa_handler = NULL;
@@ -301,11 +302,13 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 	// 因为当函数返回时堆栈上的参数将会被调用者丢弃. 这里之所以可以使用这种方式, 
 	// 是因为该函数是从汇编程序中被调用的, 并且在函数返回后汇编程序并没有把调用 do_signal() 时的所有参数都丢弃, eip 等仍然在堆栈中. 
 	// sigaction 结构的 sa_mask 字段给出了在当前信号句柄(信号描述符)程序执行期间应该被屏蔽的信号集. 
-	// 同时, 引起本信号句柄执行的信号也会被屏蔽. 不过若 sa_flags 中使用了 SA_NOMASK 标志, 那么引起本信号句柄执行的信号将不会被屏蔽掉. 
+	// 同时, 引起本信号句柄执行的信号也会被屏蔽. 
+	// 不过若 sa_flags 中使用了 SA_NOMASK 标志, 那么引起本信号句柄执行的信号将不会被屏蔽掉. 
 	// 如果允许信号自己的处理句柄程序收到信号自己, 则也需要将进程的信号阻塞码压入堆栈. 
 	*(&eip) = sa_handler;
 	longs = (sa->sa_flags & SA_NOMASK)?7:8;
-	// 将原调用程序的用户堆栈指针向下扩展 7(或 8)个长字(用来存放调用信号句柄的参数等), 并检查内存使用情况(如内存超界则分配新页等). 
+	// 将原调用程序的用户堆栈指针向下扩展 7(或 8)个长字(用来存放调用信号句柄的参数等), 
+	// 并检查内存使用情况(如内存超界则分配新页等). 
 	//*(&esp) -= longs;
 	__asm__("subl %1, %0\n\t" \
 			: \
