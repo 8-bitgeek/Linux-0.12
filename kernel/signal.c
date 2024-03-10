@@ -210,7 +210,7 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 		current->pid, signr, eax, orig_eax,
 		sa->sa_flags & SA_INTERRUPT);
 #endif	/* Continue, execute handler */
-	// 如果不是系统调用而是其他中断执行过程中调用的本函数时, roig_eax 值为 -1. 
+	// 如果不是系统调用而是其他中断执行过程中调用的本函数时, orig_eax 值为 -1. 
 	// 因此当 orig_eax 不等于 -1 时, 说明是在某个系统调用的最后调用了本函数. 
 	// 在 kernel/exit.c 的 waitpid() 函数中, 如果收到了 SIGCHLD 信号, 或者在读管道函数 fs/pipe.c 中, 
 	// 管道当前读数据但没有读到任何数据等情况下, 进程收到了任何一个非阻塞的信号, 则都会 -ERESTARTSYS 返回值返回. 
@@ -218,8 +218,7 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 	// 返回码 -ERESTARTNOINTR 说明在处理完信号后要求返回到原系统调用中继续运行, 即系统调用不会被中断. 
 	// 因此下面语句说明如果是在系统调用中调用的本函数, 
 	// 并且相应系统调用的返回码 eax 等于 -ERESTARTSYS 或 -ERESTARTNOINTR 时进行下面的处理(实际上还没有真正回到用户程序中). 
-	if ((orig_eax != -1) &&
-	    ((eax == -ERESTARTSYS) || (eax == -ERESTARTNOINTR))) {
+	if ((orig_eax != -1) && ((eax == -ERESTARTSYS) || (eax == -ERESTARTNOINTR))) {
 		// 如果系统调用返回码是 -ERESTARTSYS(重新启动系统调用), 
 		// 并且 sigaction 中含有标志 SA_INTERRUPT(系统调用被信号中断后不重新启动系统调用)
 		// 或者信号值小于 SIGCONT 或者信号值大于 SIGTTOU(即信号不是 SIGCONT, SIGSTOP, SIGTSTP, SIGTTIN 或 SIGTTOU), 
