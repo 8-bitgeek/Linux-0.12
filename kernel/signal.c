@@ -193,8 +193,8 @@ int core_dump(long signr)
 // 2: 刚进入 system_call 时压入栈的段寄存器 ds, es, fs, 寄存器 eax(orig_eax), edx, ecx, ebx;
 // 3: 第 148 行调用 sys_call_tables 后压入栈中的系统调用处理函数的返回值(eax). 
 // 4: 执行本函数前压入栈中的当前处理的信号值(signr). 
-int do_signal(long signr, long eax,  											// system_call 调用完系统调用函数后压入栈中.
-	long ebx, long ecx, long edx, long orig_eax, long fs, long es, long ds, 	// system_call 压入栈中的参数.
+int do_signal(long signr, long eax,  											// system_call 执行完系统调用函数后压入栈中.
+	long ebx, long ecx, long edx, long orig_eax, long fs, long es, long ds, 	// system_call 执行系统调用前压入栈中的参数.
 	long eip, long cs, long eflags, unsigned long * esp, long ss)				// 执行中断时压入栈中的参数.
 {
 	unsigned long sa_handler;

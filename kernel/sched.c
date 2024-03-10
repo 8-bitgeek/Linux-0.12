@@ -225,10 +225,10 @@ void schedule(void)
 				c = (*p)->counter, next = i;
 			}
 		}
-		// 如果比较得出有 counter 值不等于 0 的结果, 或者后方中没有一个可运行的任务存在(此时 c 仍然为 -1, next=0), 
+		// 如果比较得出有 counter 值不等于 0 的结果, 或者后方中没有一个可运行的任务存在(此时 c 仍然为 -1, next = 0), 
 		// 则退出开始的循环, 执行任务切换操作(下面的 switch_to()). 
 		// 否则就根据每个任务的优先权值, 更新每一个任务的 counter 值, 然后重新循环比较. 
-		// counter 值的计算方式为 counter = counter/2 + priority.
+		// counter 值的计算方式为 counter = counter / 2 + priority.
 		// 注意, 这里计算过程不考虑进程的状态.
 		if (c) break; 													// 如果找到待运行的任务, 则跳出循环切换到其上执行.
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
