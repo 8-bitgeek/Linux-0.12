@@ -31,15 +31,18 @@
  *	30(%esp) - %oldss
  */
 /*
- * sys_call.s 文件包含系统调用(system-call)底层处理子程序. 由于有些代码比较类似, 所以同时也包括时钟处理(timer-interrupt)句柄.
+ * sys_call.s 文件包含系统调用(system-call)底层处理子程序. 
+ * 由于有些代码比较类似, 所以同时也包括时钟处理(timer-interrupt)句柄.
  * 硬盘和软盘的中断处理程序也在这里.
  *
- * 注意: 这段代码处理信号(signal)识别, 在每次时钟中断和系统调用之后都会进行识别. 一般中断过程并不处理信号识别, 因为会给系统造成混乱.
+ * 注意: 这段代码处理信号(signal)识别, 在每次时钟中断和系统调用之后都会进行识别. 
+ * 一般中断过程并不处理信号识别, 因为会给系统造成混乱.
  *
  * 从系统调用返回(ret_from_system_call)时堆栈的内容见上面.
  */
 # 上面 Linus 原注释中一般中断过程是指除了系统调用中断(int 0x80)和时钟中断(int 0x20)以外的其他中断. 
-# 这些中断会在内核态或用户态随机发生, 若在这些中断过程中也处理信号识别的话, 就有可能与系统调用中断和时钟中断过程中对信号的识别处理过程相冲突, 违反了内核代码非抢占原则.
+# 这些中断会在内核态或用户态随机发生, 若在这些中断过程中也处理信号识别的话, 
+# 就有可能与系统调用中断和时钟中断过程中对信号的识别处理过程相冲突, 违反了内核代码非抢占原则.
 # 因此系统既无必要在这些 "其他" 中断中处理信号, 也不允许这样做.
 
 SIG_CHLD	= 17					# 定义 SIG_CHLD 信号(子进程停止或结束).
@@ -92,14 +95,16 @@ ENOSYS = 38							# 系统调用号出错码.
 .align 4							# 内存 4 字节对齐.
 bad_sys_call:
 	pushl $-ENOSYS					# eax 中置 - ENOSYS.
-	jmp ret_from_sys_call 			# jmp 和 call 的区别是 jmp 直接跳转到地址处开始执行, 而 call 会先将返回地址入栈然后调到标号处开始执行
+	jmp ret_from_sys_call 			# jmp 和 call 的区别是 jmp 直接跳转到地址处开始执行, 
+									# 而 call 会先将返回地址入栈然后调到标号处开始执行
 
 # 重新执行调度程序入口. 调度程序 schedule() 在(kernel/sched.c)
 # 当调度程序 schedule() 返回时就从 ret_from_sys_call 处继续执行.
 .align 4
 reschedule:
 	pushl $ret_from_sys_call		# 将 ret_from_sys_call 的地址入栈.
-	jmp schedule					# jmp 和 call 的区别是 jmp 直接跳转到地址处开始执行, 而 call 会先将返回地址入栈然后调到标号处开始执行
+	jmp schedule					# jmp 和 call 的区别是 jmp 直接跳转到地址处开始执行, 
+									# 而 call 会先将返回地址入栈然后调到标号处开始执行
 
 # CPL(Current Privilege Level): 当前特权级, 当前程序或任务的特权级, 存放在 cs 和 ss 寄存器的位 0/1 上.
 # DPL(Descriptor Privilege Level): 描述符特权级, 一个段或门的特权级, 存放在段或门描述符的 DPL 字段中.
@@ -117,14 +122,17 @@ system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	push %ds						# 保存原(调用方)段寄存器值.
 	push %es
 	push %fs
-	pushl %eax						# save the orig_eax		# 保存 eax 原值.
-	# 一个系统调用最多可带有 3 个参数, 也可以不带参数. 下面入栈的 ebx, ecx 和 edx 中放着系统调用相应 C 语言函数的调用参数.
-	# 这几个寄存器入栈的顺序是由 GNU gcc 规定的, ebx 中可存放第 1 个参数, ecx 中存放第 2 个参数, edx 中存放第 3 个参数.
+	pushl %eax						# save the orig_eax		# 保存 eax 原值(系统调用号).
+	# 一个系统调用最多可带有 3 个参数, 也可以不带参数. 
+	# 下面入栈的 ebx, ecx 和 edx 中放着系统调用相应 C 语言函数的调用参数.
+	# 这几个寄存器入栈的顺序是由 GNU gcc 规定的, ebx 中可存放第 1 个参数, 
+	# ecx 中存放第 2 个参数, edx 中存放第 3 个参数.
 	# 系统调用语句可参见头文件 include/unistd.h 中的系统调用宏.
 	pushl %edx
 	pushl %ecx						# push %ebx, %ecx, %edx as parameters
 	pushl %ebx						# to the system call
-	# 在保存过段寄存器之后, 让 ds, es 指向内核数据段, 而 fs 指向当前局部数据段, 即指向执行本次系统调用的用户程序的数据段. 
+	# 在保存过段寄存器之后, 让 ds, es 指向内核数据段, 而 fs 指向当前局部数据段, 
+	# 即指向执行本次系统调用的用户程序的数据段. 
 	# 注意, 在 Linux0.12 中内核给任务分配的代码和数据内存段是重叠的, 它们的段基址和段限长相同.
 	movl $0x10, %edx				# set up ds, es to kernel space.  	// 当前的 CPL = 0, 选择符 0x10 的 RPL = 0
 	mov %dx, %ds 					# ds/es 指向内核数据段.
@@ -134,16 +142,19 @@ system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	cmpl NR_syscalls, %eax 			# 如果 eax 中的值大于 NR_syscalls 则表示超出调用号范围(>=87).
 	jae bad_sys_call 				# 调用号如果超出范围(>=87)的话就跳转.
 
-    mov sys_call_table(, %eax, 4), %ebx 	# 把 sys_call_table[4 * %eax] 确定的内存地址处的内容(系统调用程序的地址)放入 ebx 中
+	# 把 sys_call_table[4 * %eax] 确定的内存地址处的内容(系统调用程序的地址)放入 ebx 中
+    mov sys_call_table(, %eax, 4), %ebx 	
     cmpl $0, %ebx 							# 判断该系统调用入口地址是否为 0. 
     jne sys_call 							# 不为 0 则执行系统调用.
 	#	pushl %eax
     call sys_default
 	# 下面这句操作数的含义是: 调用地址 = (sys_call_table + %eax * 4).
-	# sys_call_table[] 是一个指针数组, 定义在 include/linux/sys.h 中, 该数组中设置了内核所有 82 个系统调用 C 处理函数的地址.
+	# sys_call_table[] 是一个指针数组, 定义在 include/linux/sys.h 中, 
+	# 该数组中设置了内核所有 82 个系统调用 C 处理函数的地址.
 sys_call:
 	# call 指令会将下一行代码的地址(pushl %eax)压入栈中.
-	call *%ebx 							# ebx 中含有被调用函数的地址. 调用 eax 中对应的系统调用函数. (此处不会发生特权级切换)
+	call *%ebx 							# ebx 中含有被调用函数的地址. 
+										# 调用 eax 中对应的系统调用函数. (此处不会发生特权级切换)
 	# call *sys_call_table(, %eax, 4)	# 间接调用指定功能 C 函数.
 	pushl %eax							# 把系统调用返回值入栈.
 
@@ -194,16 +205,16 @@ ret_from_sys_call:
 	call do_signal					# 调用 C 函数信号处理程序(kernel/signal.c)
 	popl %ecx						# 弹出入栈的信号值.
 	testl %eax, %eax				# 测试返回值, 若不为 0 则跳转到前面标号 2 处.
-	jne 2b							# see if we need to switch tasks, or do more signals
-3:	popl %eax						# eax 中含有第 148 行(`pushl %eax`)入栈的系统调用返回值.
-	popl %ebx
-	popl %ecx
-	popl %edx
-	addl $4, %esp					# skip orig_eax	# 跳过(丢弃)原 eax 值.
-	pop %fs
+	jne 2b							# see if we need to switch tasks, or do more signals.
+3:	popl %eax						# eax 中含有第 159 行(`pushl %eax`)入栈的系统调用返回值.
+	popl %ebx 						# 这三个寄存器是进行系统调用时的参数. (第一个参数)
+	popl %ecx						# 第二个.
+	popl %edx 						# 第三个.
+	addl $4, %esp					# skip orig_eax. 丢弃原 eax 值(系统调用号).
+	pop %fs							# 原用户态各个段寄存器选择符.
 	pop %es
 	pop %ds
-	iret 							# 系统调用结束
+	iret 							# 系统调用结束(如果是用户态调用, 则要进行堆栈切换).
 
 # int16 -- 处理器错误中断. 类型: 错误; 无错误码.
 # 这是一个外部的基于硬件的异常. 当协处理器检测到自己发生错误时, 就会通过 ERROR 引脚通知 CPU. 
@@ -228,10 +239,12 @@ coprocessor_error:
 	jmp math_error					# 执行 math_error()(kernel/math/error.c).
 
 # int7 -- 设备不存在或协处理器不存在. 类型: 错误; 无错误码.
-# 如果控制寄存器 CR0 中 EM(模拟)标志置位, 则当 CPU 执行一个协处理器指令时就会引发该中断, 这样 CPU 就可以有机会让这个中断处理程序模拟处理器指令. 
-# CR0 的交换标志 TS 是在 CPU 执行任务转换时设置的. TS 可以用来确定什么时候协处理器中的内容与 CPU 正在执行的任务不匹配了. 
+# 如果控制寄存器 CR0 中 EM(模拟)标志置位, 则当 CPU 执行一个协处理器指令时就会引发该中断, 
+# 这样 CPU 就可以有机会让这个中断处理程序模拟处理器指令. 
+# CR0 的交换标志 TS 是在 CPU 执行任务转换时设置的. 
+# TS 可以用来确定什么时候协处理器中的内容与 CPU 正在执行的任务不匹配了. 
 # 当 CPU 在运行一个协处理器转移指令时发现 TS 置位时, 就会引发该中断.
-# 此时就可以保存前一个任务的协处理器内容, 并恢复新任务的协处理器执行状态. 参见 kernel/sched.c.
+# 此时就可以保存前一个任务的协处理器内容, 并恢复新任务的协处理器执行状态. 参见 (kernel/sched.c)
 # 该中断最后将转移到标号 ret_from_sys_call 处执行下去(检测并处理信号).
 .align 4
 device_not_available:
@@ -248,14 +261,15 @@ device_not_available:
 	mov %ax, %es
 	movl $0x17, %eax				# fs 置为指向局部数据段(出错程序的数据段).
 	mov %ax, %fs
-	# 清 CR0 中任务已交换标志 TS, 并取 CR0 值. 若其中协处理器仿真标志 EM 没有置位, 说明不是 EM 引起的中断, 则恢复任务协处理器状态, 
+	# 清 CR0 中任务已交换标志 TS, 并取 CR0 值. 若其中协处理器仿真标志 EM 没有置位, 
+	# 说明不是 EM 引起的中断, 则恢复任务协处理器状态, 
 	# 执行 C 函数 math_state_restore(), 并在返回时去执行 ret_from_sys_call 处的代码.
 	pushl $ret_from_sys_call		# 把下面跳转或调用的返回地址入栈.
 	clts							# clear TS so that we can use math
 	movl %cr0, %eax
 	testl $0x4, %eax				# EM (math emulation bit)
 	je math_state_restore			# 执行 math_state_restore()(kernel/sched.c)
-	# 若 EM 标志置位, 则支执行数学仿真程序 math_emulate().
+	# 若 EM 标志置位, 则只执行数学仿真程序 math_emulate().
 	pushl %ebp
 	pushl %esi
 	pushl %edi
@@ -268,16 +282,17 @@ device_not_available:
 	ret								# 这里的 ret 将跳转到 ret_from_sys_call.
 
 # int32 -- (int 0x20)时钟中断处理程序. 中断频率设置为 100Hz(include/linux/sched.h), 
-# 定时芯片 8253/8254 是在(kernel/sched.c)处初始化的. 因此这里 jiffies 每 10 毫秒加 1. 这段代码将 jiffies 增加 1, 
-# 发送结束中断指令给 8259 控制器, 然后用当前特权级作为参数调用 C 函数 do_timer(long CPL). 当调用返回时转去检测并处理信号.
+# 定时芯片 8253/8254 是在(kernel/sched.c)处初始化的. 因此这里 jiffies 每 10 毫秒加 1. 
+# 这段代码将 jiffies 增加 1, 发送结束中断指令给 8259 控制器, 
+# 然后用当前特权级作为参数调用 C 函数 do_timer(long CPL). 当调用返回时转去检测并处理信号.
 .align 4
 timer_interrupt:
 	push %ds						# save ds, es and put kernel data space
 	push %es						# into them. %fs is used by _system_call
 	push %fs						# 保存 ds, es 并让其指向内核数据段. fs 将用于 system_call.
 	pushl $-1						# fill in -1 for orig_eax	# 填 -1, 表明不是系统调用.
-	# 下面我们保存寄存器 eax, ecx 和 edx. 这是因为 gcc 编译器在调用函数时不会保存它们. 这里也保存了 ebx 寄存器. 
-	# 因为在后面 ret_from_sys_call 中会用到它.
+	# 下面我们保存寄存器 eax, ecx 和 edx. 这是因为 gcc 编译器在调用函数时不会保存它们. 
+	# 这里也保存了 ebx 寄存器, 因为在后面 ret_from_sys_call 中会用到它.
 	pushl %edx						# we save %eax, %ecx, %edx as gcc doesn't
 	pushl %ecx						# save those across function calls. 
 	pushl %ebx						# %ebx is saved as we use that in ret_sys_call
@@ -329,9 +344,11 @@ sys_fork:
 
 # int 46 -- (int 0x2E) 硬盘中断处理程序, 响应硬盘中断请求 IRQ14.
 # 当请求的硬盘操作完成或出错就会发出此中断信号. (参见 kernel/blk_drv/hd.c).
-# 首先问 8259A 中断控制从芯片发送结束硬件中断指令(EOI), 然后取变量 do_hd 中的函数指针放入 edx 寄存器中, 并置 do_hd 为 NULL, 
-# 接着判断 edx 函数指针是否为空. 如果为空, 则给 edx 赋值指向 unexpected_hd_interrupt(), 用于显示出错信息. 
-# 随后向 8259A 主芯片送 EOI 指令, 并调用 edx 中指针指向的函数: read_intr(), write_intr() 或 unexpected_hd_interrupt().
+# 首先问 8259A 中断控制从芯片发送结束硬件中断指令(EOI), 然后取变量 do_hd 中的函数指针放入 edx 寄存器中, 
+# 并置 do_hd 为 NULL, 接着判断 edx 函数指针是否为空. 
+# 如果为空, 则给 edx 赋值指向 unexpected_hd_interrupt(), 用于显示出错信息. 
+# 随后向 8259A 主芯片送 EOI 指令, 并调用 edx 中指针指向的函数: 
+# read_intr(), write_intr() 或 unexpected_hd_interrupt().
 hd_interrupt:
 	pushl %eax
 	pushl %ecx
@@ -349,7 +366,8 @@ hd_interrupt:
 	outb %al, $0xA0					# EOI to interrupt controller #1	# 送从 8259A
 	jmp 1f							# give port chance to breathe		# 这里 jmp 起延时作用.
 1:	jmp 1f
-	# do_hd 定义为一个函数指针, 将被赋值 read_intr() 或 write_intr() 函数地址. 放到 edx 寄存器后就将 do_hd 指针变量置为 NULL. 
+	# do_hd 定义为一个函数指针, 将被赋值 read_intr() 或 write_intr() 函数地址. 
+	# 放到 edx 寄存器后就将 do_hd 指针变量置为 NULL. 
 	# 然后测试得到的函数指针, 若该指针为空, 则赋予该指针指向 C 函数 unexpected_hd_interrupt(), 以处理未知硬盘中断.
 1:	xorl %edx, %edx
 	movl %edx, hd_timeout			# hd_timeout 置为 0. 表示控制器已在规定时间内产生了中断.
@@ -369,9 +387,11 @@ hd_interrupt:
 
 # int38 -- (int 0x26)软盘驱动器中断处理程序, 响应硬件中断请求 IRQ6.
 # 其处理过程与上面对硬盘的处理基本一样. (kernel/blk_drv/floppy.c).
-# 首先向 8259A 中断控制器主芯片发送 EOI 指令, 然后取变量 do_floppy 中的函数指针放入 eax 寄存器中, 并置 do_floppy 为NULL,
-# 接着判断 eax 函数指针是否为空. 如为空, 则给 eax 赋值张贴 unexpected_floppy_interrupt(), 用于显示出错信息. 
-# 随后调用 eax 指向的函数: rw_interrupt, seek_interrupt, recal_interrupt, reset_interrupt 或 unexpected_floppy_interrupt.
+# 首先向 8259A 中断控制器主芯片发送 EOI 指令, 然后取变量 do_floppy 中的函数指针放入 eax 寄存器中, 
+# 并置 do_floppy 为NULL, 接着判断 eax 函数指针是否为空. 如为空, 
+# 则给 eax 赋值张贴 unexpected_floppy_interrupt(), 用于显示出错信息. 
+# 随后调用 eax 指向的函数: 
+# rw_interrupt, seek_interrupt, recal_interrupt, reset_interrupt 或 unexpected_floppy_interrupt.
 floppy_interrupt:
 	pushl %eax
 	pushl %ecx

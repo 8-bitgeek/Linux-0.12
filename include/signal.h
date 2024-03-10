@@ -4,37 +4,37 @@
 #include <sys/types.h>
 
 typedef int sig_atomic_t;                           // 定义信号原子操作类型. 
-typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号集类型
+typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号集类型.
 
 #define _NSIG        32                             // 定义信号种类 -- 32种. 
-#define NSIG		 _NSIG                          // NSIG = _NSIG
+#define NSIG		 _NSIG                          // NSIG = _NSIG.
 
-#define SIGHUP		 1                              // Hang Up              -- 挂断控制终端或进程
-#define SIGINT		 2                              // Interrupt	        -- 来自键盘的中断
-#define SIGQUIT		 3                              // Quit		            -- 来自键盘的退出
-#define SIGILL		 4                              // Illeagle             -- 非法指令
-#define SIGTRAP		 5                              // Trap                 -- 跟踪断点
-#define SIGABRT		 6                              // Abort                -- 异常结束
-#define SIGIOT		 6                              // IO Trap              -- 同上
-#define SIGUNUSED	 7                              // Unused               -- 没有使用
-#define SIGFPE		 8                              // FPE                  -- 协处理器出错
-#define SIGKILL		 9	                            // Kill		            -- 强迫进程终止
-#define SIGUSR1		10                              // User1                -- 用户信号 1, 进程可使用
-#define SIGSEGV		11	                            // Segment Violation    -- 无效内存引用
-#define SIGUSR2		12                              // User2                -- 用户信号2, 进程可使用
-#define SIGPIPE		13                              // Pipe                 -- 管道写出错, 无读者
-#define SIGALRM		14	                            // Alarm	            -- 实时定时器报警
-#define SIGTERM		15                              // Terminate            -- 进程终止
-#define SIGSTKFLT	16                              // Stack Fault          -- 栈出错(协处理器)
-#define SIGCHLD		17                              // Child                -- 子进程停止或被终止
-#define SIGCONT		18                              // Continue             -- 恢复进程继续执行
-#define SIGSTOP		19	                            // Stop		            -- 停止进程的执行
-#define SIGTSTP		20                              // TTY Stop	            -- tty 发出停止进程, 可忽略
-#define SIGTTIN		21                              // TTY In               -- 后台进程请求输入
-#define SIGTTOU		22	                            // TTY Out	            -- 后台进程请求输出
+#define SIGHUP		 1                              // Hang Up              -- 挂断控制终端或进程.
+#define SIGINT		 2                              // Interrupt	        -- 来自键盘的中断.
+#define SIGQUIT		 3                              // Quit		            -- 来自键盘的退出.
+#define SIGILL		 4                              // Illeagle             -- 非法指令.
+#define SIGTRAP		 5                              // Trap                 -- 跟踪断点.
+#define SIGABRT		 6                              // Abort                -- 异常结束.
+#define SIGIOT		 6                              // IO Trap              -- 同上.
+#define SIGUNUSED	 7                              // Unused               -- 没有使用.
+#define SIGFPE		 8                              // FPE                  -- 协处理器出错.
+#define SIGKILL		 9	                            // Kill		            -- 强迫进程终止.
+#define SIGUSR1		10                              // User1                -- 用户信号 1, 进程可使用.
+#define SIGSEGV		11	                            // Segment Violation    -- 无效内存引用.
+#define SIGUSR2		12                              // User2                -- 用户信号2, 进程可使用.
+#define SIGPIPE		13                              // Pipe                 -- 管道写出错, 无读者.
+#define SIGALRM		14	                            // Alarm	            -- 实时定时器报警.
+#define SIGTERM		15                              // Terminate            -- 进程终止.
+#define SIGSTKFLT	16                              // Stack Fault          -- 栈出错(协处理器).
+#define SIGCHLD		17                              // Child                -- 子进程停止或被终止.
+#define SIGCONT		18                              // Continue             -- 恢复进程继续执行.
+#define SIGSTOP		19	                            // Stop		            -- 停止进程的执行.
+#define SIGTSTP		20                              // TTY Stop	            -- tty 发出停止进程, 可忽略.
+#define SIGTTIN		21                              // TTY In               -- 后台进程请求输入.
+#define SIGTTOU		22	                            // TTY Out	            -- 后台进程请求输出.
 
 /* Ok, I haven't implemented sigactions, but trying to keep headers POSIX */
-/* OK, 我还没有实现 sigactions 的编制, 但在头文件中仍希望遵守 POSIX 标准 */
+/* OK, 我还没有实现 sigactions 的编制, 但在头文件中仍希望遵守 POSIX 标准. */
 // 上面原注释已经过时, 因为在 0.12 内核中已经实现了 sigaction(). 
 // 下面是 sigaction 结构 sa_flags 标志字段可取的符号常数值. 
 #define SA_NOCLDSTOP	1                          // 当子进程处于停止状态, 就不对 SIGCHLD 处理. 
