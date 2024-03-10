@@ -35,22 +35,25 @@ typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号�
 
 /* Ok, I haven't implemented sigactions, but trying to keep headers POSIX */
 /* OK, 我还没有实现 sigactions 的编制, 但在头文件中仍希望遵守 POSIX 标准 */
-// 上面原注释已经过时, 因为在 0.12 内核中已经实现了 sigaction(). 下面是 sigaction 结构 sa_flags 标志字段可取的符号常数值. 
+// 上面原注释已经过时, 因为在 0.12 内核中已经实现了 sigaction(). 
+// 下面是 sigaction 结构 sa_flags 标志字段可取的符号常数值. 
 #define SA_NOCLDSTOP	1                          // 当子进程处于停止状态, 就不对 SIGCHLD 处理. 
-#define SA_INTERRUPT	0x20000000                 // 系统调用被信号中断后不重新启动系统调用. 
+#define SA_INTERRUPT	0x20000000                 // 系统调用被信号中断后不重新执行系统调用. 
 #define SA_NOMASK	    0x40000000                 // 不阻止在指定的信号处理程序中再收到该信号. 
 #define SA_ONESHOT	    0x80000000                 // 信号句柄一旦被调用过就恢复到默认处理句柄. 
 
 // 以下常量用于 sigprocmask(how, ) -- 改变阻塞信号集(屏蔽码). 用于改变该函数的行为. 
-#define SIG_BLOCK          0	                   /* for blocking signals */              // 在阻塞信号集中加上给定信号. 
-#define SIG_UNBLOCK        1	                   /* for unblocking signals */            // 从阻塞信号集中删除指定信号. 
-#define SIG_SETMASK        2	                   /* for setting the signal mask */       // 设置阻塞信号集. 
+#define SIG_BLOCK          0	                   /* for blocking signals */          // 在阻塞信号集中加上给定信号. 
+#define SIG_UNBLOCK        1	                   /* for unblocking signals */        // 从阻塞信号集中删除指定信号. 
+#define SIG_SETMASK        2	                   /* for setting the signal mask */   // 设置阻塞信号集. 
 
-// 以下两个常数符号都表示指向无返回值函数指针, 且都有一个 int 整型参数. 这两个指针值是逻辑上讲实际上不可能出现的函数地址值. 
-// 可作为下面 signal 函数的第二个参数. 用于告知内核, 让内核处理信号或忽略对信号的处理. 使用方法参见 kernle/signal.c 程序. 
-#define SIG_DFL		((void (*)(int))0)	           /* default signal handling */           // 默认信号处理程序(信号句柄). 
-#define SIG_IGN		((void (*)(int))1)	           /* ignore signal */                     // 忽略信号的处理程序. 
-#define SIG_ERR		((void (*)(int))-1)	           /* error return from signal */          // 信号处理返回错误. 
+// 以下两个常数符号都表示指向无返回值函数指针, 且都有一个 int 整型参数. 
+// 这两个指针值是逻辑上讲实际上不可能出现的函数地址值. 
+// 可作为下面 signal 函数的第二个参数. 用于告知内核, 让内核处理信号或忽略对信号的处理. 
+// 使用方法参见 kernle/signal.c 程序. 
+#define SIG_DFL		((void (*)(int))0)	           /* default signal handling */       // 默认信号处理程序(信号句柄). 
+#define SIG_IGN		((void (*)(int))1)	           /* ignore signal */                 // 忽略信号的处理程序. 
+#define SIG_ERR		((void (*)(int))-1)	           /* error return from signal */      // 信号处理返回错误. 
 
 // 下面定义初始操作设置 sigaction 结构信号屏蔽码的宏. 
 #ifdef notdef
@@ -59,17 +62,19 @@ typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号�
 #endif
 
 // 下面是 sigaction 的数据结构. 
-// sa_handler 	是对应某信号指定要采取的行动. 可以用上面的 SIG_DEL, 或 SIG_IGN 来忽略该信号, 也可以是指向处理该信号函数的一个指针. 
+// sa_handler 	是对应某信号指定要采取的行动. 可以用上面的 SIG_DEL, 或 SIG_IGN 来忽略该信号, 
+// 				也可以是指向处理该信号函数的一个指针. 
 // sa_mask 		给出了对信号的屏蔽码, 在信号程序执行时将阻塞对这些信号的处理. 
-// sa_flags 	指定改变信号处理过程的信号集. 它是由 37-40 行的位标志定义的. 
-// sa_restorer 	是恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈. 参见 signal.c. 
+// sa_flags 	指定改变信号处理过程的信号集. 它是由 40-43 行的位标志定义的. 
+// sa_restorer 	是恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈. (参见 kernel/signal.c)
 // 另外, 引起触发信号处理的信号也将被阻塞, 除非使用了 SA_NOMASK 标志. 
 struct sigaction {
-	void (*sa_handler)(int);     // 对应某信号指定要采取的行动. 
-								 // 可以用上面的 SIG_DEL 或 SIG_IGN 来忽略该信号, 也可以是指向处理该信号函数的一个指针
-	sigset_t sa_mask;            // 对信号的屏蔽码, 在信号程序执行时将阻塞对这些信号的处理. 
-	int sa_flags;                // 改变信号处理过程的信号集. 它是由 37-40 行的位标志定义的. 
-	void (*sa_restorer)(void);   // 恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈
+	void (*sa_handler)(int);     // 对应某信号指定要采取的行动(信号处理函数). 
+								 // 可以用上面的 SIG_DEL 或 SIG_IGN 来忽略该信号, 
+								 // 也可以是指向处理该信号函数的一个指针.
+	sigset_t sa_mask;            // 对信号的屏蔽码, 在信号程序执行时将屏蔽对这些信号的处理. 
+	int sa_flags;                // 改变信号处理过程的信号集. 它是由 40-43 行的位标志定义的. 
+	void (*sa_restorer)(void);   // 恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈.
 };
 
 // 下面 signal 函数用于是为信号 _sig 安装一新的信号处理程序(信号句柄), 与 sigaction() 类似. 
@@ -81,7 +86,8 @@ void (*signal(int _sig, void (*_func)(int)))(int);
 int raise(int sig);
 int kill(pid_t pid, int sig);
 // 在进程任务结构中, 除有一个以比特位表示当前进程待处理的 32 位信号字段 signal 以外, 
-// 还有一个同样以比特位表示的用于屏蔽进程当前阻塞信号集（屏蔽信号集）的字段 blocked, 也是 32 位, 每个比特代表一个对应的阻塞信号. 
+// 还有一个同样以比特位表示的用于屏蔽进程当前阻塞信号集（屏蔽信号集）的字段 blocked, 
+// 也是 32 位, 每个比特代表一个对应的阻塞信号. 
 // 修改进程的屏蔽信号集可以阻塞或解除阻塞所指定的信号. 
 // 以下五个函数就是用于操作进程屏蔽信号集, 虽然实现起来很简单, 但本版本内核中还未实现. 
 // 函数 sigaddset() 和 sigdelset() 用于对信号集中的信号进行增、删修改. 
