@@ -255,10 +255,10 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 		// 若当前进程父进程对 SIGCHLD 信号的 sigaction 处理标志 SA_NOCLDSTOP(
 		// 即当子进程停止执行或又继续执行时不要产生 SIGCHLD 信号)没有置位, 
 		// 那么就给父进程发送 SIGCHLD 信号. 
-		case SIGSTOP:
-		case SIGTSTP:
-		case SIGTTIN:
-		case SIGTTOU:
+		case SIGSTOP: 								// 停止进程的执行.
+		case SIGTSTP: 								// TTY 发出停止进程, 可忽略.
+		case SIGTTIN: 								// 后台进程请求输入.
+		case SIGTTOU: 								// 后台进程请求输出.
 			current->state = TASK_STOPPED;
 			current->exit_code = signr;
 			if (!(current->p_pptr->sigaction[SIGCHLD - 1].sa_flags &
@@ -267,8 +267,9 @@ int do_signal(long signr, long eax,  											// system_call 执行完系统�
 			return(1);  							/* Reschedule another event */
 
 		// 如果信号是以下 6 种信号之一, 那么若信号产生了 core_dump, 则以退出码为 signr|0x80 调用 do_exit() 退出. 
-		// 否则退出码就是信号值. do_exit()的参数是返回码和程序提供的退出状态信息. 可作为 wait() 或 waitpid() 函数的状态信息. 
-		// 参见sys/wait.h; wait() 或 waidpid() 利用这些宏就可以取得子进程的退出状态码或子进程终止的原因(信号). 
+		// 否则退出码就是信号值. do_exit()的参数是返回码和程序提供的退出状态信息. 
+		// 可作为 wait() 或 waitpid() 函数的状态信息. 参见sys/wait.h; 
+		// wait() 或 waidpid() 利用这些宏就可以取得子进程的退出状态码或子进程终止的原因(信号). 
 		case SIGQUIT:
 		case SIGILL:
 		case SIGTRAP:
