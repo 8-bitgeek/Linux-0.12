@@ -44,6 +44,7 @@
 // 而 b_wait 则是专门供等待指定缓冲块(即 b_wait 对应的缓冲块)的任务使用的等待队列头指针.
 extern int end;
 struct buffer_head * start_buffer = (struct buffer_head *) &end;
+// hash_table 中保存的是已经缓存过的设备的数据块, 可用于快速查找给定设备的某个块是否已有缓存.
 struct buffer_head * hash_table[NR_HASH];							// NR_HASH = 307 项. 主要使用 buffer_head 中的 b_prev 和 b_next 两个字段.
 static struct buffer_head * free_list;								// 空闲缓冲块链表头指针. 由 buffer_head 的 b_prev_free 和 b_next_free 字段构成的链表.
 static struct task_struct * buffer_wait = NULL;						// 等待空闲缓冲块而睡眠的任务队列.
@@ -245,18 +246,21 @@ static inline void insert_into_queues(struct buffer_head * bh)
 		bh->b_next->b_prev = bh;			// 此句前应添加 "if(bh->b_next)" 判断.
 }
 
-// 利用 hash 表在高速缓冲中寻找给定设备和指定块号的缓冲区块.
-// 如果找到则返回缓冲区块的指针, 否则返回 NULL.
+// 利用 hash 表在高速缓冲区中寻找给定设备和指定块是否已经缓存过.
+// 如果找到则返回缓冲区块的指针, 否则返回 NULL. hash_table 中保存着已经缓存的块设备对应的块的数据.
 static struct buffer_head * find_buffer(int dev, int block)
 {
 	struct buffer_head * tmp;
 
-	// 搜索 hash 表, 寻找指定设备与和块号的缓冲块.							  
+	// 搜索 hash 表, 寻找指定设备与和块号的缓冲块.
+	// hash 表中保存的是已经缓存的设备的数据块, 可以快速判断给定设备的某个数据块是否已经缓存过.
 	// for 循环执行流程: 表达式 1 -> 表达式 2 -> 循环体 -> 表达式 3
-	for (tmp = hash(dev, block) ; tmp != NULL ; tmp = tmp->b_next) 		// hash_table 中初始值为 NULL(0), 表示没有缓冲头指针 buffer_head *
-		if (tmp->b_dev == dev && tmp->b_blocknr == block) 				// 如果对应的哈希槽不为空, 则遍历链表以找到正确的页面, 如果没找到则返回 NULL.
-			return tmp;
-	return NULL;
+	for (tmp = hash(dev, block); tmp != NULL; tmp = tmp->b_next) {		// hash_table 中初始值为 NULL(0), 表示没有缓冲头指针 buffer_head *
+		if (tmp->b_dev == dev && tmp->b_blocknr == block) 				// 如果对应的哈希槽不为空, 则遍历链表以找到正确的缓冲块, 如果没找到则返回 NULL.
+			return tmp; 												// 如果找到块号对应的缓冲头指针, 则返回.
+		// 如果没找到则继续.
+	}
+	return NULL; 														// 最终如果也没找到则返回 NULL.
 }
 
 /*
@@ -272,13 +276,13 @@ static struct buffer_head * find_buffer(int dev, int block)
  * 那么当我们(进程)睡眠时缓冲块可能发生一些问题(例如一个读错误将导致该缓冲块出错). 
  * 目前这种情况实际上是不会发生的, 但处理的代码已经准备好了.
  */
-// 利用 hash 表在高速缓冲区中寻找指定的缓冲块. 若找到则对该缓冲块上锁并返回块头指针.
+// 利用 hash 表在高速缓冲区中查看指定的块是否已经缓存过. 若找到则对该缓冲块上锁并返回数据块的头指针.
 struct buffer_head * get_hash_table(int dev, int block)
 {
 	struct buffer_head * bh;
 
 	for (;;) {
-		// 在高速缓冲中寻找给定设备和指定块的缓冲区块, 如果没有找到则返回 NULL, 退出.
+		// 在高速缓冲区中寻找给定设备和指定块的缓冲区块, 如果没有找到则返回 NULL, 退出.
 		if (!(bh = find_buffer(dev, block)))
 			return NULL;
 		// 对该缓冲块增加引用计数, 并等待该缓冲块解锁(如果已被上锁). 
@@ -309,17 +313,18 @@ struct buffer_head * get_hash_table(int dev, int block)
 #define BADNESS(bh) (((bh)->b_dirt << 1) + (bh)->b_lock)
 
 
-// 取高速缓冲中指定的缓冲块.
-// 检查指定(设备号和块号)的缓冲区是否已经在高速缓冲中. 如果指定块已经在高速缓冲区中, 则返回对应缓冲区头指针退出; 
-// 如果不在, 就需要在高速区中设置一个对应设备号和块号的新项. 返回相应缓冲区头指针.
+// 取高速缓冲区中指定的缓冲块.
+// 利用 hash_table 检查指定(设备号和块号)的块是否已经在高速缓冲区中(已缓存). 
+// 如果指定块已经在高速缓冲区中, 则返回对应缓冲块头指针; 
+// 如果不在, 就需要在高速缓冲区中设置一个对应设备号和块号的新项. 返回相应缓冲区头指针.
 struct buffer_head * getblk(int dev, int block)
 {
 	struct buffer_head * tmp, * bh;
 
 repeat:
-	if (bh = get_hash_table(dev, block)) 			// 如果在缓冲区中找到, 则直接返回
+	if (bh = get_hash_table(dev, block)) 			// 如果已经缓存过该设备的给定数据块, 则直接返回对应的缓冲块指针.
 		return bh;
-	// 扫描空闲数据块链表, 从空闲链表中查找空闲缓冲区.
+	// 如果没有缓存过该块, 则扫描空闲数据块链表, 从空闲链表中查找空闲缓冲区.
 	// 首先让 tmp 指向空闲链表的第一个空闲缓冲区头.
 	tmp = free_list;
 	do {
