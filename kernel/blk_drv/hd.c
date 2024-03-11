@@ -122,14 +122,14 @@ int sys_setup(void * BIOS)
 
 	// 首先设置 callable 标志, 使得本函数只能被调用 1 次. 然后设置硬盘信息数据组 hd_info[]. 
 	// 如果在 include/linux/config.h 文件已定义了符号常数 HD_TYPE, 
-	// 那么 hd_info[] 数组已经在前面第 49 行上设置好了. 
+	// 那么 hd_info[] 数组已经在前面第 80 行上设置好了. 
 	// 否则就需要读取 boot/setup.s 程序存放在内存 0x90080 处开始的硬盘参数表.
-	// setup.s 程序在内存此处连续存放着一到两个硬盘参数表.
+	// boot/setup.s 程序在此处(0x90080)连续存放着一到两个硬盘参数表.
 	if (!callable)
 		return -1;
 	callable = 0;
 #ifndef HD_TYPE															// 如果没有定义 HD_TYPE, 则读取.
-	for (drive = 0 ; drive < 2 ; drive++) {
+	for (drive = 0; drive < 2; drive++) {
 		hd_info[drive].cyl = *(unsigned short *) BIOS;					// 柱面数.
 		hd_info[drive].head = *(unsigned char *) (2 + BIOS);			// 磁头数.
 		hd_info[drive].wpcom = *(unsigned short *) (5 + BIOS);			// 写前预补偿柱面号.
