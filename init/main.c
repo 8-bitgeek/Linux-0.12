@@ -102,15 +102,15 @@ extern long kernel_mktime(struct tm * tm);			// 计算系统开机启动时间(�
 static inline long fork_for_process0() {
 	long __res;
 	__asm__ volatile (
-		"int $0x80\n\t"  							/* 调用系统中断 0x80: system_call(kernel/sys_call.s) */
-		: "=a" (__res)  							/* 返回值 -> eax(__res) */ // 返回值放入 __res 中.
-		: "0" (2));  								/* 输入为系统中断调用号 __NR_name(2) */ // 输入寄存器为 eax(%0) = 2, 
-													/* 即调用 sys_call_table[2](include/linux/sys.h) 中的 sys_fork (kernel/sys_call.s) */
+		"int $0x80\n\t"  			/* 调用系统中断 0x80: system_call(kernel/sys_call.s) */
+		: "=a" (__res)  			/* 返回值 -> eax(__res) */ // 返回值(新进程的 pid)放入 __res 中.
+		: "0" (2));  				/* 输入为系统中断调用号 __NR_name(2) */ // 输入寄存器为 eax(%0) = 2, 
+									/* 即调用 sys_call_table[2](include/linux/sys.h) 中的 sys_fork (kernel/sys_call.s) */
 
 	// 从 fork_for_process0() 返回时, cs = 0xf = 0b-0000-1-1-11 ==> LDT 中第一项(代码段), CPL = 3.
-	if (__res >= 0)  								/* 如果返回值(新进程的 pid, 存放在 eax 中) >= 0, 则直接返回该值 */
+	if (__res >= 0)  				/* 如果返回值(新进程的 pid, 存放在 eax 中) >= 0(创建成功), 则直接返回该值. */
 		return __res;
-	errno = -__res;  								/* 否则置出错号, 并返回 -1 */
+	errno = -__res;  				/* 否则置出错号, 并返回 -1 */
 	return -1;
 }
 
@@ -277,7 +277,8 @@ int main(void)										/* This really IS void, no error here. */
 	move_to_user_mode();							// 切换到用户态(CPL = 3)下执行. (include/asm/system.h)
 	// fork 一个子进程 TASK-1, 并通过时钟中断切换到 TASK-1 中执行 init() 函数, 执行初始化操作.
 	if (!fork_for_process0()) {						/* we count on this going ok */
-		// TASK-0 中不会进入到这里(返回值不为 0), 但是子进程 TASK-1 (返回值 eax 为 0, 在创建进程的时候设置的 eax = 0)会进入到这里来执行.
+		// TASK-0 中不会进入到这里(返回值不为 0, 是子进程的 pid), 
+		// 但是子进程 TASK-1 (返回值 eax 为 0, 在创建进程的时候设置的 eax = 0)会进入到这里来执行.
 		init();										// 在新建的子进程(TASK-1 即 init 进程)中执行.
 	}
 	/*

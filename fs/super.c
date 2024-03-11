@@ -251,7 +251,7 @@ int sys_umount(char * dev_name)
 		return -ENOENT;
 	dev = inode->i_zone[0];
 	if (!S_ISBLK(inode->i_mode)) {
-		iput(inode);                    				// fs/inode.c. 
+		iput(inode);                    				// fs/inode.c 
 		return -ENOTBLK;
 	}
 	// OK, 现在上面为了得到设备号而取得的 i 节点已完成了它的使命, 因此这里放回该设备文件的 i 节点. 

@@ -210,8 +210,8 @@ ret_from_sys_call:
 	popl %ebx 						# 这三个寄存器是进行系统调用时的参数. (第一个参数)
 	popl %ecx						# 第二个.
 	popl %edx 						# 第三个.
-	addl $4, %esp					# skip orig_eax. 丢弃原 eax 值(系统调用号).
-	pop %fs							# 原用户态各个段寄存器选择符.
+	addl $4, %esp					# skip orig_eax. 丢弃原 eax 值(原来是保存的系统调用号).
+	pop %fs							# 恢复原用户态各个段寄存器选择符.
 	pop %es
 	pop %ds
 	iret 							# 系统调用结束(如果是用户态调用, 则要进行堆栈切换).
