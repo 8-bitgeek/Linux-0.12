@@ -115,7 +115,7 @@ reschedule:
 # 该中断的 DPL = 0, 需要进行特权级切换, 中断和任务使用不同的堆栈(中断处理程序使用任务 ss0, sp0 字段指定的堆栈).
 
 # int 0x80 -- Linux 系统调用入口点(调用中断 int 0x80, eax 中是调用号).
-# 中断调用服务列表在 sys_call_table 中(include/linux/sys.h)
+# 中断调用服务列表在 sys_call_table 中(include/linux/sys.h).
 # system_call 陷阱门在 GDT 中的特权级(DPL)是 3, 即所有特权级的代码都可以调用.
 .align 4
 system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
@@ -134,16 +134,16 @@ system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	# 在保存过段寄存器之后, 让 ds, es 指向内核数据段, 而 fs 指向当前局部数据段, 
 	# 即指向执行本次系统调用的用户程序的数据段. 
 	# 注意, 在 Linux0.12 中内核给任务分配的代码和数据内存段是重叠的, 它们的段基址和段限长相同.
-	movl $0x10, %edx				# set up ds, es to kernel space.  	// 当前的 CPL = 0, 选择符 0x10 的 RPL = 0
+	movl $0x10, %edx				# set up ds, es to kernel space.  	// 当前的 CPL = 0, 选择符 0x10 的 RPL = 0.
 	mov %dx, %ds 					# ds/es 指向内核数据段.
 	mov %dx, %es
 	movl $0x17, %edx				# fs points to local data space.
 	mov %dx, %fs 					# fs 指向局部数据段.
-	cmpl NR_syscalls, %eax 			# 如果 eax 中的值大于 NR_syscalls 则表示超出调用号范围(>=87).
-	jae bad_sys_call 				# 调用号如果超出范围(>=87)的话就跳转.
+	cmpl NR_syscalls, %eax 			# 如果 eax 中的值大于 NR_syscalls 则表示超出调用号范围(>= 87).
+	jae bad_sys_call 				# 调用号如果超出范围(>= 87)的话就跳转.
 
 	# 把 sys_call_table[4 * %eax] 确定的内存地址处的内容(系统调用程序的地址)放入 ebx 中
-    mov sys_call_table(, %eax, 4), %ebx 	
+    mov sys_call_table(, %eax, 4), %ebx		# (include/linux/sys.h)
     cmpl $0, %ebx 							# 判断该系统调用入口地址是否为 0. 
     jne sys_call 							# 不为 0 则执行系统调用.
 	#	pushl %eax
@@ -152,7 +152,7 @@ system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	# sys_call_table[] 是一个指针数组, 定义在 include/linux/sys.h 中, 
 	# 该数组中设置了内核所有 82 个系统调用 C 处理函数的地址.
 sys_call:
-	# call 指令会将下一行代码的地址(pushl %eax)压入栈中.
+	# call 指令会将下一行代码的地址(`pushl %eax`)压入栈中.
 	call *%ebx 							# ebx 中含有被调用函数的地址. 
 										# 调用 eax 中对应的系统调用函数. (此处不会发生特权级切换)
 	# call *sys_call_table(, %eax, 4)	# 间接调用指定功能 C 函数.
