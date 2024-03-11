@@ -154,7 +154,7 @@ int sys_setup(void * BIOS)
 	}
 
 	/*
-		We querry CMOS about hard disks : it could be that
+		We query CMOS about hard disks : it could be that
 		we have a SCSI/ESDI/etc controller that is BIOS
 		compatable with ST-506, and thus showing up in our
 		BIOS table, but not register compatable, and therefore
@@ -199,12 +199,12 @@ int sys_setup(void * BIOS)
 		NR_HD = 0;
 	// 若 NR_HD = 0, 则两个硬盘都不是 AT 控制器兼容的, 两个硬盘数据结构全清零. 
 	// 若 NR_HD = 1, 则将第 2 个硬盘的参数清零.
-	for (i = NR_HD ; i < 2 ; i++) {
+	for (i = NR_HD; i < 2; i++) {
 		hd[i * 5].start_sect = 0;
 		hd[i * 5].nr_sects = 0;
 	}
 	// 好, 到此为止我们已经真正确定了系统中所含的硬盘个数 NR_HD. 现在我们来读取每个硬盘上第 1 个扇区中的分区表信息, 
-	// 用来设置分区结构数组 hd[] 中硬盘各分区的信息. 首先利用读函数 bread() 读硬盘第 1 个数据块(fs/buffer.c), 
+	// 用来设置分区结构数组 hd[] 中硬盘各分区的信息. 首先利用读函数 bread() 读取硬盘第 1 个数据块(fs/buffer.c), 
 	// 第 1 个参数(0x300, 0x305)分别是两个硬盘的设备号, 第 2 个参数(0)是所需读取的块号. 
 	// 若读操作成功, 则数据会被存放在缓冲块 bh 的数据区中.
 	// 若缓冲块头指针 bh 为 0, 则说明读操作失败, 则显示出错信息并停机. 
@@ -213,7 +213,8 @@ int sys_setup(void * BIOS)
 	// 若有效则将硬盘分区表信息放入硬盘分区结构数组 hd[] 中. 最后释放 bh 缓冲区.
 	for (drive = 0 ; drive < NR_HD ; drive++) {
 		// 0x300 表示整个第 1 个硬盘, 对应的设备文件是 /dev/hd0, 
-		// 0x301 表示第 1 个硬盘的第 1 个分区, 对应的设备文件是 /dev/hd1, 0x305 表示整个第 2 个硬盘.
+		// 0x301 表示第 1 个硬盘的第 1 个分区, 对应的设备文件是 /dev/hd1, 
+		// 0x305 表示整个第 2 个硬盘. 对应的设备文件是 /dev/hd5.
 		if (!(bh = bread(0x300 + drive * 5, 0))) {			// 0x300, 0x305 是设备号. 参见 p218 表 6-1.
 			printk("Unable to read partition table of drive %d\n\r", drive);
 			panic("");
