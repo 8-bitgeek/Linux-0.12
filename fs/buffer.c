@@ -212,7 +212,7 @@ static inline void remove_from_queues(struct buffer_head * bh)
 		hash(bh->b_dev, bh->b_blocknr) = bh->b_next;
 	/* remove from free list */
 	/* 从空闲缓冲块表中移除缓冲块 */
-	if (!(bh->b_prev_free) || !(bh->b_next_free))
+	if (!(bh->b_prev_free) || !(bh->b_next_free)) 			// 空闲缓冲块链表损坏的情况.
 		panic("Free block list corrupted");
 	bh->b_prev_free->b_next_free = bh->b_next_free;
 	bh->b_next_free->b_prev_free = bh->b_prev_free; 		// 从空闲链表中移除.
@@ -226,12 +226,12 @@ static inline void insert_into_queues(struct buffer_head * bh)
 {
 	/* put at end of free list */
 	/* 放在空闲链表末尾处 */
-	bh->b_next_free = free_list;
-	bh->b_prev_free = free_list->b_prev_free;
+	bh->b_next_free = free_list; 							// 下一节点指向空闲链表头部.
+	bh->b_prev_free = free_list->b_prev_free; 				// 前一节点指向空闲链表尾部.
 	free_list->b_prev_free->b_next_free = bh;
 	free_list->b_prev_free = bh;							// 以上四句将给定缓冲块头放到空闲链表末尾.
-	/* put the buffer in new hash-queue if it has a device */
-	/* 如果该缓冲块对应一个设备, 则将其插入新 hash 队列中 */
+	/* put the buffer in new hash-queue if it has a device. */
+	/* 如果该缓冲块对应一个设备, 则将其插入新 hash 队列中. */
 	bh->b_prev = NULL;
 	bh->b_next = NULL;
 	if (!bh->b_dev) 										// 如果没有指定设备号, 则不需要放到 hash_table 中.

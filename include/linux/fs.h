@@ -90,7 +90,7 @@ typedef char buffer_block[BLOCK_SIZE];      // 块缓冲区。
 // 缓冲块头数据结构. (极为重要!!!) 用于缓冲块设备中读/写的数据. 
 // 在程序中常用 bh 来表示 buffer_head 类型的缩写.
 struct buffer_head {
-	char * b_data;						/* pointer to data block (1024 bytes) */	// 数据块(1kb)指针
+	char * b_data;						/* pointer to data block (1024 bytes) */	// 数据块(1KB)指针
 	unsigned long b_blocknr;			/* block number */							// 块号.
 	unsigned short b_dev;				/* device (0 = free) */						// 数据源的设备号.
 	unsigned char b_uptodate;  			// 更新标志: 表示数据是否已更新(最新的).
