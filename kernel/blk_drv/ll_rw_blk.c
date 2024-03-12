@@ -276,7 +276,7 @@ repeat:
 	schedule();
 }
 
-// 低级数据块读写函数(Low Level Read Write Block)
+// 低级数据块读写函数(Low Level Read Write Block).
 // 该函数是块设备驱动程序与系统其他部分的接口函数. 通常在 fs/buffer.c 程序中被调用.
 // 主要功能是创建块设备读写请求项并插入到指定块设备请求队列. 
 // 实际的读写操作则是由设备的 request_fn() 函数完成. 对于硬盘操作, 该函数是 do_hd_request(); 
@@ -288,8 +288,7 @@ void ll_rw_block(int rw, struct buffer_head * bh)
 	unsigned int major;									// 主设备号(对于硬盘是 3)
 
 	// 如果设备主设备号不存在或者该设备的请求操作函数不存在, 则显示出错信息, 并返回. 否则创建请求项并插入请求队列.
-	if ((major = MAJOR(bh->b_dev)) >= NR_BLK_DEV ||
-		!(blk_dev[major].request_fn)) {
+	if ((major = MAJOR(bh->b_dev)) >= NR_BLK_DEV || !(blk_dev[major].request_fn)) {
 		printk("Trying to read nonexistent block-device\n\r");
 		return;
 	}

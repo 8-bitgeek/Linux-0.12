@@ -238,11 +238,11 @@ static inline void insert_into_queues(struct buffer_head * bh)
 		return;
 	bh->b_next = hash(bh->b_dev, bh->b_blocknr);
 	hash(bh->b_dev, bh->b_blocknr) = bh; 					// 放到对应的链表头部.
-	// 请注意当 hash 表某索引第 1 次插入元素时, hash() 计算值肯定为 NULL, 
+	// 请注意当 hash 表某个槽位第 1 次插入元素时, hash() 计算值肯定为 NULL, 
 	// 因此此时 hash(bh->b_dev, bh->b_blocknr) 得到的 bh->b_next 肯定是 NULL,
 	// 所以 bh->b_next->b_prev = bh 应该在 bh->b_next 不为 NULL 时才能给 b_pev 赋 bh 值. 
 	// 即 bh->b_next->b_prev = bh 前应该增加判断 "if (bh->b_next)". 该错误到 0.96 版后才被纠正.
-	if (bh->b_next) 							// 已添加用于修正错误! 非空判断.
+	if (bh->b_next) 						// 已添加用于修正错误! 非空判断.
 		bh->b_next->b_prev = bh;			// 此句前应添加 "if(bh->b_next)" 判断.
 }
 
@@ -416,7 +416,7 @@ struct buffer_head * bread(int dev, int block)
 	struct buffer_head * bh;
 
 	// 从高速缓冲区(主要是空闲链表 free_list)中申请一块缓冲块. 
-	// 如果返回值是 NULL, 则表示内核出错, 停机. 否则我们判断其中是否已有可用数据.
+	// 如果返回值是 NULL, 则表示内核出错, 停机. 否则我们判断其中是否已缓存过可用数据.
 	if (!(bh = getblk(dev, block)))
 		panic("bread: getblk returned NULL\n");
 	// 如果该缓冲块中数据是有效的(已更新的)可以直接使用, 则返回.
