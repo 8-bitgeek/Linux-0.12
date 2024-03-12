@@ -45,9 +45,9 @@
 extern int end;
 struct buffer_head * start_buffer = (struct buffer_head *) &end;
 // hash_table 中保存的是已经缓存过的设备的数据块, 可用于快速查找给定设备的某个块是否已有缓存.
-struct buffer_head * hash_table[NR_HASH];							// NR_HASH = 307 项. 主要使用 buffer_head 中的 b_prev 和 b_next 两个字段.
-static struct buffer_head * free_list;								// 空闲缓冲块链表头指针. 由 buffer_head 的 b_prev_free 和 b_next_free 字段构成的链表.
-static struct task_struct * buffer_wait = NULL;						// 等待空闲缓冲块而睡眠的任务队列.
+struct buffer_head * hash_table[NR_HASH];			// NR_HASH = 307 项. 主要使用 buffer_head 中的 b_prev 和 b_next 两个字段.
+static struct buffer_head * free_list;				// 空闲的高速缓冲块链表头指针. 由 buffer_head 的 b_prev_free 和 b_next_free 字段构成的链表.
+static struct task_struct * buffer_wait = NULL;		// 等待空闲缓冲块而睡眠的任务队列.
 // 下面定义系统缓冲区中含有的缓冲块个数. 这里, NR_BUFFERS 是一个定义在 linux/fs.h 头文件的宏, 
 // 其值即是变量名 nr_buffers, 并且在 fs.h 文件声明为全局变量.
 // 大写名称通常都是一个宏名称; 
@@ -202,7 +202,7 @@ void check_disk_change(int dev)
 static inline void remove_from_queues(struct buffer_head * bh)
 {
 	/* remove from hash-queue */
-	/* 从 hash 队列中移除缓冲块 */
+	/* 如果当前缓冲块头已经存在于 hash 表中, 则从 hash 队列中移除该缓冲块头. */
 	if (bh->b_next)
 		bh->b_next->b_prev = bh->b_prev;
 	if (bh->b_prev)
@@ -328,28 +328,28 @@ repeat:
 	// 首先让 tmp 指向空闲链表的第一个空闲缓冲区头.
 	tmp = free_list;
 	do {
-		// 如果该缓冲区正在被使用(引用计数不等于 0), 则继续扫描下一项. 对于 b_count=0 的块, 
-		// 即高速缓冲中当前没有引用的块不一定就是干净的(b_dirt=0)或没有锁定的(b_lock=0). 
+		// 如果该缓冲区正在被使用(引用计数不等于 0), 则继续扫描下一项. 对于 b_count = 0 的块, 
+		// 即高速缓冲中当前没有引用的块不一定就是干净的(b_dirt = 0)或没有锁定的(b_lock = 0). 
 		// 因此, 我们还是需要继续下面的判断和选择. 
-		// 例如当一个任务改写过一块内容后就释放了, 于是该块 b_count=0, 但 b_lock 不等于 0;
+		// 例如当一个任务改写过一块内容后就释放了, 于是该块 b_count = 0, 但 b_lock 不等于 0;
 		// 当一个任务执行 breada() 预读几个块时, 只要 ll_rw_block() 命令发出后, 它就会递减 b_count; 
-		// 但此时实际上硬盘访问操作可能还在进行, 因此此时 b_lock=1, 但 b_count=0.
-		if (tmp->b_count) 							// 有引用的一定是不可用的
+		// 但此时实际上硬盘访问操作可能还在进行, 因此此时 b_lock = 1, 但 b_count = 0.
+		if (tmp->b_count) 							// 有引用的一定是不可用的.
 			continue;
 		// 如果缓冲头指针 bh 为空, 或者 tmp 所指缓冲头的标志(修改, 锁定)权重小于 bh 头标志的权重, 
 		// 则让 bh 指向 tmp 缓冲块头. 
 		// 如果该 tmp 缓冲块头表明缓冲块既没有修改也没有锁定, 则说明已为指定设备上的块取得对应的高速缓冲块, 则退出循环.
 		// 否则我们就继续执行本循环, 看看能否找到一个 BADNESS() 最小的缓冲块.
 		if (!bh || BADNESS(tmp) < BADNESS(bh)) {
-			bh = tmp; 								// 得到 dirt 和 block 更小的 buffer_head
+			bh = tmp; 								// 得到 (dirt * 2 + block) 更小的 buffer_head
 			if (!BADNESS(tmp)) 						// b_dirt 和 b_block 都为 0 则表示找到可用的缓冲块, 退出循环.
 				break;
 		}
 	/* and repeat until we find something good */	/* 重复操作直到找到适合的缓冲块 */
-	} while ((tmp = tmp->b_next_free) != free_list); 	// 循环一圈, 不管找没找到(没找到的情况下 bh 指向 dirt+lock 最小的), 循环结束.
+	} while ((tmp = tmp->b_next_free) != free_list); 	// 循环一圈, 不管找没找到(没找到的情况下 bh 指向 [dirt * 2 + lock] 最小的), 循环结束.
 	// 如果循环检查发现所有缓冲块都正在被使用(所有缓冲块的引用计数都 >0)中, 则睡眠等待有空闲缓冲区可用. 
 	// 当有空闲缓冲块可用时本进程会被明确地唤醒. 然后我们就跳转到函数开始处重新查找空闲缓冲块.
-	if (!bh) { 										// 没有找到合适的缓冲块, 则重新寻找
+	if (!bh) { 											// 没有找到合适的缓冲块, 则重新寻找.
 		sleep_on(&buffer_wait);
 		goto repeat;
 	}
@@ -368,19 +368,19 @@ repeat:
 	}
 	/* NOTE!! While we slept waiting for this block, somebody else might */
 	/* already have added "this" block to the cache. check it */
-	/* 注意!! 当进程为了等待该缓冲块而睡眠时, 其他进程可能已经将该缓冲块加入进高速缓冲中, 所以我们也要对此进行检查. */
+	/* 注意!! 当进程为了等待该缓冲块而睡眠时, 其他进程可能已经将该缓冲块加入进高速缓冲区中, 所以我们也要对此进行检查. */
 	// 在高速缓冲 hash 表中检查指定设备和块的缓冲块是否在我们睡眠的时候已经被加入进去. 如果是的话就再次重复上述寻找过程.
 	if (find_buffer(dev, block))
 		goto repeat;
 	/* OK, FINALLY we know that this buffer is the only one of it's kind, */
 	/* and that it's unused (b_count=0), unlocked (b_lock=0), and clean */
-	/* OK, 最终我们知道该缓冲块是指定参数的唯一一块, 而且目前还没有被占用(b_count=0), */
-	/* 也未被上锁(b_lock=0), 并且是干净的(未被修改的 b_dirty=0). */
+	/* OK, 最终我们知道该缓冲块是指定参数的唯一一块, 而且目前还没有被占用(b_count = 0), */
+	/* 也未被上锁(b_lock = 0), 并且是干净的(未被修改的 b_dirty = 0). */
 	// 于是让我们占用此缓冲块. 置引用计数为 1, 复位修改标志和有效(更新)标志.
 	bh->b_count = 1;
 	bh->b_dirt = 0;
 	bh->b_uptodate = 0;
-	// 从 hash 队列和空闲块链表中移出该缓冲头, 让该缓冲区用于指定设备和其上的指定块. 
+	// 从 hash 队列和空闲块链表中移除该缓冲头, 让该缓冲区用于指定设备和其上的指定块. 
 	// 然后根据此新设备号和块号重新插入空闲链表(链表尾)和 hash 队列新位置处(链表头). 并最终返回缓冲头指针.
 	remove_from_queues(bh);
 	bh->b_dev = dev;

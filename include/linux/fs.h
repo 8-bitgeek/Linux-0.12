@@ -93,7 +93,7 @@ struct buffer_head {
 	char * b_data;						/* pointer to data block (1024 bytes) */	// 数据块(1kb)指针
 	unsigned long b_blocknr;			/* block number */							// 块号.
 	unsigned short b_dev;				/* device (0 = free) */						// 数据源的设备号.
-	unsigned char b_uptodate;  			// 更新标志: 表示数据是否已更新.
+	unsigned char b_uptodate;  			// 更新标志: 表示数据是否已更新(最新的).
 	unsigned char b_dirt;				/* 0 - clean, 1 - dirty */					// 修改(脏)标志: 0 未修改, 1 已修改.
 	unsigned char b_count;				/* users using this block */				// 使用用户数.
 	unsigned char b_lock;				/* 0 - ok, 1 - locked */					// 缓冲区是否被锁定.
