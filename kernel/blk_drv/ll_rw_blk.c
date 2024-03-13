@@ -21,14 +21,15 @@
 /*
  * 请求结构中含有加载 nr 个扇区数据到内存中去的所有必须的信息.
  */
-// 请求项数组队列. 共有 NR_REQUEST = 32 个请求项(所有类型的设备共用这一个请求数组). (参见文件 kernel/blk_drv/blk.h)
+// 磁盘等低级设备读写请求项数组队列. 
+// 共有 NR_REQUEST = 32 个请求项(所有类型的设备共用这一个请求数组). (参见文件 kernel/blk_drv/blk.h)
 struct request request[NR_REQUEST];
 
 /*
  * used to wait on when there are no free requests
  */
 /*
- * 是用于在请求数组没有空闲项时进程的临时等待处.
+ * 是用于在设备读写请求数组没有空闲项时进程的临时等待处.
  */
 struct task_struct * wait_for_request = NULL;
 
@@ -102,13 +103,12 @@ static inline void unlock_buffer(struct buffer_head * bh)
 /*
  * add-request() 向链表中加入一项请求项. 它会关闭中断, 这样就能安全地处理请求链表了.
  *
- * 注意, 交换请求总是在其他请求之前操作, 并且以它们出现在顺序完成.
+ * 注意, 交换请求总是在其他请求之前操作, 并且以它们出现的顺序完成.
  */
-// 向链表中加入请求项.
-// 参数 dev 是指定块设备结构指针, 该结构中有处理请求项函数指针和当前正在请求项指针;
-// req 是已设置好内容的请求项结构指针.
+// 向请求链表中加入新的请求项.
+// 参数 dev 是指定块设备结构指针, 该结构中有该设备的请求处理函数指针和请求项链表指针;
 // 本函数把已经设置好的请求项 req 添加到指定设备的请求项链表中. 
-// 如果该设备在当前请求项指针为空, 则可以设置 req 为当前请求项并立刻调用设备请求项处理函数. 
+// 如果该设备在当前请求项指针为空, 则可以设置 req 为当前请求项并立刻调用设备请求处理函数. 
 // 否则就把 req 请求项插入到该请求项链表中.
 static void add_request(struct blk_dev_struct * dev, struct request * req)
 {
@@ -116,16 +116,16 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 	struct request * tmp;
 
 	req->next = NULL;
-	cli();								// 关中断
+	cli();								// 关中断(可以屏蔽硬件中断, 比如硬盘中断等).
 	if (req->bh)
 		req->bh->b_dirt = 0;			// 清缓冲区 "脏" 标志.
-	// 然后查看指定设备是否有当前请求项, 即查看设备是否正忙. 
-	// 如果指定设备 dev 当前请求项(current_equest)字段为空, 则表示目前该设备没有请求项, 
-	// 本次是第 1 个请求项, 也是唯一的一个. 因此可将块设备当前请求指针直接指向该请求项, 并立刻执行相应设备的请求函数.
+	// 然后查看指定设备当前是否有请求项, 即查看设备是否正忙. 
+	// 如果指定设备 dev 当前请求项(current_request)字段为空, 则表示目前该设备没有请求项, 
+	// 本次是第 1 个请求项, 也是唯一的一个. 因此可将块设备的当前请求指针直接指向该请求项, 并立刻执行相应设备的请求处理函数.
 	if (!(tmp = dev->current_request)) {
 		dev->current_request = req; 	// 直接设置为该设备的当前请求项.
 		sti();							// 开中断.
-		(dev->request_fn)();			// 执行请求函数, 对于硬盘是 do_hd_request() (kernel/blk_drv/hd.c).
+		(dev->request_fn)();			// 执行请求处理函数, 对于硬盘是 do_hd_request() (kernel/blk_drv/hd.c).
 		return;
 	}
 	// 如果目前该设备已经有当前请求项在处理, 则首先利用电梯算法搜索最佳插入位置, 然后将当前请求项插入到请求链表中. 
@@ -134,7 +134,7 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 	// 最后开中断并退出函数. 电梯算法的作用是让磁盘磁头的移动距离最小, 从而改善(减少)硬盘访问时间.
 	// 下面 for 循环中 if 语句用于把 req 所指请求项与请求队列(链表)中已有的请求项作比较, 
 	// 找出 req 插入该队列的正确位置顺序, 然后中断循环, 并把 req 插入到该队列正确位置处.
-	for ( ; tmp->next ; tmp = tmp->next) {
+	for ( ; tmp->next; tmp = tmp->next) {
 		if (!req->bh)
 			if (tmp->next->bh)
 				break;
@@ -190,7 +190,7 @@ static void make_request(int major, int rw, struct buffer_head * bh)
 	 * 我们不能让队列中全都是写请求项: 我们需要为读请求保留一些空间: 读操作是优先的. 
 	 * 请求队列的后三分之一空间仅用于读请求项.
 	 */
-	// 好, 现在我们必须为本函数生成并添加读/写请求项了. 首先我们需要在请求数组中寻找到一个空闲项(糟)来存放新请求项. 
+	// 生成并添加读/写请求项. 首先我们需要在请求数组中寻找到一个空闲项(槽)来存放新请求项. 
 	// 搜索过程从请求数组末端开始, 根据上述要求, 对于读命令请求, 我们直接从队列末尾开始搜索, 
 	// 而对于写请求就只能从队列 2/3 处向队列头处搜索空项填入. 
 	// 于是我们开始从后向前搜索, 当请求结构 request 的设备字段 dev 值 = -1 时, 表示该项未被占用(空闲). 
@@ -203,14 +203,14 @@ repeat:
 		req = request + ((NR_REQUEST * 2) / 3);			// 对于写请求, 指针指向队列 2/3 处.
 	/* find an empty request */
 	/* 搜索一个空请求项 */
-	while (--req >= request)
-		if (req->dev < 0)
+	while (--req >= request) 							// 还没查找完(没超过数组头部)时继续查找.
+		if (req->dev < 0) 								// 找到空闲项?
 			break;
 	/* if none found, sleep on new requests: check for rw_ahead */
 	/* 如果没有找到空闲项, 则让该次请求操作睡眠: 需检查是否提前读/写 */
-	if (req < request) {								// 如果已搜索到头(队列无空项)
+	if (req < request) {								// 如果已搜索到头(表明请求队列无空闲项).
 		if (rw_ahead) {									// 则若是提前读/写请求, 则退出.
-			unlock_buffer(bh);
+			unlock_buffer(bh); 							// 解锁缓冲块头, 以使得其它任务可以使用该缓冲块头.
 			return;
 		}
 		sleep_on(&wait_for_request);					// 否则就睡眠, 过会再查看请求队列.
@@ -218,15 +218,15 @@ repeat:
 	}
 	/* fill up the request-info, and add it to the queue */
 	/* 向空闲请求项中填写请求信息, 并将其加入队列中 */
-	// OK, 程序执行到这里表示已找到一个空闲请求项. 于是我们在设置好的新请求项后就调用 add_request() 把它添加到请求队列中, 立刻退出. 
-	// 请求结构请参见 blk_drv/blk.h. req->sector 是读写操作的起始扇区号, req->buffer 是请求项存放数据的缓冲区.
+	// 已找到一个空闲请求项. 设置好新的请求项后就调用 add_request() 把它添加到请求队列中并退出. 
+	// (请求结构参见 blk_drv/blk.h). req->sector 是读写操作的起始扇区号, req->buffer 是请求项存放数据的缓冲区.
 	req->dev = bh->b_dev;								// 设备号.
 	req->cmd = rw;										// 命令(READ/WRITE).
 	req->errors = 0;									// 操作时产生的错误次数.
 	req->sector = bh->b_blocknr << 1;					// 起始扇区. 块号转换成扇区号(1 块 = 2 扇区).
 	req->nr_sectors = 2;								// 本请求项需要读写的扇区数.
-	req->buffer = bh->b_data;							// 请求项缓冲区指针指向需读写的数据缓冲区.
-	req->waiting = NULL;								// 任务等待操作执行完成的地方.
+	req->buffer = bh->b_data;							// 请求项缓冲区指向需要读写的缓存头的数据缓冲区.
+	req->waiting = NULL;								// 等待该请求完成的任务.
 	req->bh = bh;										// 缓冲块头指针.
 	req->next = NULL;									// 指向下一请求项.
 	add_request(major + blk_dev, req);					// 将请求项加入队列中(major + blk_dev ==> blk_dev[major], reg).

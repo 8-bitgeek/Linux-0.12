@@ -4,7 +4,7 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>
 
-#define NR_BLK_DEV	7	// 块设备类型数量.
+#define NR_BLK_DEV	7					// 块设备类型数量.
 /*
  * NR_REQUEST is the number of entries in the request-queue.
  * NOTE that writes may use only the low 2/3 of these: reads
@@ -41,7 +41,7 @@ struct request {
 	unsigned long sector;   			// 起始扇区. (1 缓冲块 = 2 扇区)
 	unsigned long nr_sectors;			// 读/写扇区数.
 	char * buffer;                  	// 数据缓冲区(主内存区).
-	struct task_struct * waiting;   	// 任务等待请求完成操作的地方(队列).
+	struct task_struct * waiting;   	// 等待该请求完成操作的任务.
 	struct buffer_head * bh;        	// 高速缓冲区头指针(include/linux/fs.h).
 	struct request * next;          	// 指向下一请求项.
 };
@@ -55,7 +55,8 @@ struct request {
  * 下面的定义用于电梯算法: 注意读操作总是在写操作之前进行. 这是很自然的: 读操作对时间的要求要比写操作严格得多.
  */
 // 下面宏中参数 s1 和 s2 的取值是上面定义的请求结构 request 的指针. 
-// 该宏定义用于根据两个参数指定的请求项结构中的信息(命令 cmd(READ 或 WRITE), 设备号 dev 以及所操作的扇区号 sector)来判断出两个请求项结构的前后排列顺序.
+// 该宏定义用于根据两个参数指定的请求项结构中的信息(命令 cmd(READ 或 WRITE), 
+// 设备号 dev 以及所操作的扇区号 sector)来判断出两个请求项结构的前后排列顺序.
 // 这个顺序将用作访问块设备时的请求项执行顺序. 这个宏会在程序 blk_drv/ll_rw_blk.c 中函数 add_request() 中被调用.
 // 该部分地实现了 I/O 调度功能, 即实现了对请求项的排序功能(另一个是请求项合并功能).
 #define IN_ORDER(s1, s2) \
@@ -66,7 +67,7 @@ struct request {
 // 块设备处理结构.
 struct blk_dev_struct {
 	void (*request_fn)(void);							// 请求处理函数指针, 执行真正的读取、写入等操作
-	struct request * current_request;					// 当前处理的请求结构.
+	struct request * current_request;					// 当前处理的请求指针链表.
 };
 
 extern struct blk_dev_struct blk_dev[NR_BLK_DEV];       // 块设备表(数组). 每种块设备占用一项, 共 7 项.
@@ -77,7 +78,8 @@ extern struct task_struct * wait_for_request;           // 等待空闲请求项
 // 该总块数数组每一项对应子设备号确定的一个子设备上所拥有的数据块总数(1 块大小 = 1KB).
 extern int * blk_size[NR_BLK_DEV];
 
-// 在块设备驱动程序(如 hd.c)包含此头文件时, 必须先定义驱动程序处理设备的主设备号. 这样, 在下面行就能为包含本文件的驱动程序给出正确的宏定义.
+// 在块设备驱动程序(如 hd.c)包含此头文件时, 必须先定义驱动程序处理设备的主设备号. 
+// 这样, 在下面行就能为包含本文件的驱动程序给出正确的宏定义.
 #ifdef MAJOR_NR		// 主设备号.
 
 /*
@@ -125,7 +127,8 @@ extern int * blk_size[NR_BLK_DEV];
 
 #endif
 
-// 为了便于编程表示, 这里定义了两个宏: CURENT 是指定主设备号的当前请求结构项指针, CURRENT_DEV 是当前请求项 CURRENT 中设备号.
+// 为了便于编程表示, 这里定义了两个宏: CURRENT 是指定主设备号的当前请求结构项指针, 
+// CURRENT_DEV 是当前请求项 CURRENT 中设备号.
 #define CURRENT (blk_dev[MAJOR_NR].current_request)
 #define CURRENT_DEV DEVICE_NR(CURRENT->dev)
 
@@ -144,7 +147,8 @@ int DEVICE_TIMEOUT = 0;
 static void (DEVICE_REQUEST)(void);
 
 // 解锁指定的缓冲块.
-// 如果指定缓冲块 bh 并没有被上锁, 则显示警告信息. 否则将该缓冲块解锁, 并唤醒等待该缓冲块的进程. 此为内嵌函数. 参数是缓冲块头指针.
+// 如果指定缓冲块 bh 并没有被上锁, 则显示警告信息. 
+// 否则将该缓冲块解锁, 并唤醒等待该缓冲块的进程. 此为内嵌函数. 参数是缓冲块头指针.
 static inline void unlock_buffer(struct buffer_head * bh)
 {
 	if (!bh->b_lock)
@@ -157,7 +161,8 @@ static inline void unlock_buffer(struct buffer_head * bh)
 // 参数 uptodate 是更新标志.
 // 首先关闭指定块设备, 然后检查此次读写缓冲区是否有效. 如果有效则根据参数值设置缓冲区数据更新标志, 并解锁该缓冲区. 
 // 如果更新标志参数值是 0, 表示此次请求项的操作失败, 因此显示相关块设备IO错误信息. 
-// 最后, 唤醒等待该请求项的进程以及等待空闲请求项出现的进程, 释放并从请求链表中删除本请求项, 并把当前请求项指针指向下一请求项.
+// 最后, 唤醒等待该请求项的进程以及等待空闲请求项出现的进程, 释放并从请求链表中删除本请求项, 
+// 并把当前请求项指针指向下一请求项.
 static inline void end_request(int uptodate)
 {
 	DEVICE_OFF(CURRENT->dev);							// 关闭设备. (实际上好像只有软盘有关闭设备的函数.)
@@ -176,14 +181,16 @@ static inline void end_request(int uptodate)
 	CURRENT = CURRENT->next;							// 指向下一请求项.
 }
 
-// 如果定义了设备超时符号常量 DEVICE_TIMEOUT, 则定义 CLEAR_DEVICE_TIMEOUT 符号常量为 "DEVICE_TIMEOUT = 0". 否则定义 CLEAR_DEVICE_TIMEOUT 为空.
+// 如果定义了设备超时符号常量 DEVICE_TIMEOUT, 
+// 则定义 CLEAR_DEVICE_TIMEOUT 符号常量为 "DEVICE_TIMEOUT = 0", 否则定义 CLEAR_DEVICE_TIMEOUT 为空.
 #ifdef DEVICE_TIMEOUT
 #define CLEAR_DEVICE_TIMEOUT DEVICE_TIMEOUT = 0;
 #else
 #define CLEAR_DEVICE_TIMEOUT
 #endif
 
-// 如果定义了设备中断符号常量 DEVICE_INTR, 则定义 CLEAR_DEVICE_INTR 符号常量为 "DEVICE_INTR = 0", 否则定义其为空.
+// 如果定义了设备中断符号常量 DEVICE_INTR, 
+// 则定义 CLEAR_DEVICE_INTR 符号常量为 "DEVICE_INTR = 0", 否则定义其为空.
 #ifdef DEVICE_INTR
 #define CLEAR_DEVICE_INTR DEVICE_INTR = 0;
 #else
@@ -191,7 +198,8 @@ static inline void end_request(int uptodate)
 #endif
 
 // 定义初始化请求项宏.
-// 由于几个块设备驱动程序开始处对请求项的初始化操作相似, 因此这里为它们定义了一个统一的初始化宏. 该宏用于对当前请求项进行一些有效性判断. 
+// 由于几个块设备驱动程序开始处对请求项的初始化操作相似, 因此这里为它们定义了一个统一的初始化宏. 
+// 该宏用于对当前请求项进行一些有效性判断. 
 // 所做工作如下: 如果设备当前请求项为空(NULL), 表示该设备目前已无需要处理的请求项. 于是略作扫尾就退出相应函数. 
 // 否则, 如果当前请求项中设备的主设备号不等于驱动程序定义的主设备号, 说明请求项队列乱掉了, 于是内核显示出错信息并停机. 
 // 否则若请求中用的缓冲块没有被锁定, 也说明内核程序出了问题, 于是显示出错信息并停机.
