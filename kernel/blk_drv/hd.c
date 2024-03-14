@@ -223,12 +223,14 @@ int sys_setup(void * BIOS)
 			printk("Bad partition table on drive %d\n\r", drive);
 			panic("");
 		}
-		p = 0x1BE + (void *)bh->b_data;	 							// 分区表位于第 1(0) 扇区 0x1BE 处.
+		p = 0x1BE + (void *)bh->b_data;	 				// 分区表位于第 1(0) 扇区 0x1BE 开始处.
 		for (i = 1; i < 5; i++, p++) {
-			hd[i + 5 * drive].start_sect = p->start_sect; 			// hd[1] 表示第一个硬盘的第一个分区; hd[6] 表示第二个硬盘的第一个分区.
-			hd[i + 5 * drive].nr_sects = p->nr_sects; 				// 一个硬盘的第 0 个扇区一般是主引导扇区. 所以 start_sect == 1 或更大的值.
+			// hd[1] 表示第一个硬盘的第一个分区; hd[6] 表示第二个硬盘的第一个分区.
+			hd[i + 5 * drive].start_sect = p->start_sect;
+			// 一个硬盘的第 0 个扇区一般是主引导扇区. 所以 start_sect == 1 或更大的值.
+			hd[i + 5 * drive].nr_sects = p->nr_sects;
 		}
-		brelse(bh);													// 释放为存放硬盘数据块而申请的缓冲区.
+		brelse(bh);										// 释放为了存放硬盘数据块而申请的缓冲区.
     }
 	// 现在再对每个分区中的数据块总数进行统计, 并保存在硬盘分区总数据数组 hd_sizes[] 中. 
 	// 然后让设备数据块总数指针数组的本设备项指向该数组.

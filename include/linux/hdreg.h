@@ -38,14 +38,14 @@
 /* Values for HD_COMMAND */
 /* 硬盘命令值(HD_CMD) */
 #define WIN_RESTORE		0x10		// 驱动器重新校正(驱动器复位).
-#define WIN_READ		0x20		// 读扇区
-#define WIN_WRITE		0x30		// 写扇区
-#define WIN_VERIFY		0x40		// 扇区检验
-#define WIN_FORMAT		0x50		// 格式化磁道
-#define WIN_INIT		0x60		// 控制器初始化
-#define WIN_SEEK 		0x70		// 寻道
-#define WIN_DIAGNOSE	0x90		// 控制器诊断
-#define WIN_SPECIFY		0x91		// 建立驱动器参数
+#define WIN_READ		0x20		// 读扇区.
+#define WIN_WRITE		0x30		// 写扇区.
+#define WIN_VERIFY		0x40		// 扇区检验.
+#define WIN_FORMAT		0x50		// 格式化磁道.
+#define WIN_INIT		0x60		// 控制器初始化.
+#define WIN_SEEK 		0x70		// 寻道.
+#define WIN_DIAGNOSE	0x90		// 控制器诊断.
+#define WIN_SPECIFY		0x91		// 建立驱动器参数.
 
 /* Bits for HD_ERROR */
 /* 错误寄存器各位的含义(HD_ERROR) */
@@ -72,14 +72,14 @@
 // 硬盘分区表结构.
 struct partition {
 	unsigned char boot_ind;		/* 0x80 - active (unused) */ 			// 引导标志.
-	unsigned char head;			/* ? */ 								// 分区起始磁头号.
-	unsigned char sector;		/* ? */ 								// 分区起始扇区号(位 0-5)和起始柱面号高 2 位(位 6-7).
-	unsigned char cyl;			/* ? */ 								// 分区起始柱面号低 8 位.
-	unsigned char sys_ind;		/* ? */ 								// 分区类型字节. 0x0b - DOS; 0x80 - Old Minix; 0x83 - Linux ...
-	unsigned char end_head;		/* ? */ 								// 分区的结束磁头号.
-	unsigned char end_sector;	/* ? */ 								// 结束扇区号(位 0-5)和结束柱面号高 2 位(位 6-7).
-	unsigned char end_cyl;		/* ? */ 								// 结束柱面号低 8 位.
-	unsigned int start_sect;	/* starting sector counting from 0 */	// 分区起始物理扇区号. 以整个硬盘上的所有扇区从 0 计起.
+	unsigned char head;			/* ? */ 		// 分区起始磁头号.
+	unsigned char sector;		/* ? */ 		// 分区起始扇区号(位 0-5)和起始柱面号高 2 位(位 6-7).
+	unsigned char cyl;			/* ? */ 		// 分区起始柱面号低 8 位.
+	unsigned char sys_ind;		/* ? */ 		// 分区类型字节. 0x0b - DOS; 0x80 - Old Minix; 0x83 - Linux ...
+	unsigned char end_head;		/* ? */ 		// 分区的结束磁头号.
+	unsigned char end_sector;	/* ? */ 		// 结束扇区号(位 0-5)和结束柱面号高 2 位(位 6-7).
+	unsigned char end_cyl;		/* ? */ 		// 结束柱面号低 8 位.
+	unsigned int start_sect;	/* starting sector counting from 0 */	// 分区起始物理扇区号. 整个硬盘上的所有扇区从 0 计起.
 	unsigned int nr_sects;		/* nr of sectors in partition */ 		// 分区占用的扇区数.
 };
 
