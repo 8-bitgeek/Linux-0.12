@@ -95,7 +95,7 @@ struct buffer_head {
 	unsigned short b_dev;				/* device (0 = free) */						// 数据源的设备号.
 	unsigned char b_uptodate;  			// 更新标志: 表示数据是否已更新(最新的).
 	unsigned char b_dirt;				/* 0 - clean, 1 - dirty */					// 修改(脏)标志: 0 未修改, 1 已修改.
-	unsigned char b_count;				/* users using this block */				// 使用用户数.
+	unsigned char b_count;				/* users using this block */				// 该缓冲块的使用用户数.
 	unsigned char b_lock;				/* 0 - ok, 1 - locked */					// 缓冲区是否被锁定.
 	struct task_struct * b_wait;		// 指向等待该缓冲区解锁的进程.
 	struct buffer_head * b_prev;		// hash 队列上前一块(这四个指针用于缓冲区的管理).

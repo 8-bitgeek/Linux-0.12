@@ -37,7 +37,8 @@ int	rd_length = 0;								// 虚拟盘所占内存大小(字节).
 
 // 虚拟盘当前请求项操作函数.
 // 该函数的程序结构与硬盘的 do_hd_request() 函数类似. 
-// 在低级块设备接口函数 ll_rw_block() 建立起虚拟盘(rd)的请求项并添加到 rd 的链表中之后, 就会调用该函数对 rd 当前请求项进行处理.
+// 在低级块设备接口函数 ll_rw_block() 建立起虚拟盘(rd)的请求项并添加到 rd 的链表中之后, 
+// 就会调用该函数对 rd 当前请求项进行处理.
 // 该函数首先计算当前请求项中指定起始扇区对应虚拟盘所处内存的起始位置 addr 和要求的扇区数对应的字节长度值 len, 
 // 然后根据请求项中的命令进行操作. 若是写命令 WRITE, 就把请求项所指缓冲区中的数据直接复制到内存位置 addr 处. 
 // 若是读操作作反之. 数据复制完成后即可直接调用 end_request() 对本次请求项作结束处理. 
@@ -54,7 +55,8 @@ void do_rd_request(void)
 	INIT_REQUEST;
 	addr = rd_start + (CURRENT->sector << 9);
 	len = CURRENT->nr_sectors << 9;
-	// 如果当前请求项中子设备号不为 1 或者对应内存起始位置大于虚拟盘末尾, 则结束该请求项, 并跳转到 repeat 处去处理下一个虚拟盘请求项. 
+	// 如果当前请求项中子设备号不为 1 或者对应内存起始位置大于虚拟盘末尾, 则结束该请求项, 
+	// 并跳转到 repeat 处去处理下一个虚拟盘请求项. 
 	// 标号 repeat 定义在宏 INIT_REQUEST 内, 位于宏的开始处, 参见 blk.h 文件. 
 	if ((MINOR(CURRENT->dev) != 1) || (addr + len > rd_start + rd_length)) {
 		end_request(0);
@@ -82,9 +84,11 @@ void do_rd_request(void)
  */
 /* 返回内存虚拟盘 ramdisk 所需的内存量 */
 // 虚拟盘初始化函数.
-// 该函数首先设置虚拟盘设备的请求项处理函数指针指向 do_rd_request(), 然后确定虚拟盘在物理内存中的起始地址, 占用字节长度值. 
-// 并对整个虚拟盘区清零. 最后返回盘区长度. 当 linux/Makefile 文件中设置过 RAMDISK 值不为零时, 表示系统中会创建 RAM 虚拟盘设备. 
-// 在这种情况下的内核初始化过程中, 本函数就会被调用(init/main.c). 该函数在第 2 个参数 length 会被赋值成 RAMDISK * 1024, 单位为字节.
+// 该函数首先设置虚拟盘设备的请求项处理函数指针指向 do_rd_request(), 
+// 然后确定虚拟盘在物理内存中的起始地址, 占用字节长度值. 并对整个虚拟盘区清零. 最后返回盘区长度. 
+// 当 linux/Makefile 文件中设置过 RAMDISK 值不为零时, 表示系统中会创建 RAM 虚拟盘设备. 
+// 在这种情况下的内核初始化过程中, 本函数就会被调用(init/main.c). 
+// 该函数在第 2 个参数 length 会被赋值成 RAMDISK * 1024, 单位为字节.
 long rd_init(long mem_start, int length)
 {
 	int	i;
@@ -106,7 +110,8 @@ long rd_init(long mem_start, int length)
  * floppy, and we later change it to be ram disk.
  */
 /*
- * 如果根文件设备(root device)是 ramdisk 的话, 则尝试加载它. root device 原先是指向软盘的, 我们将它改成指向 ramdisk.
+ * 如果根文件设备(root device)是 ramdisk 的话, 则尝试加载它. 
+ * root device 原先是指向软盘的, 我们将它改成指向 ramdisk.
  */
 // 尝试根文件系统加载到虚拟盘中.
 // 该函数将在内核设置函数 setup()(kernel/blk_drv/hd.c) 中被调用. 另外, 1 磁盘块 = 1024 字节. 
@@ -143,10 +148,12 @@ void rd_load(void)
 		/* No ram disk image present, assume normal floppy boot */
         /* 磁盘中没有 ramdisk 映像文件, 退出去执行通常的软盘引导 */
 		return;
-	// 然后我们试图把整个根文件系统读入在内存虚拟盘区中. 对于一个文件系统来说, 其超级块结构的 s_nzones 字段中保存着总逻辑块数(或称为区段数). 
-	// 一个逻辑块中含有的数据块数则由字段 s_log_zone_size 指定. 因此文件系统中的数据块总数 nblocks 就等于(逻辑块数 *2^(每区段块数的次方)), 
-	// 即 nblocks = (s_nzones * 2^s_log_zone_size). 如果遇到文件系统中数据块总数大于内存虚拟盘所能容纳的块数的情况, 则不能执行加载操作, 
-	// 而只能显示出错信息并返回.
+	// 然后我们试图把整个根文件系统读入在内存虚拟盘区中. 
+	// 对于一个文件系统来说, 其超级块结构的 s_nzones 字段中保存着总逻辑块数(或称为区段数). 
+	// 一个逻辑块中含有的数据块数则由字段 s_log_zone_size 指定. 
+	// 因此文件系统中的数据块总数 nblocks 就等于(逻辑块数 *2^(每区段块数的次方)), 
+	// 即 nblocks = (s_nzones * 2^s_log_zone_size). 
+	// 如果遇到文件系统中数据块总数大于内存虚拟盘所能容纳的块数的情况, 则不能执行加载操作, 而只能显示出错信息并返回.
 	nblocks = s.s_nzones << s.s_log_zone_size;
 	if (nblocks > (rd_length >> BLOCK_SIZE_BITS)) {
 		printk("Ram disk image too big!  (%d blocks, %d avail)\n",
@@ -155,7 +162,8 @@ void rd_load(void)
 	}
 	// 若虚拟盘能容纳得下文件系统总数据块数, 则我们显示加载数据信息, 并让 cp 指向内存虚拟盘起始处, 
 	// 然后开始执行循环操作将磁盘上根文件系统映像加载到虚拟盘上. 
-	// 在操作过程中, 如果一次需要加载的盘块数大于 2 块, 我们就是用超前预读函数 breada(), 否则就使用 bread() 函数进行单块读取. 
+	// 在操作过程中, 如果一次需要加载的盘块数大于 2 块, 我们就是用超前预读函数 breada(), 
+	// 否则就使用 bread() 函数进行单块读取. 
 	// 若在读盘过程中出现 I/O 操作错误, 就只能放弃加载过程返回. 
 	// 所读取的磁盘块会使用 memcpy() 函数从高速缓冲区中复制到内存虚拟盘相应位置处, 同时显示已加载的块数.
 	// 显示字符串中的八进制数 '\010' 表示显示一个制表符.
@@ -179,6 +187,7 @@ void rd_load(void)
 		nblocks--;
 		i++;
 	}
-	// 当 boot 盘中从 256 盘块开始的整个文件系统加载完毕后, 我们显示 "done", 并把目前根文件设备号修改成虚拟盘的设备号 0x0101, 返回.
+	// 当 boot 盘中从 256 盘块开始的整个文件系统加载完毕后, 
+	// 我们显示 "done", 并把目前根文件设备号修改成虚拟盘的设备号 0x0101, 返回.
 	ROOT_DEV = 0x0101;
 }

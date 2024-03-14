@@ -69,7 +69,7 @@
 #define ECC_ERR		0x40	/* ? */
 #define	BBD_ERR		0x80	/* ? */
 
-// 硬盘分区表结构.
+// 硬盘分区表结构: 每个结构体保存一个分区的数据, 所有的分区信息组成一个分区表(struct partition[] ...).
 struct partition {
 	unsigned char boot_ind;		/* 0x80 - active (unused) */ 			// 引导标志.
 	unsigned char head;			/* ? */ 		// 分区起始磁头号.

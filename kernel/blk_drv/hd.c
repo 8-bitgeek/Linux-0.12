@@ -30,7 +30,7 @@
 //#include <asm/segment.h>
 
 // 定义硬盘主设备号符号常数. 在驱动程序中, 主设备号必须在包含 blk.h 文件之前被定义.
-// 因为 blk.h 文件中要用到这个符号常数来确定一些列其他相关符号常数和宏.
+// 因为 kernel/blk_drv/blk.h 文件中要用到这个符号常数来确定一些列其他相关符号常数和宏.
 #define MAJOR_NR 3									// 硬盘主设备号是 3
 #include "blk.h"
 
@@ -84,14 +84,14 @@ struct hd_i_struct hd_info[] = { {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0} };
 static int NR_HD = 0;
 #endif
 
-// 定义硬盘分区结构. 给出每个分区从硬盘 0 开始算起的物理起始扇区号和分区扇区总数. 
+// 定义硬盘分区(每个硬盘最多有 4 个分区)结构. 保存每个分区从硬盘 0 开始算起的物理起始扇区号和分区扇区总数. 
 // 其中 5 的倍数处的项(例如 hd[0] 和 hd[5] 等)代表整个硬盘的参数.
 static struct hd_struct {
-	long start_sect;				// 分区在硬盘中起始物理(绝对)扇区. (扇区 0 一般用于主引导扇区, 所以 start_sect 一般最小是 1)
-	long nr_sects;					// 分区中扇区总数.
-} hd[5 * MAX_HD] = {{0, 0}, };
+	long start_sect;		// 分区起始(绝对)扇区. (扇区 0 一般用于主引导扇区, 所以 start_sect 一般最小是 1)
+	long nr_sects;			// 该分区拥有的扇区数.
+} hd[5 * MAX_HD] = {{0, 0}, }; 
 
-// 硬盘每个分区数据块总数数组.
+// 硬盘每个分区数据块总数(扇区数 / 2)数组.
 static int hd_sizes[5 * MAX_HD] = {0, };
 
 // 读端口嵌入汇编宏. 读端口 port, 共读 nr 字, 保存在 buf 中.
@@ -224,7 +224,7 @@ int sys_setup(void * BIOS)
 			panic("");
 		}
 		p = 0x1BE + (void *)bh->b_data;	 				// 分区表位于第 1(0) 扇区 0x1BE 开始处.
-		for (i = 1; i < 5; i++, p++) {
+		for (i = 1; i < 5; i++, p++) { 					// 保存每个分区的起始扇区及拥有的扇区数.(每个硬盘最多 4 个分区)
 			// hd[1] 表示第一个硬盘的第一个分区; hd[6] 表示第二个硬盘的第一个分区.
 			hd[i + 5 * drive].start_sect = p->start_sect;
 			// 一个硬盘的第 0 个扇区一般是主引导扇区. 所以 start_sect == 1 或更大的值.
@@ -232,11 +232,11 @@ int sys_setup(void * BIOS)
 		}
 		brelse(bh);										// 释放为了存放硬盘数据块而申请的缓冲区.
     }
-	// 现在再对每个分区中的数据块总数进行统计, 并保存在硬盘分区总数据数组 hd_sizes[] 中. 
+	// 现在再对每个分区中的数据块总数进行统计, 并保存在硬盘各分区总数据块数组 hd_sizes[] 中. 
 	// 然后让设备数据块总数指针数组的本设备项指向该数组.
-	for (i = 0 ; i < 5 * MAX_HD ; i++) {
+	for (i = 0; i < 5 * MAX_HD; i++) {
 		if (hd[i].nr_sects != 0)
-			Log(LOG_INFO_TYPE, "<<<<< HD Partition%d Info : start_sect = %d, nr_sects = %d >>>>>\n", i, hd[i].start_sect, hd[i].nr_sects);
+			Log(LOG_INFO_TYPE, "<<<<< HD Partition[%d] Info: start_sect = %d, nr_sects = %d, end_sect = %d >>>>>\n", i, hd[i].start_sect, hd[i].nr_sects, hd[i].start_sect + hd[i].nr_sects);
 		hd_sizes[i] = hd[i].nr_sects >> 1 ;
 	}
 	blk_size[MAJOR_NR] = hd_sizes;
@@ -249,7 +249,7 @@ int sys_setup(void * BIOS)
 	if (NR_HD)
 		Log(LOG_INFO_TYPE, "<<<<< Partition table%s ok. >>>>>\n\r",(NR_HD > 1) ? "s":"");
 	for (i = 0; i < NR_HD; i++)
-		Log(LOG_INFO_TYPE, "<<<<< HD%d Info: cyl = %d, head = %d, sect = %d, ctl = %x >>>>>\n", hd_info[i].cyl, hd_info[i].head, hd_info[i].sect, hd_info[i].ctl);
+		Log(LOG_INFO_TYPE, "<<<<< HD[%d] Info: cyl = %d, head = %d, sect = %d, ctl = %x >>>>>\n", i, hd_info[i].cyl, hd_info[i].head, hd_info[i].sect, hd_info[i].ctl);
 	rd_load();						// kernel/blk_drv/ramdisk.c
 	// 初始化交换设备使用位图, 如果存在交换设备, 则在内存中申请一页物理内存(4KB)生成交换内存位图信息 swap_bitmap. 
 	init_swapping();				// (mm/swap.c)
