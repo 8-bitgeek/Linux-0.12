@@ -126,23 +126,21 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 		dev->current_request = req; 	// 直接设置为该设备的当前请求项.
 		sti();							// 开中断.
 		(dev->request_fn)();			// 执行请求处理函数, 对于硬盘是 do_hd_request() (kernel/blk_drv/hd.c).
-		return;
-	}
-	// 如果目前该设备已经有当前请求项在处理, 则首先利用电梯算法搜索最佳插入位置, 然后将当前请求项插入到请求链表中. 
-	// 在搜索过程中, 如果判断出欲插入请求项的缓冲块头指针空, 即没有缓冲块, 那么就需要找一个项, 其已经有可用的缓冲块. 
+		return; 						// 读请求已将块设备中的数据读入高速缓冲区(buffer_head->data),
+	} 									// 或写请求已将高速缓冲区中的数据写入块设备.
+	// 如果目前该设备已经有请求项在处理, 则首先利用电梯算法搜索最佳插入位置, 然后将当前请求项插入到请求链表中. 
+	// 在搜索过程中, 如果要插入的请求项的缓冲块头指针空, 即没有缓冲块, 那么就需要找一个项, 其已经有可用的缓冲块. 
 	// 因此若当前插入位置(tmp 之后)处的空闲项缓冲块头指针不空, 就选择这个位置, 于是退出循环并把请求项插入此处. 
 	// 最后开中断并退出函数. 电梯算法的作用是让磁盘磁头的移动距离最小, 从而改善(减少)硬盘访问时间.
 	// 下面 for 循环中 if 语句用于把 req 所指请求项与请求队列(链表)中已有的请求项作比较, 
 	// 找出 req 插入该队列的正确位置顺序, 然后中断循环, 并把 req 插入到该队列正确位置处.
-	for ( ; tmp->next; tmp = tmp->next) {
-		if (!req->bh)
+	for ( ; tmp->next; tmp = tmp->next) { 		// tmp 开始时指向当前正在处理的请求.
+		if (!req->bh) 							// 如果新的请求项没有缓冲块.
 			if (tmp->next->bh)
 				break;
 			else
 				continue;
-		if ((IN_ORDER(tmp, req) ||
-		    !IN_ORDER(tmp, tmp->next)) &&
-		    IN_ORDER(req, tmp->next))
+		if ((IN_ORDER(tmp, req) || !IN_ORDER(tmp, tmp->next)) && IN_ORDER(req, tmp->next))
 			break;
 	}
 	req->next = tmp->next;

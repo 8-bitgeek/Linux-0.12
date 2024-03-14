@@ -35,10 +35,10 @@
  * 在分页处理中 'bh' 是 NULL, 而 'waiting' 则用于等待读/写的完成.
  */
 struct request {
-	int dev;							/* -1 if no request */		// 请求的设备号
+	int dev;							/* -1 if no request */		// 请求的设备号.
 	int cmd;							/* READ or WRITE */			// READ 或 WRITE 命令.
 	int errors;             			// 操作时产生的错误次数.
-	unsigned long sector;   			// 起始扇区. (1 缓冲块 = 2 扇区)
+	unsigned long sector;   			// 分区内的扇区号. (1 缓冲块 = 2 扇区)
 	unsigned long nr_sectors;			// 读/写扇区数.
 	char * buffer;                  	// 数据缓冲区(主内存区).
 	struct task_struct * waiting;   	// 等待该请求完成操作的任务.
@@ -127,7 +127,7 @@ extern int * blk_size[NR_BLK_DEV];
 
 #endif
 
-// 为了便于编程表示, 这里定义了两个宏: CURRENT 是指定主设备号的当前请求结构项指针, 
+// 为了便于编程表示, 这里定义了两个宏: CURRENT 是指定主设备号的当前请求项指针, 
 // CURRENT_DEV 是当前请求项 CURRENT 中设备号.
 #define CURRENT (blk_dev[MAJOR_NR].current_request)
 #define CURRENT_DEV DEVICE_NR(CURRENT->dev)
