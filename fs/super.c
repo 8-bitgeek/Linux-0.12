@@ -36,7 +36,7 @@ __asm__("bt %2, %3; setb %%al":"=a" (__res):"a" (0),"r" (bitnr),"m" (*(addr))); 
 
 struct super_block super_block[NR_SUPER];					// 超级块结构表数组(NR_SUPER = 8)
 /* this is initialized in init/main.c */
-/* ROOT_DEV 已在 init/main.c 中被初始化 */
+/* ROOT_DEV 已在 init/main.c 中被初始化. */
 int ROOT_DEV = 0;											// 根文件系统设备号.
 
 // 以下 3 个函数(lock_super(), free_super() 和 wait_on_super()) 的作用与 inode.c 文件中头 ３ 个函数的作用相同, 
@@ -207,9 +207,10 @@ static struct super_block * read_super(int dev)
 		s->s_imap[i] = NULL;
 	for (i = 0; i < Z_MAP_SLOTS; i++)
 		s->s_zmap[i] = NULL;
-	block = 2; 											// 2 号块保存 i 节点位图(引导块 - 超级块 - i 节点位图 - 逻辑块位图 - i 节点 - 数据区).
+	block = 2; 			// 2 号块保存 i 节点位图(引导块 - 超级块 - i 节点位图 - 逻辑块位图 - i 节点 - 数据区).
 	// 从第二逻辑块号(2 号块)开始读取 i 节点位图.
-	for (i = 0; i < s->s_imap_blocks; i++)				// 读取块设备中 i 节点位图信息到高速缓冲区, 并设置超级块信息指向这些缓冲区.
+	// 读取块设备中 i 节点位图信息到高速缓冲区, 并设置超级块信息指向这些缓冲区.
+	for (i = 0; i < s->s_imap_blocks; i++)
 		if (s->s_imap[i] = bread(dev, block))
 			block++;
 		else
@@ -354,7 +355,7 @@ int sys_mount(char * dev_name, char * dir_name, int rw_flag)
 // 安装根文件系统. 该函数属于系统初始化操作的一部分. 
 // 函数首先初始化文件表数组 file_table[](fs/file_table.c) 和超级块表(数组), 
 // 然后读取根文件系统超级块, 并取得文件系统根 i 节点. 
-// 最后统计并显示出根文件系统上的可用资源(空闲块数和空闲 i 节点数 0. 
+// 最后统计并显示出根文件系统上的可用资源(空闲块数和空闲 i 节点数). 
 // 该函数会在系统开机进行初始化设置时(sys_setup())调用(kernel/blk_drv/hd.c).
 void mount_root(void)
 {
@@ -365,17 +366,17 @@ void mount_root(void)
 	// 若磁盘 i 节点结构不是 32 字节, 则出错停机. 该判断用于防止修改代码时出现不一致情况.
 	if (32 != sizeof (struct d_inode))
 		panic("bad i-node size");
-	// 首先初始化文件表数组(共 64 项, 即系统同时只能打开 64 个文件)和超级块表. 
+	// 首先初始化文件表数组(共 64 项, 即系统只能同时打开 64 个文件)和超级块表. 
 	// 这里将所有文件结构中的引用计数设置为 0(表示空闲), 并把超级块表中各项结构的设备字段初始化为 0(也表示空闲). 
 	// 如果根文件系统所在设备是软盘的话, 就提示 "插入根文件系统盘, 并按回车键", 并等待按键.
-	for(i = 0; i < NR_FILE; i++)									// 初始化文件表.
-		file_table[i].f_count = 0; 									// (fs/file_table.c)
-	if (MAJOR(ROOT_DEV) == 2) {										// 如果是 ROOT_DEV(根文件设备)是软盘, 则提示插入根文件系统盘.
+	for (i = 0; i < NR_FILE; i++)							// 初始化文件表.
+		file_table[i].f_count = 0; 							// (fs/file_table.c)
+	if (MAJOR(ROOT_DEV) == 2) {								// 如果是 ROOT_DEV(根文件设备)是软盘, 则提示插入根文件系统盘.
 		printk("Insert root floppy and press ENTER\r\n");
 		wait_for_keypress();
 	}
 	for(p = &super_block[0]; p < &super_block[NR_SUPER]; p++) {
-		p->s_dev = 0;												// 初始化超级块表
+		p->s_dev = 0;										// 初始化超级块表.
 		p->s_lock = 0;
 		p->s_wait = NULL;
 	}
@@ -390,11 +391,11 @@ void mount_root(void)
 	// 因为下面 266 行上也引用了该 i 节点. 另外, iget() 函数中 i 节点引用计数已被设置为 1. 
 	// 然后置该超级块的被安装文件系统 i 节点和被安装到 i 节点字段为该 i 节点.
 	// 再设置当前进程的当前工作目录和根目录 i 节点. 此时当前进程是 1 号进程(init 进程).
-	mi->i_count += 3 ;										/* NOTE! it is logically used 4 times, not 1 */
-                                							/* 注意! 从逻辑上讲, 它已被引用了 4 次, 而不是 1 次 */
-	p->s_isup = p->s_imount = mi; 							// 设置根目录及超级块被安装到的 i 节点.
-	current->pwd = mi; 										// 设置当前任务的工作目录 i 节点.
-	current->root = mi; 									// 设置当前任务的根目录 i 节点.
+	mi->i_count += 3 ;								/* NOTE! it is logically used 4 times, not 1 */
+                                					/* 注意! 从逻辑上讲, 它已被引用了 4 次, 而不是 1 次 */
+	p->s_isup = p->s_imount = mi; 					// 设置根目录及超级块被安装到的 i 节点.
+	current->pwd = mi; 								// 设置当前任务的工作目录 i 节点.
+	current->root = mi; 							// 设置当前任务的根目录 i 节点.
 	// 然后我们对根文件系统上的资源作统计工作. 统计该设备上空闲块数和空闲 i 节点数. 
 	// 首先令 i 等于超级块中表明的设备逻辑块总数. 
 	// 然后根据逻辑块位图中相应位的占用情况统计出空闲块数. 

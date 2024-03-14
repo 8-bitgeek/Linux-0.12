@@ -58,7 +58,7 @@ void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 
 #define NR_OPEN 		20								// 进程能打开的最大文件数.
 #define NR_INODE 		64								// 系统同时能打开(使用)的最大 i 节点个数.
-#define NR_FILE 		64								// 系统能同时打开的最多文件个数(文件数组项数).
+#define NR_FILE 		64								// 系统能同时打开的最大文件个数(文件数组项数).
 #define NR_SUPER 		8								// 系统所含超级块个数(超级块数组项数).
 #define NR_HASH 		307								// 高速缓冲区 Hash 表数组项数值.
 #define NR_BUFFERS 		nr_buffers						// 系统所含缓冲个数. 初始化后不再改变.
