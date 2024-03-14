@@ -423,11 +423,11 @@ struct buffer_head * bread(int dev, int block)
 	if (bh->b_uptodate)
 		return bh;
 	// 否则我们就调用底层块设备读写 ll_rw_block() 函数, 产生读设备块请求. 
-	// 然后等待指定数据块被读入, 并等待缓冲区解锁. 
+	// 然后等待指定数据块被读入, 并阻塞等待缓冲区解锁. 
 	// 在睡眠醒来之后, 如果该缓冲区已更新, 则返回缓冲区头指针, 退出. 
 	// 否则表明读设备操作失败, 于是释放该缓冲区, 返回 NULL, 退出.
 	ll_rw_block(READ, bh);
-	wait_on_buffer(bh);
+	wait_on_buffer(bh); 						// 阻塞等待数据缓冲完成.
 	if (bh->b_uptodate)
 		return bh;
 	brelse(bh);

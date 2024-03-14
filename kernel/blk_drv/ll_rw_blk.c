@@ -227,7 +227,7 @@ repeat:
 	req->waiting = NULL;								// 等待该请求完成的任务.
 	req->bh = bh;										// 缓冲块头指针.
 	req->next = NULL;									// 指向下一请求项.
-	add_request(major + blk_dev, req);					// 将请求项加入队列中(major + blk_dev ==> blk_dev[major], reg).
+	add_request(major + blk_dev, req);					// 将请求项加入队列中(major + blk_dev ==> blk_dev[major], req).
 }
 
 // 低级页面读写函数(Low Level Read Write Pagk).

@@ -219,8 +219,7 @@ int sys_setup(void * BIOS)
 			printk("Unable to read partition table of drive %d\n\r", drive);
 			panic("");
 		}
-		if (bh->b_data[510] != 0x55 || (unsigned char)
-		    bh->b_data[511] != 0xAA) {								// 判断硬盘标志 0xAA55.
+		if (bh->b_data[510] != 0x55 || (unsigned char) bh->b_data[511] != 0xAA) {	// 判断硬盘标志 0xAA55. 
 			printk("Bad partition table on drive %d\n\r", drive);
 			panic("");
 		}
@@ -308,7 +307,7 @@ static void hd_out(unsigned int drive, unsigned int nsect, unsigned int sect,
 		panic("Trying to write bad sector");
 	if (!controller_ready())
 		panic("HD controller not ready");
-	// 接着我们设置硬盘中断发生时将调用的 C 函数指针 do_hd(该函数指针定义在 blk.h 文件). 
+	// 接着我们设置硬盘中断发生时将调用的 C 函数指针 do_hd(该函数指针定义在 kernel/blk_drv/blk.h 文件). 
 	// 然后在向硬盘控制器发送参数和命令之前, 规定要先向控制器命令端口(0x3f6)发送指定硬盘的控制字节, 
 	// 以建立相应的硬盘控制方式. 
 	// 该控制字节即是硬盘信息结构数组中的 ctl 字节. 然后向控制器端口 0x1f1 - 0x1f7 发送 7 字节的参数命令块.
