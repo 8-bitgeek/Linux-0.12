@@ -230,7 +230,7 @@ repeat:
 	add_request(major + blk_dev, req);					// 将请求项加入队列中(major + blk_dev ==> blk_dev[major], req).
 }
 
-// 低级页面读写函数(Low Level Read Write Pagk).
+// 低级页面读写函数(Low Level Read Write Page).
 // 以页面(4K)为单位访问设备数据, 即每次读/写 8 个扇区. 参见下面 ll_rw_blk() 函数. 
 // page - 要读取的页面号; buffer - 要缓存到的缓冲区指针.
 void ll_rw_page(int rw, int dev, int page, char * buffer)
@@ -299,7 +299,7 @@ void ll_rw_block(int rw, struct buffer_head * bh)
 		printk("Trying to read nonexistent block-device\n\r");
 		return;
 	}
-	make_request(major, rw, bh); 				// 创建请求项并插入到请求队列中.
+	make_request(major, rw, bh); 						// 创建请求项并插入到请求队列中.
 }
 
 // 块设备初始化函数, 由初始化程序 main.c 调用.

@@ -56,7 +56,7 @@ int SWAP_DEV = 0;							// 内核初始化时设置的交换设备号.
  * We page all other pages.
  */
 /*
- * 我们从不交换任务 0(task[0]) 的页面, 即不交换内核页面, 我们只对其他页面进行交换操作.
+ * 我们不会交换任务 0(task[0]) 的页面, 即不交换内核页面, 我们只对其他页面进行交换操作.
  */
 // 第 1 个虚拟内存页面, 即从任务 0 末端(64MB)处开始的虚拟内存页面.
 #define FIRST_VM_PAGE (TASK_SIZE >> 12)			// = 64MB/4KB = 16384
@@ -279,18 +279,19 @@ repeat:
 		:"0" (0), "i" (LOW_MEM), "c" (PAGING_PAGES), 	/* 输入寄存器列表: %1(=%0=eax), %2, %3(ecx); LOW_MEM = 1MB; PAGING_PAGES = 3840 */
 		"D" (mem_map + PAGING_PAGES - 1) 				/* %4(edi) */
 		:"dx");
-	if (__res >= HIGH_MEMORY)						// 页面地址大于实际内存容量则重新寻找
+	if (__res >= HIGH_MEMORY)				// 页面地址大于实际内存容量则重新寻找
 		goto repeat;
-	if (!__res && swap_out())						// 若没有得到空闲页面则执行交换处理, 并重新查找.
+	if (!__res && swap_out())				// 若没有得到空闲页面则执行交换处理, 并重新查找.
 		goto repeat;
-	return __res;									// 返回空闲物理页面地址.
+	return __res;							// 返回空闲物理页面地址.
 }
 
-// 内存交换初始化.
+// 交换内存初始化.
 void init_swapping(void)
 {
-	// blk_size[] 指向指定主设备号的块设备块数数组. 该块数数组每一项对应一个设备上所拥有的数据块总数(1 块大小 = 1KB).
-	extern int *blk_size[];							// kernel/blk_drv/ll_rw_blk.c 存放各个块设备大小的指针.
+	// blk_size[] 指向指定主设备号的块设备数据块总数数组. 
+	// 该块数数组每一项对应一个设备上所拥有的数据块总数(1 块大小 = 1KB).
+	extern int *blk_size[];					// 存放各个块设备大小的指针数组. (kernel/blk_drv/ll_rw_blk.c)
 	int swap_size, i, j;
 
 	// 如果没有定义交换设备则返回. 如果交换设备没有设置块数数组, 则显示并返回.
@@ -311,7 +312,7 @@ void init_swapping(void)
 	}
 	// 每页 4 个数据块(4096KB), 所以 swap_size >>= 2 计算出交换页面总数.
 	// 交换数据块总数转换成对应可交换页面总数. 该值不能大于 SWAP_BITS 所能表示的页面数. 即交换页面总数不得大于 32768.
-	swap_size >>= 2;
+	swap_size >>= 2; 								// swap_size /= 4.
 	if (swap_size > SWAP_BITS)
 		swap_size = SWAP_BITS;
 	// 然后从主内存区申请一页物理内存(4KB)来存放交换页面映射数组 swap_bitmap, 其中每 1 比特代表 1 页交换页面.
@@ -321,9 +322,9 @@ void init_swapping(void)
 		return;
 	}
 	// read_swap_page(nr, buffer) 被定义为 ll_rw_page(READ, SWAP_DEV, (nr), (buffer)). 
-	// 这里把交换设备上的页面 ０ 读到 swap_bitmap 页面中, 该页面是交换区管理页面. 
-	// 其中第 4086 字节开始处含有 10 个字符的交换设备特征字符串 "SWAP-SPACE". 
-	// 若没有找到该特征字符串, 则说明不是一个有效的交换设备.
+	// 这里把交换设备上的页面 0 读到 swap_bitmap 页面中, 该页面是交换区管理页面. 
+	// **其中第 4086 字节开始处含有 10 个字符的交换设备特征字符串 "SWAP-SPACE". 
+	// 若没有找到该特征字符串, 则说明不是一个有效的交换设备.**
 	// 于是显示信息, 释放刚申请的物理页面并退出函数. 否则将特征字符串字节清零.
 	read_swap_page(0, swap_bitmap);
 	if (strncmp("SWAP-SPACE", swap_bitmap + 4086, 10)) {
@@ -332,15 +333,18 @@ void init_swapping(void)
 		swap_bitmap = NULL;
 		return;
 	}
-	// 将交换设备的标志字符串 "SWAP-SPACE" 字符串清空
-	memset(swap_bitmap + 4086, 0, 10);
-	// 然后检查读入的交换位映射图. 
-	// 应该 32768 个位全为 0, 若位图中有置位的位(1), 则表示位图有问题, 于是显示出错信息, 释放位图占用的页面并退出函数. 
-	// 为了加快检查速度, 这里首先仅挑选查看位图 0 和最后一个交换页面对应的位, 
-	// 即 swap_size 交换页面对应的位, 以及随后到 SWAP_BITS(32768) 位.
-	for (i = 0 ; i < SWAP_BITS ; i++) {
+	// 将交换设备的标志字符串 "SWAP-SPACE" 字符串清空.
+	memset(swap_bitmap + 4086, 0, 10); 					// 用字符 'x' 填写指定长度的内存.
+	// 然后检查读入的交换位映射图. 其中共有 32768 个比特位. 
+	// 若位图中的比特位为 0, 则表示设备上对应的交换页面已被使用, 若比特位为 1, 则表示对应的交换页面可用.
+	// 因此对于设备上的交换分区, 第一个页面(页面 0)已被用作交换管理页面, 位为 0.
+	// 而页面 [1 -- swap_size-1] 是可用的, 因此它们对应在位图中的比特位应该均为 1(空闲).
+	// 位图中 [swap_size -- SWAP_BITS] 范围内的比特位由于没有交换分区中对应的交换页面, 所以它们应该被初始化为 0(占用).
+	// 先检查不可用的位图情况, 它们应该均为 0, 若这部分(0, swap_size--SWAP_BITS)位图中有置位的比特位(1), 
+	// 则表示位图有问题, 于是显示出错信息, 释放位图占用的页面并退出函数. 
+	for (i = 0; i < SWAP_BITS; i++) {
 		if (i == 1)
-			i = swap_size;
+			i = swap_size; 							// 跳到 swap_size 之后的位继续检查.
 		if (bit(swap_bitmap, i)) {
 			printk("Bad swap-space bit-map\n\r");
 			free_page((long) swap_bitmap);
@@ -348,17 +352,17 @@ void init_swapping(void)
 			return;
 		}
 	}
-	// 然后再仔细地检测位 1 到位 swap_size 所有位是否为 0. 
-	// 若存在不是 0 的位, 则表示位图有问题, 于是释放位图占用的页面并退出函数. 
+	// 然后再检查和统计[位 1 到位 swap_size]之间的所有比特位是否为 1(空闲). 
+	// 若统计出没有空闲的交换页面, 则表示交换功能有问题, 于是释放位图占用的内存页面并退出函数.
 	// 否则显示交换设备工作正常以及交换页面和交换空间总字节数.
 	j = 0;
-	for (i = 1 ; i < swap_size ; i++)
+	for (i = 1; i < swap_size; i++)
 		if (bit(swap_bitmap, i))
 			j++;
-	if (!j) {
+	if (!j) { 									// 如果没有空闲的交换页面, 则表示交换设备有问题.
 		free_page((long) swap_bitmap);
 		swap_bitmap = NULL;
 		return;
 	}
-	Log(LOG_INFO_TYPE, "<<<<< Swap device ok: %d pages (%d bytes) swap-space >>>>>\n\r", j, j * 4096);
+	Log(LOG_INFO_TYPE, "<<<<< Swap device ok: %d pages(%d bytes) swap-space. >>>>>\n\r", j, j * 4096);
 }

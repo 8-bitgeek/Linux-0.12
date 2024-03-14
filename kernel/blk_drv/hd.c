@@ -250,10 +250,10 @@ int sys_setup(void * BIOS)
 		Log(LOG_INFO_TYPE, "<<<<< Partition table%s ok. >>>>>\n\r",(NR_HD > 1) ? "s":"");
 	for (i = 0; i < NR_HD; i++)
 		Log(LOG_INFO_TYPE, "<<<<< HD[%d] Info: cyl = %d, head = %d, sect = %d, ctl = %x >>>>>\n", i, hd_info[i].cyl, hd_info[i].head, hd_info[i].sect, hd_info[i].ctl);
-	rd_load();						// kernel/blk_drv/ramdisk.c
-	// 初始化交换设备使用位图, 如果存在交换设备, 则在内存中申请一页物理内存(4KB)生成交换内存位图信息 swap_bitmap. 
+	rd_load();						// 尝试在虚拟盘中加载根文件系统. (kernel/blk_drv/ramdisk.c)
+	// 初始化交换设备使用位图, 如果存在交换设备, 则在主内存中申请一页物理内存(4KB)生成交换内存位图信息 swap_bitmap. 
 	init_swapping();				// (mm/swap.c)
-	mount_root();					// 安装根文件系统. fs/super.c
+	mount_root();					// 安装根文件系统. (fs/super.c)
 	return (0);
 }
 
