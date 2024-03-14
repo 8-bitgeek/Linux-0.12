@@ -18,8 +18,8 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-int sync_dev(int dev);                  					// 对指定设备执行高速缓冲与设备上数据同步操作(fs/buffer.c).
-void wait_for_keypress(void);           					// 等待击键(kernel/chr_drv/tty_io.c)
+int sync_dev(int dev);                  		// 对指定设备执行高速缓冲与设备上数据同步操作(fs/buffer.c).
+void wait_for_keypress(void);           		// 等待击键(kernel/chr_drv/tty_io.c)
 
 /* set_bit uses setb, as gas doesn't recognize setc */
 /* set_bit() 使用了 setb 指令, 因为汇编编译器 gas 不能识别指令 setc */
@@ -41,8 +41,10 @@ int ROOT_DEV = 0;											// 根文件系统设备号.
 
 // 以下 3 个函数(lock_super(), free_super() 和 wait_on_super()) 的作用与 inode.c 文件中头 ３ 个函数的作用相同, 
 // 只是这里操作的对象换成了超级块.
+
 // 锁定超级块.
-// 如果超级块已被锁定, 则将当前任务置为不可中断的等待状态, 并添加到该超级块等待队列 s_wait 中. 直到该超级块解锁并明确地唤醒本任务. 然后对其上锁.
+// 如果超级块已被锁定, 则将当前任务置为不可中断的等待状态, 并添加到该超级块等待队列 s_wait 中. 
+// 直到该超级块解锁并明确地唤醒本任务, 然后对其上锁.
 static void lock_super(struct super_block * sb)
 {
 	cli();													//　关中断
@@ -64,7 +66,8 @@ static void free_super(struct super_block * sb)
 }
 
 // 睡眠等待超级块解锁.
-// 如果超级块已被锁定, 则将当前任务置为不可中断的等待状态, 并添加到该超级块的等待队列 s_wait 中. 直到该超级块解锁并明确地唤醒本任务.
+// 如果超级块已被锁定, 则将当前任务置为不可中断的等待状态, 
+// 并添加到该超级块的等待队列 s_wait 中, 直到该超级块解锁并明确地唤醒本任务.
 static void wait_on_super(struct super_block * sb)
 {
 	cli();
@@ -86,8 +89,10 @@ struct super_block * get_super(int dev)
 		return NULL;
 	s = 0 + super_block;
 	while (s < NR_SUPER + super_block) {
-		// 如果当前搜索项是指定设备的超级块, 即该超级块的设备号字段值与函数参数指定的相同, 则先等待该超级块解锁(若已被其他进程上锁的话).
-		// 在等待期间, 该超级块项有可能被其他设备使用, 因此等待返回之后需再判断一次是否是指定设备的超级块, 如果是则返回该超级块的指针. 
+		// 如果当前搜索项是指定设备的超级块, 即该超级块的设备号字段值与函数参数指定的相同, 
+		// 则先等待该超级块解锁(若已被其他进程上锁的话).
+		// 在等待期间, 该超级块项有可能被其他设备使用, 
+		// 因此等待返回之后需再判断一次是否是指定设备的超级块, 如果是则返回该超级块的指针. 
 		// 否则就重新对超级块数组再搜索一遍, 因此此时 s 需重又指向超级块数组开始处.
 		if (s->s_dev == dev) {
 			wait_on_super(s);
@@ -125,7 +130,8 @@ void put_super(int dev)
 		return;
 	}
 	// 然后在找到指定设备的超级块之后, 我们先锁定该超级块, 再置该超级块对应的设备号字段 s_dev 为 0, 
-	// 也即释放该设备上的文件系统超级块. 然后释放该超级块占用的其他内核资源, 即释放该设备上文件系统 i 节点位图和逻辑位图在缓冲区中所占用的缓冲块. 
+	// 也即释放该设备上的文件系统超级块. 然后释放该超级块占用的其他内核资源, 
+	// 即释放该设备上文件系统 i 节点位图和逻辑位图在缓冲区中所占用的缓冲块. 
 	// 下面常数符号 I_MAP_SLOTS 和 Z_MAP_SLOTS 均等于 8, 用于分别指明 i 节点位图和逻辑块位图占用的磁盘逻辑块数. 
 	// 注意, 若这些缓冲块内容被修改过, 则需要作同步操作才能把缓冲块中的数据写入设备中. 函数最后对该超级块, 并返回.
 	lock_super(sb);
@@ -183,7 +189,8 @@ static struct super_block * read_super(int dev)
 	// 把硬盘中读取的超级块信息复制到超级块列表的对应项中.
 	*((struct d_super_block *) s) = *((struct d_super_block *) bh->b_data);
 	brelse(bh);
-	// 现在我们从设备 dev 上得到了文件系统的超级块, 于是开始检查这个超级块的有效性并从设备上读取 i 节点位图和逻辑块位图等信息. 
+	// 现在我们从设备 dev 上得到了文件系统的超级块, 
+	// 于是开始检查这个超级块的有效性并从设备上读取 i 节点位图和逻辑块位图等信息. 
 	// 如果所读取的超级块的文件系统魔数字段不对, 说明设备上不是正确的文件系统, 因此向上面一样, 
 	// 释放上面选定的超级块数组中的项, 并解锁该项, 返回空指针退出. 
 	// 对于该版 Linux 内核, 只支持 MINIX 文件系统 1.0 版本, 其魔数是 0x137f.
@@ -277,7 +284,8 @@ int sys_umount(char * dev_name)
 	sb->s_imount = NULL;
 	iput(sb->s_isup);
 	sb->s_isup = NULL;
-	// 最后我们释放该设备上的超级块以及位图占用的高速缓冲块, 并对该设备执行高速缓冲与设备上数据的同步操作. 然后返回 0(卸载成功).
+	// 最后我们释放该设备上的超级块以及位图占用的高速缓冲块, 并对该设备执行高速缓冲与设备上数据的同步操作. 
+	// 然后返回 0(卸载成功).
 	put_super(dev);
 	sync_dev(dev);
 	return 0;
@@ -303,7 +311,8 @@ int sys_mount(char * dev_name, char * dir_name, int rw_flag)
 	}
 	// OK, 现在上面为了得到设备号而取得的 i 节点 dev_i 已经完成了它的使命, 因此这里放回该设备文件的 i 节点. 
 	// 接着我们来检查一下文件系统安装到的目录名是否有效. 于是根据给定的目录文件名找到对应的 i 节点 dir_i. 
-	// 如果该 i 节点的引用计数不为 1(仅在这里引用), 或者该 i 节点的节点号是根文件系统的节点号 1, 则放回该 i 节点返回出错码. 
+	// 如果该 i 节点的引用计数不为 1(仅在这里引用), 或者该 i 节点的节点号是根文件系统的节点号 1, 
+	// 则放回该 i 节点返回出错码. 
 	// 另外, 如果该节点不是一个目录文件节点, 则也放回该 i 节点, 返回出错码. 因为文件系统只能安装在一个目录名上.
 	iput(dev_i);
 	if (!(dir_i = namei(dir_name)))
@@ -338,8 +347,8 @@ int sys_mount(char * dev_name, char * dir_name, int rw_flag)
 	// 并设置安装位置 i 节点的安装标志和节点已修改标志. 然后返回 0(安装成功).
 	sb->s_imount = dir_i;
 	dir_i->i_mount = 1;
-	dir_i->i_dirt = 1;					/* NOTE! we don't iput(dir_i) */        /* 注意! 这里没有用 iput(dir_i) */
-	return 0;							/* we do that in umount */      		/* 这将在 umount 内操作 */
+	dir_i->i_dirt = 1;			/* NOTE! we don't iput(dir_i) */        /* 注意! 这里没有用 iput(dir_i) */
+	return 0;					/* we do that in umount */      		/* 这将在 umount 内操作 */
 }
 
 // 安装根文件系统. 该函数属于系统初始化操作的一部分. 
@@ -375,20 +384,23 @@ void mount_root(void)
 	// 如果读根设备上超级块失败或取根节点失败, 则都显示信息并停机.
 	if (!(p = read_super(ROOT_DEV)))
 		panic("Unable to mount root");
-	if (!(mi = iget(ROOT_DEV, ROOT_INO)))							// 在 include/linux/fs.h 中 ROOT_INO 定义为 1.
+	if (!(mi = iget(ROOT_DEV, ROOT_INO)))					// 在 include/linux/fs.h 中 ROOT_INO 定义为 1.
 		panic("Unable to read root i-node");
 	// 现在我们对超级块和根 i 节点进行设置. 把根 i 节点引用次数递增 3 次. 
 	// 因为下面 266 行上也引用了该 i 节点. 另外, iget() 函数中 i 节点引用计数已被设置为 1. 
 	// 然后置该超级块的被安装文件系统 i 节点和被安装到 i 节点字段为该 i 节点.
 	// 再设置当前进程的当前工作目录和根目录 i 节点. 此时当前进程是 1 号进程(init 进程).
-	mi->i_count += 3 ;												/* NOTE! it is logically used 4 times, not 1 */
-                                									/* 注意! 从逻辑上讲, 它已被引用了 4 次, 而不是 1 次 */
-	p->s_isup = p->s_imount = mi; 									// 设置根目录及超级块被安装到的 i 节点.
-	current->pwd = mi; 												// 设置当前任务的工作目录 i 节点.
-	current->root = mi; 											// 设置当前任务的根目录 i 节点.
-	// 然后我们对根文件系统上的资源作统计工作. 统计该设备上空闲块数和空闲 i 节点数. 首先令 i 等于超级块中表明的设备逻辑块总数. 
-	// 然后根据逻辑块位图中相应位的占用情况统计出空闲块数. 这里宏函数 set_bit() 只是在测试位, 而非设置位. 
-	// "i&8191" 用于取得 i 节点号在当前位图块中对应的位偏移值. "i>>13" 是将 i 除以 8192, 也即除一个磁盘块包含的位数.
+	mi->i_count += 3 ;										/* NOTE! it is logically used 4 times, not 1 */
+                                							/* 注意! 从逻辑上讲, 它已被引用了 4 次, 而不是 1 次 */
+	p->s_isup = p->s_imount = mi; 							// 设置根目录及超级块被安装到的 i 节点.
+	current->pwd = mi; 										// 设置当前任务的工作目录 i 节点.
+	current->root = mi; 									// 设置当前任务的根目录 i 节点.
+	// 然后我们对根文件系统上的资源作统计工作. 统计该设备上空闲块数和空闲 i 节点数. 
+	// 首先令 i 等于超级块中表明的设备逻辑块总数. 
+	// 然后根据逻辑块位图中相应位的占用情况统计出空闲块数. 
+	// 这里宏函数 set_bit() 只是在测试位, 而非设置位. 
+	// "i&8191" 用于取得 i 节点号在当前位图块中对应的位偏移值. 
+	// "i>>13" 是将 i 除以 8192, 也即除一个磁盘块包含的位数.
 	free = 0; 														// 保存空闲的逻辑块数.
 	i = p->s_nzones; 												// 该文件系统的总逻辑块个数.
 	while (--i >= 0)
@@ -396,13 +408,14 @@ void mount_root(void)
 			free++; 
 	// 打印当前主设备上空闲和总的逻辑块数.
 	Log(LOG_INFO_TYPE, "<<<<< %d/%d free blocks >>>>>\n\r", free, p->s_nzones);
-	// 在显示过设备上空闲逻辑块数/逻辑块总数之后. 我们再统计设备上空闲 i 节点数. 首先令 i 等于超级块中表明的设备上 i 节点总数 + 1. 
-	// 加 1 是将 0 节点也统计进去. 然后根据 i 节点位图中相应位的占用情况计算出空闲 i 节点数. 最后再显示设备上可用空闲 i 节点数和 i 节点总数.
+	// 在显示过设备上空闲逻辑块数/逻辑块总数之后. 我们再统计设备上空闲 i 节点数. 
+	// 首先令 i 等于超级块中表明的设备上 i 节点总数 + 1. 加 1 是将 0 节点也统计进去. 
+	// 然后根据 i 节点位图中相应位的占用情况计算出空闲 i 节点数. 最后再显示设备上可用空闲 i 节点数和 i 节点总数.
 	free = 0;
 	i = p->s_ninodes + 1;
 	while (--i >= 0)
 		if (!set_bit(i & 8191, p->s_imap[i >> 13]->b_data))
 			free++;
-	// 打印当前主设备上 i 节点空闲和总的数量
+	// 打印当前主设备上 i 节点空闲和总的数量.
 	Log(LOG_INFO_TYPE, "<<<<< %d/%d free inodes >>>>>\n\r", free, p->s_ninodes);
 }
