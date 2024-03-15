@@ -355,7 +355,8 @@ struct m_inode * iget(int dev, int nr)
 {
 	struct m_inode * inode, * empty;
 
-	// 首先判断参数有效性. 若设备号是 0, 则表明内核代码问题, 显示出错信息并停机. 然后预先从 i 节点表中取一个空闲 i 节点备用.
+	// 首先判断参数有效性. 若设备号是 0, 则表明内核代码问题, 显示出错信息并停机. 
+	// 然后预先从 i 节点表中取一个空闲 i 节点备用.
 	if (!dev)
 		panic("iget with dev == 0");
 	empty = get_empty_inode(); 							// 预先从 inode_table 中获取一个空闲项.
@@ -384,11 +385,11 @@ struct m_inode * iget(int dev, int nr)
 			int i;
 
 			for (i = 0 ; i < NR_SUPER ; i++)
-				if (super_block[i].s_imount == inode) 					// 如果某个文件系统(超级块)安装到了这个 i 节点.
+				if (super_block[i].s_imount == inode) 		// 如果某个文件系统(超级块)安装到了这个 i 节点.
 					break;
-			if (i >= NR_SUPER) { 										// 如果没有超级块(文件系统)安装到这个 i 节点.
+			if (i >= NR_SUPER) { 							// 如果没有超级块(文件系统)安装到这个 i 节点.
 				printk("Mounted inode hasn't got super block.\n");
-				if (empty) 												// inode_table 中有空闲的 i 节点的情况下.
+				if (empty) 									// inode_table 中有空闲的 i 节点的情况下.
 					iput(empty);
 				return inode;
 			}
@@ -486,7 +487,8 @@ static void write_inode(struct m_inode * inode)
 	((struct d_inode *)bh->b_data)
 		[(inode->i_num - 1) % INODES_PER_BLOCK] =
 			*(struct d_inode *)inode;
-	// 然后置缓冲区已修改标志, 而 i 节点内容已经与缓冲区中的一致, 因此修改标志置零. 然后释放该含有 i 节点的缓冲区, 并解锁该 i 节点.
+	// 然后置缓冲区已修改标志, 而 i 节点内容已经与缓冲区中的一致, 因此修改标志置零. 
+	// 然后释放该含有 i 节点的缓冲区, 并解锁该 i 节点.
 	bh->b_dirt = 1;
 	inode->i_dirt = 0;
 	brelse(bh);

@@ -76,7 +76,7 @@ static void wait_on_super(struct super_block * sb)
 	sti();
 }
 
-// 取指定设备的超级块.
+// 获取指定设备的超级块.
 // 在超级块表(数组)中搜索指定设备 dev 的超级块结构信息. 若找到则返回超级块的指针, 否则返回空指针.
 struct super_block * get_super(int dev)
 {
@@ -84,7 +84,7 @@ struct super_block * get_super(int dev)
 
 	// 首先判断参数给出设备的有效性. 若设备号为 0 则返回空指针. 
 	// 然后让 s 指向超级块数组起始处, 开始搜索整个超级块数组, 以寻找指定设备 dev 的超级块.
-	// 下面的指针赋值语句 `s = 0+super_block` 等同于 `s = super_block` 或 `s = &super_block[0]`.
+	// 下面的指针赋值语句 `s = 0 + super_block` 等同于 `s = super_block` 或 `s = &super_block[0]`.
 	if (!dev)
 		return NULL;
 	s = 0 + super_block;
@@ -153,7 +153,7 @@ static struct super_block * read_super(int dev)
 	struct buffer_head * bh;
 	int i, block;
 
-	// 首先判断参数的有效性. 如果没有指明设备, 则返回空指针. 然后检查该设备是否更换过盘片(也即是否是软盘设备). 
+	// 首先判断参数的有效性. 如果没有指明设备, 则返回空指针. 否则检查该设备是否更换过盘片(也即是否是软盘设备). 
 	// 如果更换过盘, 则高速缓冲区有关该设备的所有缓冲块均失效, 需要进行失效处理, 即释放原来加载的文件系统.
 	if (!dev)
 		return NULL;
@@ -165,10 +165,10 @@ static struct super_block * read_super(int dev)
 	for (s = 0 + super_block; ; s++) {
 		if (s >= NR_SUPER + super_block)
 			return NULL;
-		if (!s->s_dev) 									// 找到空闲项
+		if (!s->s_dev) 									// 找到空闲项.
 			break;
 	}
-	// 在超级块数组中找到空项之后, 就将该超级块项用于指定设备 dev 上的文件系统. 
+	// 在超级块数组中找到空闲项后, 就将该超级块项用于指定设备 dev 上的文件系统. 
 	// 于是对该超级块结构中的内存字段进行部分初始化处理.
 	s->s_dev = dev;										// 指定该超级块所属的 dev 设备号.
 	s->s_isup = NULL;
@@ -176,17 +176,17 @@ static struct super_block * read_super(int dev)
 	s->s_time = 0;
 	s->s_rd_only = 0; 									// 只读标志.
 	s->s_dirt = 0; 										// 已修改(脏)标志.
-	// 然后锁定该超级块, 并从设备上读取超级块信息到 bh 指向的缓冲块中. 
-	// 超级块位于块设备的第 2 个逻辑块(1 号块)中, (第 1 个是引导块). (每个块大小为 1KB).
+	// 然后锁定该超级块, 并从设备上读取设备上的超级块信息到 bh 指向的缓冲块中. 
+	// 超级块位于块设备的第 1 个逻辑块中, (第 0 个是引导块). (每个块大小为 1KB).
 	// 如果读超级块操作失败, 则释放上面选定的超级块数组中的项(即置 s_dev = 0), 并解锁该项, 返回空指针退出. 
 	// 否则就将设备上读取的超级块信息从缓冲块数据区复制到超级块数组相应项结构中. 并释放存放读取信息的高速缓冲块.
 	lock_super(s);
-	if (!(bh = bread(dev, 1))) {
+	if (!(bh = bread(dev, 1))) { 						// 从设备中读取超级块(1).
 		s->s_dev = 0;
 		free_super(s);
 		return NULL;
 	}
-	// 把硬盘中读取的超级块信息复制到超级块列表的对应项中.
+	// 把从硬盘中读取的超级块信息复制到超级块列表的对应项中.
 	*((struct d_super_block *) s) = *((struct d_super_block *) bh->b_data);
 	brelse(bh);
 	// 现在我们从设备 dev 上得到了文件系统的超级块, 
@@ -201,7 +201,7 @@ static struct super_block * read_super(int dev)
 	}
 	// 下面开始读取设备上 i 节点位图和逻辑块位图数据. 首先初始化内存超级块结构中位图空间. 
 	// 然后从设备上读取 i 节点位图和逻辑块位图信息, 并存放在超级块对应字段中. 
-	// i 节点位图保存在设备上 2 号块开始的逻辑块中, 共占用 s_imap_blocks 个块. 
+	// i 节点位图保存在设备的 2 号(第 3 个)逻辑块中, 共占用 s_imap_blocks(保存在超级块中) 个块. 
 	// 逻辑块位图在 i 节点位图所在块的后续块中, 共占用 s_zmap_blocks 个块.
 	for (i = 0; i < I_MAP_SLOTS; i++)					// 初始化操作.
 		s->s_imap[i] = NULL;
@@ -211,13 +211,13 @@ static struct super_block * read_super(int dev)
 	// 从第二逻辑块号(2 号块)开始读取 i 节点位图.
 	// 读取块设备中 i 节点位图信息到高速缓冲区, 并设置超级块信息指向这些缓冲区.
 	for (i = 0; i < s->s_imap_blocks; i++)
-		if (s->s_imap[i] = bread(dev, block))
+		if (s->s_imap[i] = bread(dev, block)) 			// 从设备中依次读取各个 i 节点位图到高速缓冲区.
 			block++;
 		else
 			break;
-	// 从 i 节点位图之后开始读取逻辑块位图
+	// 从 i 节点位图之后开始读取逻辑块位图.
 	for (i = 0; i < s->s_zmap_blocks; i++)				// 读取设备中逻辑块位图.
-		if (s->s_zmap[i] = bread(dev, block))
+		if (s->s_zmap[i] = bread(dev, block))			// 从设备中依次读取各个 i 节点位图到高速缓冲区.
 			block++;
 		else
 			break;
@@ -369,21 +369,21 @@ void mount_root(void)
 	// 首先初始化文件表数组(共 64 项, 即系统只能同时打开 64 个文件)和超级块表. 
 	// 这里将所有文件结构中的引用计数设置为 0(表示空闲), 并把超级块表中各项结构的设备字段初始化为 0(也表示空闲). 
 	// 如果根文件系统所在设备是软盘的话, 就提示 "插入根文件系统盘, 并按回车键", 并等待按键.
-	for (i = 0; i < NR_FILE; i++)							// 初始化文件表.
-		file_table[i].f_count = 0; 							// (fs/file_table.c)
-	if (MAJOR(ROOT_DEV) == 2) {								// 如果是 ROOT_DEV(根文件设备)是软盘, 则提示插入根文件系统盘.
+	for (i = 0; i < NR_FILE; i++)					// 初始化文件表.
+		file_table[i].f_count = 0; 					// (fs/file_table.c)
+	if (MAJOR(ROOT_DEV) == 2) {						// 如果是 ROOT_DEV(根文件设备)是软盘, 则提示插入根文件系统盘.
 		printk("Insert root floppy and press ENTER\r\n");
 		wait_for_keypress();
 	}
-	for(p = &super_block[0]; p < &super_block[NR_SUPER]; p++) {
-		p->s_dev = 0;										// 初始化超级块表.
+	for (p = &super_block[0]; p < &super_block[NR_SUPER]; p++) {
+		p->s_dev = 0;								// 初始化超级块表.
 		p->s_lock = 0;
 		p->s_wait = NULL;
 	}
 	// 做好以上 "分外" 的初始化工作之后, 我们开始安装根文件系统. 
-	// 于是从根设备上读取文件系统超级块, 并取得文件系统的根 i 节点(1[0]号节点)在内存 i 节点表中的指针.
-	// 如果读根设备上超级块失败或取根节点失败, 则都显示信息并停机.
-	if (!(p = read_super(ROOT_DEV)))
+	// 于是从根设备上读取文件系统超级块, 并取得文件系统的根 i 节点(0 号节点)在内存 i 节点表中的指针.
+	// 如果读根设备上超级块失败或取根节点失败, 则显示错误信息并停机.
+	if (!(p = read_super(ROOT_DEV))) 						// ROOT_DEV = 0x301. (硬盘的第一个分区)
 		panic("Unable to mount root");
 	if (!(mi = iget(ROOT_DEV, ROOT_INO)))					// 在 include/linux/fs.h 中 ROOT_INO 定义为 1.
 		panic("Unable to read root i-node");
@@ -396,7 +396,7 @@ void mount_root(void)
 	p->s_isup = p->s_imount = mi; 					// 设置根目录及超级块被安装到的 i 节点.
 	current->pwd = mi; 								// 设置当前任务的工作目录 i 节点.
 	current->root = mi; 							// 设置当前任务的根目录 i 节点.
-	// 然后我们对根文件系统上的资源作统计工作. 统计该设备上空闲块数和空闲 i 节点数. 
+	// 然后我们对根文件系统上的资源进行统计. 统计该设备上空闲块数和空闲 i 节点数. 
 	// 首先令 i 等于超级块中表明的设备逻辑块总数. 
 	// 然后根据逻辑块位图中相应位的占用情况统计出空闲块数. 
 	// 这里宏函数 set_bit() 只是在测试位, 而非设置位. 
