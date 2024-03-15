@@ -294,6 +294,7 @@ struct m_inode * get_empty_inode(void)
 	do {
 		inode = NULL;
 		for (i = NR_INODE; i; i--) {							// NR_INODE = 64.
+			// TODO: ++last_inode 有导致一个问题: last_inode 会在系统初始化时由 inode_table[1] 开始寻找空闲项.
 			if (++last_inode >= inode_table + NR_INODE) 		// 如果超出表末尾则从头开始.
 				last_inode = inode_table;
 			if (!last_inode->i_count) {

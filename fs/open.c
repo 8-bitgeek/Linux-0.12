@@ -248,10 +248,12 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 }
 
 // 打开(或创建)文件的系统调用.
-// 参数 filename 是文件名, flag 是打开文件标志, 它可取值: O_RDONLY(只读), O_WRONLY(只写), O_RDWR(读写), 
-// 以及 O_CREAT(创建), O_EXCL(被创建文件必须不存在), O_APPEND(在文件尾添加数据) 等其他一些标志的组合(include/fcntl.h).
+// 参数 filename 是文件名, flag 是打开文件标志, 它可取值: O_RDONLY(00, 只读), O_WRONLY(01, 只写), 
+// O_RDWR(02, 读写), 以及 O_CREAT(00100, 不存在则创建), O_EXCL(00200, 被创建文件必须不存在), 
+// O_APPEND(在文件尾添加数据) 等其他一些标志的组合(include/fcntl.h).
 // 如果本调用创建了一个新文件, 则 mode 就用于指定文件的许可属性. 
-// 这些属性有 S_IRWXU(文件宿主具有读, 写和执行权限), S_IRUSR(用户具有读文件权限), S_IRWXG(组成员有读, 写执行)等等. 
+// 这些属性有 S_IRWXU(00700, 文件宿主具有读, 写和执行权限), S_IRUSR(00400, 用户具有读文件权限), 
+// S_IRWXG(00070, 组成员有读, 写执行)等等. 
 // 对于新创建的文件, 这些属性只应用于将来对文件的访问, 创建了只读文件的打开调用也将返回一个读写的文件句柄. 
 // 如果调用操作成功, 则返回文件句柄(文件描述符 fd), 否则返回出错码. 参见(include/sys/stat.h include/fcntl.h).
 int sys_open(const char * filename, int flag, int mode)
