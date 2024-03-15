@@ -50,7 +50,7 @@ void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 #define MINOR(a) ((a) & 0xff)							// 取低字节(次设备号)
 
 #define NAME_LEN 14										// 名字最大长度值.
-#define ROOT_INO 1										// 根 i 节点.
+#define ROOT_INO 1										// 根 i 节点号.
 
 #define I_MAP_SLOTS 8									// i 节点位图槽数.
 #define Z_MAP_SLOTS 8									// 逻辑块(区段块)位图槽数.
@@ -144,7 +144,7 @@ struct m_inode {
 	unsigned char i_lock;								// i 节点被锁定标志.
 	unsigned char i_dirt;								// i 节点已修改(脏)标志.
 	unsigned char i_pipe;								// i 节点用作管道标志.
-	unsigned char i_mount;								// i 节点安装了其它文件系统标志.
+	unsigned char i_mount;								// 安装标志: 该 i 节点是否安装了文件系统.
 	unsigned char i_seek;								// 搜索标志(lseek 操作时).
 	unsigned char i_update;								// i 节点已更新标志.
 };

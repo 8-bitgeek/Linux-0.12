@@ -210,9 +210,10 @@ int create_block(struct m_inode * inode, int block)
 	return _bmap(inode, block, 1);
 }
 
-// 放回(放置)一个 i 节点(加写入设备).
+// 放回(放置)一个 i 节点(并将 i 节点元数据写入设备).
 // 该函数主要用于把 i 节点引用计数值递减 1, 并且若是管道 i 节点, 则唤醒等待的进程. 
-// 若是块设备文件 i 节点则刷新设备. 并且若 i 节点的链接计数(i_nlinks)为 0, 则释放该 i 节点占用的所有磁盘逻辑块, 并释放该 i 节点.
+// 若是块设备文件 i 节点则刷新设备, 并且若 i 节点的链接计数(i_nlinks)为 0, 
+// 则释放该 i 节点占用的所有磁盘逻辑块, 并释放该 i 节点.
 void iput(struct m_inode * inode)
 {
 	// 首先判断参数给出的 i 节点的有效性, 并等待 inode 节点解锁(如果已经上锁的话). 
@@ -287,7 +288,7 @@ struct m_inode * get_empty_inode(void)
 	int i;
 
 	// 在初始化 last_inode 指针指向 i 节点表第一(0)项后循环扫描整个 i 节点表, 
-	// 如果 last_inode 已经指向 i 节点表的最后 1 项之后, 则让其重新指向 i 节点表开始处,
+	// 如果 last_inode 已经指向 i 节点表的最后一项之后, 则让其重新指向 i 节点表开始处,
 	// 以继续循环寻找空闲 i 节点项. 如果 last_inode 所指向的 i 节点计数值为 0, 则说明可能找到空闲 i 节点项. 
 	// 让 inode 指向该 i 节点. 如果该 i 节点的已修改标志和和锁定标志均为 0, 则我们可以使用该 i 节点, 于是退出 for 循环.
 	do {
@@ -381,7 +382,7 @@ struct m_inode * iget(int dev, int nr)
 		// 如果该 i 节点的确是其他文件系统的安装点, 则在超级块表中搜寻安装在此 i 节点的超级块. 
 		// 如果没有找到, 则显示出错信息, 并放回本函数开始时获取的空闲节点 empty, 返回该 i 节点指针.
 		inode->i_count++;
-		if (inode->i_mount) {
+		if (inode->i_mount) { 								// 该 i 节点是否安装了文件系统.
 			int i;
 
 			for (i = 0 ; i < NR_SUPER ; i++)
