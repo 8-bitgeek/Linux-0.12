@@ -68,8 +68,8 @@ void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 #define NULL ((void *) 0)
 #endif
 
-#define INODES_PER_BLOCK ((BLOCK_SIZE) / (sizeof (struct d_inode)))               // 每个逻辑块可存放的 i 节点数.
-#define DIR_ENTRIES_PER_BLOCK ((BLOCK_SIZE) / (sizeof (struct dir_entry)))        // 每个逻辑块可存放的目录项数.
+#define INODES_PER_BLOCK ((BLOCK_SIZE) / (sizeof (struct d_inode)))           // 每个逻辑块可存放的 i 节点数(32).
+#define DIR_ENTRIES_PER_BLOCK ((BLOCK_SIZE) / (sizeof (struct dir_entry)))    // 每个逻辑块可存放的目录项数.
 
 // 管道头、管道尾、管道大小、管道空？、管道满？、管道头指针递增。
 #define PIPE_READ_WAIT(inode) ((inode).i_wait)
@@ -134,12 +134,12 @@ struct m_inode {
 														// 注: zone 是区的意思, 可译成区块或逻辑块.
 														// 对于设备特殊文件(比如 '/dev/tty')的 i 节点, 其 zone[0] 中存放的是该文件名所指设备的设备号.
 	/* these are in memory also */
-	struct task_struct * i_wait;						// 等待该 i 节点的进程.
+	struct task_struct * i_wait;						// 等待该 i 节点解锁的进程.
 	struct task_struct * i_wait2;						/* for pipes */
 	unsigned long i_atime;								// 最后访问时间.
 	unsigned long i_ctime;								// i 节点自身被修改的时间.
 	unsigned short i_dev;								// i 节点所在的设备号.
-	unsigned short i_num;								// i 节点号.
+	unsigned short i_num;								// i 节点编号.
 	unsigned short i_count;								// i 节点被引用的次数, 0 表示该 i 节点空闲.
 	unsigned char i_lock;								// i 节点被锁定标志.
 	unsigned char i_dirt;								// i 节点已修改(脏)标志.

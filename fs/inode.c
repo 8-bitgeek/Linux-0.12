@@ -369,7 +369,7 @@ struct m_inode * iget(int dev, int nr)
 			inode++;
 			continue;
 		}
-		// 如果找到指定设备号 dev 和节点号 nr 的 i 节点, 则等待该节点解锁(如果已上锁的话). 
+		// 如果在 i 节点表中找到指定设备号 dev 和节点号 nr 的 i 节点, 则等待该节点解锁(如果已上锁的话). 
 		// 在等待该节点解锁过程中, i 节点内容可能会发生变化. 所以再次进行上述相同判断. 
 		// 如果发生了变化, 则重新扫描整个 i 节点表.
 		wait_on_inode(inode);
@@ -435,19 +435,19 @@ static void read_inode(struct m_inode * inode)
 	lock_inode(inode);
 	if (!(sb = get_super(inode->i_dev)))
 		panic("trying to read inode without dev");
-	// 该 i 节点所在设备逻辑块号 = (启动块 + 超级块) + i 节点位图占用的块数 + 逻辑块位图的块数 + (i 节点号 - 1) / 每块含有的 i 节点数. 
+	// 该 i 节点所在设备逻辑块号 = (启动块(1) + 超级块(1)) + i 节点位图占用的块数 + 逻辑块位图的块数 + ((i 节点号 - 1) / 每块含有的 i 节点数).
 	// 虽然 i 节点号从 0 开始编号, 但第 1 个 0 号 i 节点不用, 并且磁盘上也不保存对应的 0 号 i 节点结构. 
 	// 因此存放 i 节点的盘块的第 1 块上保存的是 i 节点号是 1--16 的 i 节点结构而不是 0--15 的. 
 	// 因此在上面计算 i 节点号对应的 i 节点结构所在盘块时需要减 1, 即: B = (i 节点号 - 1) / 每块含有 i 节点结构数. 
 	// 例如, 节点号 16 的 i 节点结构应该在 B = (16 - 1) / 16 = 0 的块上. 
 	// 这里我们从设备上读取该 i 节点所在逻辑块, 并复制指定 i 节点内容到 inode 指针所指位置处.
 	block = 2 + sb->s_imap_blocks + sb->s_zmap_blocks + ((inode->i_num - 1) / INODES_PER_BLOCK);
-	// 将 i 节点信息的那个逻辑块读取到高速缓存中
+	// 将 i 节点信息所在的逻辑块读取到高速缓存中.
 	if (!(bh = bread(inode->i_dev, block)))
 		panic("unable to read i-node block");
 	// 复制磁盘上的 inode 信息到内存中.
 	*(struct d_inode *)inode = ((struct d_inode *)bh->b_data)[(inode->i_num - 1) % INODES_PER_BLOCK]; 	// 求余得到在该页面内的下标.
-	// 最后释放读入的缓冲块, 并解锁该 i 节点. 对于块设备文件, 还需要设置 i 节点的文件最大长度值.
+	// 最后释放读入的缓冲块, 并解锁该 i 节点. 对于块设备文件(比如 /dev/fd0), 还需要设置 i 节点的文件最大长度值.
 	brelse(bh);
 	if (S_ISBLK(inode->i_mode)) {
 		int i = inode->i_zone[0];							// 对于块设备文件, i_zone[0] 中是设备号.

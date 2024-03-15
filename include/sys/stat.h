@@ -17,20 +17,23 @@ struct stat {
 	time_t	st_ctime;	// 最后节点修改时间.
 };
 
-// 下面是为 st_mode 字段所用的值定义的符号名称. 这些值均用八进制表示. 为便于记忆, 这些符号名称均为一些英文单词的首字母或缩写组合而成. 
-// 例如名称 S_IFMT 的每个字母分别代表单词 State, Inode, File, Mask 和 Type; 而名称 s_IFREG 则是 State, Inode, File 和 REGular 几个大写字母的组合;
+// 下面是为 st_mode 字段所用的值定义的符号名称. 这些值均用八进制表示. 
+// 为便于记忆, 这些符号名称均为一些英文单词的首字母或缩写组合而成. 
+// 例如名称 S_IFMT 的每个字母分别代表单词 State, Inode, File, Mask 和 Type; 
+// 而名称 S_IFREG 则是 State, Inode, File 和 REGular 几个大写字母的组合;
 // 名称 S_IRWXU 是 State, Inode, Read, Write, Execute 和 User 的组合. 其他名称可以此类推.
 // 文件类型:
-#define S_IFMT   00170000	// 文件类型位屏蔽码(8 进制表示).
-#define S_IFLNK	 0120000	// 符号链接.
-#define S_IFREG  0100000	// 常规文件.
-#define S_IFBLK  0060000	// 块特殊(设备)文件, 如磁盘 dev/fd0.
-#define S_IFDIR  0040000	// 目录.
-#define S_IFCHR  0020000	// 字符设备文件.
-#define S_IFIFO  0010000    // FIFO 特殊文件
+#define S_IFMT   00170000	// 文件类型位屏蔽码(8 进制表示). 		   1111 0000 0000 0000
+#define S_IFLNK	 0120000	// 符号链接.					 		1010 0000 0000 0000
+#define S_IFREG  0100000	// 常规文件. 					 		1000 0000 0000 0000
+#define S_IFBLK  0060000	// 块特殊(设备)文件, 如磁盘 /dev/fd0. 	  0110 0000 0000 0000
+#define S_IFDIR  0040000	// 目录. 							   0100 0000 0000 0000
+#define S_IFCHR  0020000	// 字符设备文件. 						0010 0000 0000 0000
+#define S_IFIFO  0010000    // FIFO 特殊文件. 					   0001 0000 0000 0000
 // 文件属性位:
 // S_ISUID 用于测试文件的 set-user-ID 标志是否置位. 
-// 若该标志置位, 则当执行该文件时, 进程的有效用户 ID 将被设置为该文件宿主的用户 ID. S_ISGID 则是针对组 ID 进行相同处理.
+// 若该标志置位, 则当执行该文件时, 进程的有效用户 ID 将被设置为该文件宿主的用户 ID. 
+// S_ISGID 则是针对组 ID 进行相同处理.
 #define S_ISUID  0004000		// 执行时设置用户 ID(set-user-ID)
 #define S_ISGID  0002000		// 执行时设置组 ID(set-group-ID)
 #define S_ISVTX  0001000        // 对于目录, 受限删除标志.
