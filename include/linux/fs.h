@@ -122,13 +122,13 @@ struct d_inode {
 
 // 这是内存中的 i 节点结构. 前 7 项与 d_inode 完全一样.
 struct m_inode {
-	unsigned short i_mode;								// 文件类型和属性(rwx 位).
+	unsigned short i_mode;								// 文件类型和属性(宿主, 组员, 其他人的访问权限信息: rwx).
 	unsigned short i_uid;								// 文件宿主的用户 id(文件拥有者标识符).
 	unsigned long i_size;								// 文件大小(字节数).
 	unsigned long i_mtime;								// 修改时间(自 1970.1.1.:0 算起, 秒).
 	unsigned char i_gid;								// 文件宿主的组 id(文件拥有者所在的组).
 	unsigned char i_nlinks;								// 链接数(有多少个文件目录项指向该 i 节点).
-	unsigned short i_zone[9];							// 文件所占用的盘上逻辑块号的数组. 
+	unsigned short i_zone[9];							// 文件(或目录)所占用的盘上逻辑块号的数组. 
 														// 其中, zone[0]-zone[6] 是直接块号;
 														// zone[7] 是一次间接块号; zone[8] 是二次(双重)间接块号.
 														// 注: zone 是区的意思, 可译成区块或逻辑块.
@@ -215,7 +215,7 @@ extern void floppy_off(unsigned int dev);                       // 关闭指定�
 extern void truncate(struct m_inode * inode);                   // 将 i 节点指定的文件截为 0.
 extern void sync_inodes(void);                                  // 刷新 i 节点信息.
 extern void wait_on(struct m_inode * inode);                    // 等待指定的 i 节点.
-extern int bmap(struct m_inode * inode,int block);              // 逻辑块(区段, 磁盘块)位图操作. 取数据块 block 在设备上对应的逻辑块号.
+extern int bmap(struct m_inode * inode, int block);              // 逻辑块(区段, 磁盘块)位图操作. 取数据块 block 在设备上对应的逻辑块号.
 extern int create_block(struct m_inode * inode,int block);      // 创建数据块 block 在设备上对应的逻辑块, 并返回在设备上的逻辑块号.
 
 extern struct m_inode * namei(const char * pathname);           // 获取指定路径名的 i 节点号.
@@ -231,9 +231,9 @@ extern struct buffer_head * getblk(int dev, int block);         // 从设备读�
 extern void ll_rw_block(int rw, struct buffer_head * bh);       // 读/写数据块.
 extern void ll_rw_page(int rw, int dev, int nr, char * buffer); // 读/写数据页面, 即每次 4 块数据块.
 extern void brelse(struct buffer_head * buf);                   // 释放指定缓冲块.
-extern struct buffer_head * bread(int dev,int block);           // 读取指定的数据块.
-extern void bread_page(unsigned long addr,int dev,int b[4]);    // 读取设备上一个页面(4 个缓冲块)的内容到指定内存地址处。
-extern struct buffer_head * breada(int dev,int block,...);      // 读取头一个指定的数据块, 并标记后续将要读的块.
+extern struct buffer_head * bread(int dev, int block);           // 读取指定的数据块.
+extern void bread_page(unsigned long addr, int dev, int b[4]);    // 读取设备上一个页面(4 个缓冲块)的内容到指定内存地址处。
+extern struct buffer_head * breada(int dev, int block,...);      // 读取头一个指定的数据块, 并标记后续将要读的块.
 extern int new_block(int dev);                                  // 向设备 dev 申请一个磁盘块(区段, 逻辑块). 返回逻辑块号.
 extern int free_block(int dev, int block);                      // 释放设备数据区中的逻辑块(区段, 逻辑块) block.
 extern struct m_inode * new_inode(int dev);                     // 为设备 dev 建立一个新 i 节点, 返回 i 节点号.

@@ -22,14 +22,14 @@ struct stat {
 // 例如名称 S_IFMT 的每个字母分别代表单词 State, Inode, File, Mask 和 Type; 
 // 而名称 S_IFREG 则是 State, Inode, File 和 REGular 几个大写字母的组合;
 // 名称 S_IRWXU 是 State, Inode, Read, Write, Execute 和 User 的组合. 其他名称可以此类推.
-// 文件类型:
-#define S_IFMT   00170000	// 文件类型位屏蔽码(8 进制表示). 		   1111 0000 0000 0000
-#define S_IFLNK	 0120000	// 符号链接.					 		1010 0000 0000 0000
-#define S_IFREG  0100000	// 常规文件. 					 		1000 0000 0000 0000
-#define S_IFBLK  0060000	// 块特殊(设备)文件, 如磁盘 /dev/fd0. 	  0110 0000 0000 0000
-#define S_IFDIR  0040000	// 目录. 							   0100 0000 0000 0000
-#define S_IFCHR  0020000	// 字符设备文件. 						0010 0000 0000 0000
-#define S_IFIFO  0010000    // FIFO 特殊文件. 					   0001 0000 0000 0000
+// 文件类型: 																文件类型       宿主 组员 其他人
+#define S_IFMT   0170000	// 文件类型位屏蔽码(8 进制表示). 		   			1111 	000  000 000 000
+#define S_IFLNK	 0120000	// 符号链接.					 				 1010 	 000  000 000 000
+#define S_IFREG  0100000	// 常规文件. 					 				 1000 	 000  000 000 000
+#define S_IFBLK  0060000	// 块设备文件, 如硬盘, 软盘(/dev/fd0). 	  		   0110    000  000 000 000
+#define S_IFDIR  0040000	// 目录. 							  			0100 	000  000 000 000
+#define S_IFCHR  0020000	// 字符设备文件, 如 tty 终端, 内存设备, 网络设备.	 0010 	 000  000 000 000
+#define S_IFIFO  0010000    // FIFO 特殊文件. 					   			0001 	000  000 000 000
 // 文件属性位:
 // S_ISUID 用于测试文件的 set-user-ID 标志是否置位. 
 // 若该标志置位, 则当执行该文件时, 进程的有效用户 ID 将被设置为该文件宿主的用户 ID. 
@@ -42,7 +42,7 @@ struct stat {
 #define S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)		// 测试是否为常规文件.
 #define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)		// 是否为目录文件(imode 位 14 置位).
 #define S_ISCHR(m)	(((m) & S_IFMT) == S_IFCHR)		// 是否为字符设备文件.
-#define S_ISBLK(m)	(((m) & S_IFMT) == S_IFBLK)		// 是否为块设备文件.
+#define S_ISBLK(m)	(((m) & S_IFMT) == S_IFBLK)		// 是否为块设备(硬盘, 软盘)文件. (/dev/fd0)
 #define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)     // 是否为 FIFO 特殊文件。
 
 // 文件访问权限:

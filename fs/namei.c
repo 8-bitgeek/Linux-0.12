@@ -64,9 +64,9 @@ static struct m_inode * _namei(const char * filename, struct m_inode * base, int
  *
  * 该函数用于检测一个文件的读/写/执行权限. 我不知道是否只需检查 euid, 还是需要检查 euid 和 uid 两者, 不过这很容易修改.
  */
-// 检测文件访问许可权限.
+// 检测文件访问许可权限(rwx).
 // 参数: inode - 文件的 i 节点指针; mask - 访问属性屏蔽码.
-// 返回: 访问许可返回 1, 否则返回 0. (如果给定的 inode 的 imode 宿主信息与 mask 指定的位[值]相同，则表示有权限).
+// 返回: 访问许可返回 1, 否则返回 0. (如果给定的 inode 的 i_mode 宿主访问权限(rwx)与 mask 指定权限相同，则表示有权限).
 static int permission(struct m_inode * inode, int mask)
 {
 	int mode = inode->i_mode;								// 文件访问属性.
@@ -76,9 +76,9 @@ static int permission(struct m_inode * inode, int mask)
 	// 如果 i 节点有对应的设备, 但该 i 节点的链接计数值等于 0, 表示该文件已被删除, 则返回.
 	if (inode->i_dev && !inode->i_nlinks)
 		return 0;
-	// 如果进程的有效用户 id(euid) 与 i 节点的用户 id 相同, 则取文件宿主的访问权限
+	// 如果进程的有效用户 id(euid) 与 i 节点的用户 id 相同, 则取文件宿主的访问权限.
 	else if (current->euid == inode->i_uid)
-		mode >>= 6;
+		mode >>= 6; 			// 右移 6 位得到文件宿主信息等. (i_mode 低 6 位分别是其他人和组员访问权限)
 	// 如果进程有效组 id(egid) 与 i 节点的组 id 相同, 则取组用户的访问权限
 	else if (in_group_p(inode->i_gid))
 		mode >>= 3;
@@ -204,7 +204,7 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 			/* '..' over a mount-point results in 'dir' being exchanged for the mounted
 			   directory-inode. NOTE! We set mounted, so that we can iput the new dir */
 			/* 在一个安装点上的 '..' 将导致目录交换到被安装文件系统的目录 i 节点上. 
-			   注意! 由于我们设置了 mounted 标志, 因而我们能够放回该新目录 */
+			   注意! 由于我们设置了 mounted 标志, 因而我们能够放回该新目录. */
 			sb = get_super((*dir)->i_dev);
 			if (sb->s_imount) {
 				iput(*dir);
@@ -214,7 +214,7 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 		}
 	}
 	// 现在我们开始正常操作, 查找指定文件名的目录项在什么地方. 
-	// 因此我们需要读取目录的数据, 即取出目录 i 节点对应块设备数据区中的数据块(逻辑块)信息. 
+	// 因此我们需要读取目录的数据, 即取出目录 i 节点在对应块设备数据区中的数据块(逻辑块)信息. 
 	// 这些逻辑块的块号保存在 i 节点结构的 i_zone[] 数组中. 我们先取其中第 1 个块号. 
 	// 如果目录 i 节点指向的第一个直接盘块号为 0, 
 	// 则说明该目录竟然不含数据, 这不正常. 于是返回 NULL 退出.
@@ -226,12 +226,12 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 	// 此时我们就在这个读取的目录 i 节点数据块中搜索匹配指定文件名的目录项. 首先让 de 指向缓冲块中的数据块部分, 
 	// 并在不超过目录项数据的条件下, 循环执行搜索. 其中 i 是目录中的目录项索引号, 在循环开始时初始化为 0.
 	i = 0;
-	de = (struct dir_entry *) bh->b_data; 						// 目录项指针指向目录的 inode 的数据区. 
+	de = (struct dir_entry *) bh->b_data; 						// 目录项指针指向目录 inode 的数据区. 
 	while (i < entries) {
 		// 如果当前目录项数据块已经搜索完, 还没有找到匹配的目录项, 则释放当前目录项数据块. 再读入目录的下一个逻辑块. 
 		// 若这块为空, 则只要还没有搜索完目录中的所有目录项, 就跳过该块, 继续读目录的下一逻辑块. 
 		// 若该块不空, 就让 de 指向该数据块, 然后在其中继续搜索. 
-		// 其中 141 行上 i/DIR_ENTRIES_PER_BLOCK 可得到当前搜索的目录项所在目录文件中的块号, 
+		// 其中 `i / DIR_ENTRIES_PER_BLOCK` 可得到当前搜索的目录项所在目录文件中的块号, 
 		// 而 bmap() 函数(inode.c)则可计算出在设备上对应的逻辑块号.
 		if ((char *)de >= (BLOCK_SIZE + bh->b_data)) { 			// 已搜索完该数据块.
 			brelse(bh); 										// 则释放该数据块.
@@ -418,12 +418,12 @@ static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode
 /*
  *	get_dir()
  *
- * 该函数根据给出的路径名进行搜索, 直到达到最顶端(比如 /dev/tty1 -> /dev/ 为最顶端的目录)的目录. 
+ * 该函数根据给出的路径名进行搜索, 直到达到最深层(比如 /dev/tty1 -> /dev/ 为最深层目录)的目录. 
  * 如果失败是返回 NULL.
  */
-// 从指定目录开始搜寻指定路径名的顶端目录(或文件名[TODO: 存疑])的 i 节点. 
+// 从指定目录开始搜寻给定路径名的最深层目录(或文件名[TODO: 存疑])的 i 节点. 
 // 参数: pathname - 路径名; inode - 指定起始目录的 i 节点.
-// 返回: 目录或文件的 i 节点指针. 失败时返回 NULL.
+// 返回: 给定目录名最深层目录或文件的 i 节点指针. 失败时返回 NULL.
 static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 {
 	char c;
@@ -453,8 +453,8 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 	// 在循环处理过程中, 我们先要对当前正在处理的目录名部分的 i 节点进行有效性判断, 
 	// 并且把变量 thisname 指向当前正在处理的目录名(文件名)部分. 
 	// 如果该 i 节点表明当前处理的目录名部分不是目录类型, 或者没有可进入该目录的访问许可, 
-	// 则放回该 i 节点并返回 NULL 退出. 当然在刚进入循环时, 
-	// 当前目录的 i 节点 inode 就是进程根 i 节点或者是当前工作目录的 i 节点, 
+	// 则放回该 i 节点并返回 NULL 退出. 
+	// 当然在刚进入循环时, 当前目录的 i 节点 inode 就是进程根 i 节点或者是当前工作目录的 i 节点, 
 	// 或者是参数指定的某个搜索起始目录的 i 节点. 
 	while (1) {
 		thisname = pathname; 											// thisname 指向当前正在处理的部分.
@@ -470,11 +470,11 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 		// 则返回该 i 节点指针退出.
 		// 注意! 如果路径名中最后一个名称也是一个目录名, 但其后面没有加上 '/' 字符, 
 		// 则函数不会返回该最后目录名的 i 节点! 
-		// 例如: 对于路径 /usr/src/linux, 该函数将只返回 src/ 目录名的 i 节点.
-		for(namelen = 0; (c = get_fs_byte(pathname++)) && (c != '/'); namelen++) 	// 每次循环结束都将得到 pathname 中的一部分(比如 'dev/'[目录] 或者 'tty1'[文件]).
-			/* nothing */ ;
-		if (!c) 												// 如果当前到达 pathname 末尾('\0'), 则直接返回本次循环前的 inode.
-			return inode; 										// 比如 '/dev/tty1' -> 则返回的是 'dev/' 对应的 inode.
+		// 例如: 对于目录 /usr/src/linux, 该函数将只返回 src/ 目录名的 i 节点.
+		for(namelen = 0; (c = get_fs_byte(pathname++)) && (c != '/'); namelen++) 	
+			/* nothing */; // 每次该循环结束都将得到 pathname 中的一部分(比如 'dev/'[目录] 或者 'tty1'[文件]).
+		if (!c) 						// 如果当前到达 pathname 末尾('\0'), 则直接返回本次循环前的 inode.
+			return inode; 				// 比如 '/dev/tty1' -> 则返回的是 'dev/' 对应的 inode.
 		// 在得到当前目录名部分(或文件名)后, 
 		// 我们调用查找目录项函数 find_entry() 在当前处理的目录中寻找指定名称的目录项. 
 		// 如果没有找到, 则放回该 i 节点, 并返回 NULL 退出. 如果找到, 
@@ -495,7 +495,7 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 		}
 		if (!(inode = follow_link(dir, inode)))
 			return NULL;
-        }
+    }
 }
 
 /*
@@ -507,26 +507,26 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 /*
  *	dir_namei()
  *
- * dir_namei() 函数返回指定目录名的 i 节点指针, 以及在最顶层目录的名称.
+ * dir_namei() 函数返回指定目录名的 i 节点指针, 以及在最深层目录的名称.
  */
 // 参数: pathname - 目录路径名; namelen - 路径名长度; 
-// 		name - 返回的最顶层目录名; base - 搜索起始目录的 i 节点.
-// 返回: 指定目录名最顶层的 i 节点指针和最顶层目录名称及长度. 出错时返回 NULL.
-// 注意!! 这里 "最顶层目录" 是指路径名中最靠近末端的目录(比如 '/dev/tty1' 的最顶层目录为 'dev/' 而不是 '/').
+// 		name - 返回的最深层目录名; base - 搜索起始目录的 i 节点.
+// 返回: 指定目录名最深层的 i 节点指针和最顶层目录名称及长度. 出错时返回 NULL.
+// 注意!! 这里 "最深层目录" 是指路径名中最靠近末端的目录(比如 '/dev/tty1' 的最深层目录为 'dev/' 而不是 '/').
 static struct m_inode * dir_namei(const char * pathname, int * namelen, 
 								  const char ** name, struct m_inode * base)
 {
 	char c;
 	const char * basename;
-	struct m_inode * dir; 		// 最顶层的目录对应的 inode. 比如 '/dev/tty1' -> '/dev/' 对应的 inode.
+	struct m_inode * dir; 		// 最深层的目录对应的 inode. 比如 '/dev/tty1' -> '/dev/' 对应的 inode.
 
-	// 首先取得指定路径名最顶层目录的 i 节点. 
+	// 首先取得指定路径名最深层目录的 i 节点. 
 	// 然后对路径名 pathname 进行搜索检测, 查出最后一个 '/' 字符后面的文件名字符串, 
-	// 计算其长度, 并且返回最顶层目录的 i 节点指针. 
+	// 计算其长度, 并且返回最深层目录的 i 节点指针. 
 	// 注意! 如果路径名最后一个字符是斜杠字符 '/', 那么返回的文件名为空, 并且长度为 0. 
 	// 但返回的 i 节点指针仍然指向最后一个 '/' 字符前目录名的 i 节点. 
 	// 比如 '/dev/tty1' 则返回的是 'dev/' 对应的 inode.
-	if (!(dir = get_dir(pathname, base)))		// base 是指定的起始目录 i 节点. (获取顶端目录的 inode 指针)
+	if (!(dir = get_dir(pathname, base)))		// base 是指定的起始目录 i 节点. (获取最深层目录的 inode 指针)
 		return NULL;
 	basename = pathname;
 	while (c = get_fs_byte(pathname++))
