@@ -509,8 +509,8 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
  *
  * dir_namei() 函数返回指定目录名的 i 节点指针, 以及在最顶层目录的名称.
  */
-// 参数: pathname - 目录路径名; namelen - 路径名长度; name - 返回的最顶层目录名.
-// base - 搜索起始目录的 i 节点.
+// 参数: pathname - 目录路径名; namelen - 路径名长度; 
+// 		name - 返回的最顶层目录名; base - 搜索起始目录的 i 节点.
 // 返回: 指定目录名最顶层的 i 节点指针和最顶层目录名称及长度. 出错时返回 NULL.
 // 注意!! 这里 "最顶层目录" 是指路径名中最靠近末端的目录(比如 '/dev/tty1' 的最顶层目录为 'dev/' 而不是 '/').
 static struct m_inode * dir_namei(const char * pathname, int * namelen, 
