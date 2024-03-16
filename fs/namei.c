@@ -443,7 +443,7 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 	// 于是我们需要先放回参数指定的或者设定的目录 i 节点, 并取得进程使用的根 i 节点. 
 	// 然后把该 i 节点的引用计数加 1, 并删除路径名的第 1 个字符 '/'. 
 	// 这样就可以保证进程只能以其设定的根 i 节点作为搜索的起点.
-	if ((c = get_fs_byte(pathname)) == '/') { // 如果指定的 pathname 是以根目录开始的, 则放回指定的用户指定的 inode 或者上面指定的当前工作目录 inode, 使用根 i 节点.
+	if ((c = get_fs_byte(pathname)) == '/') { 	// 如果 pathname 是以 '/' 开始的, 则放回指定的用户指定的 inode 或者上面指定的当前工作目录 inode, 使用根 i 节点.
 		iput(inode);											// 放回原 i 节点.
 		inode = current->root;									// 设置为进程指定的根 i 节点.
 		pathname++;

@@ -21,8 +21,9 @@ struct m_inode inode_table[NR_INODE]={{0, }, };   					// 内存中 i 节点表(
 static void read_inode(struct m_inode * inode);						// 读指定 i 节点号的 i 节点信息.
 static void write_inode(struct m_inode * inode);					// 写 i 节点信息到高速缓冲中.
 
-// 等待指定的 i 节点可用.
-// 如果 i 节点已被锁定, 则将当前任务置为不可中断的等待状态, 并添加到该 i 节点的等待队列 i_wait 中. 直到该 i 节点解锁并明确地唤醒本任务.
+// 等待指定的 i 节点可用(解锁).
+// 如果 i 节点已被锁定, 则将当前任务置为不可中断的等待状态, 并添加到该 i 节点的等待队列 i_wait 中. 
+// 直到该 i 节点解锁并明确地唤醒本任务.
 static inline void wait_on_inode(struct m_inode * inode)
 {
 	cli();
@@ -102,7 +103,8 @@ static int _bmap(struct m_inode * inode, int block, int create)
 	struct buffer_head * bh;
 	int i;
 
-	// 首先判断参数文件数据块号 block 的有效性. 如果块号小于 0, 则停机. 如果块号大于直接块数 + 间接块数 + 二次间接块数, 超出文件系统表示范围, 则停机.
+	// 首先判断参数文件数据块号 block 的有效性. 如果块号小于 0, 则停机. 
+	// 如果块号大于直接块数 + 间接块数 + 二次间接块数, 超出文件系统表示范围, 则停机.
 	if (block < 0)
 		panic("_bmap: block<0");
 	if (block >= 7 + 512 + 512 * 512)
@@ -136,7 +138,8 @@ static int _bmap(struct m_inode * inode, int block, int create)
 			return 0;
 		// 现在读取设备上该 i 节点的一次间接块. 并取该间接块上第 block 项中的逻辑块号(盘块号)i. 
 		// 每一项占 2 个字节. 如果是创建并且间接块的第 block 项中的逻辑块号为 0 的话, 则申请一磁盘块,
-		// 并让间接块中的第 block 项等于该新逻辑块块号. 然后置位间接块的已修改标志. 如果不是创建, 则 i 就是需要映射(寻找)的逻辑块号.
+		// 并让间接块中的第 block 项等于该新逻辑块块号, 然后置位间接块的已修改标志. 
+		// 如果不是创建, 则 i 就是需要映射(寻找)的逻辑块号.
 		if (!(bh = bread(inode->i_dev, inode->i_zone[7])))
 			return 0;
 		i = ((unsigned short *) (bh->b_data))[block];
@@ -150,9 +153,11 @@ static int _bmap(struct m_inode * inode, int block, int create)
 		return i;
 	}
 	// 若程序运行到此, 则表明数据块属于二次间接块. 其处理过程与一次间接块类似. 
-	// 下面是对二次间接块的处理. 首先将 block 再减去间接块所容纳的块数(512). 然后根据是否设置了创建标志进行创建或寻找处理. 
-	// 如果是新创建并且 i 节点的二次间接块字段为 0, 则需申请一磁盘块用于存放二次间接块的一级块信息, 并将此实际磁盘块号填入二次间接块字段中.
-	// 之后, 置 i 节点已修改编制和修改时间. 同样地, 如果创建时申请磁盘块失败, 则此时 i 节点二次间接块字段 i_zone[8] 为 0, 则返回 0.
+	// 下面是对二次间接块的处理. 首先将 block 再减去间接块所容纳的块数(512). 
+	// 然后根据是否设置了创建标志进行创建或寻找处理. 
+	// 如果是新创建并且 i 节点的二次间接块字段为 0, 则需申请一磁盘块用于存放二次间接块的一级块信息, 
+	// 并将此实际磁盘块号填入二次间接块字段中. 之后, 置 i 节点已修改编制和修改时间. 
+	// 同样地, 如果创建时申请磁盘块失败, 则此时 i 节点二次间接块字段 i_zone[8] 为 0, 则返回 0.
 	// 或者不是创建, 但 i_zone[8] 原来变为 0, 表明 i 节点中没有间接块, 于是映射磁盘块失败, 返回 0 退出.
 	block -= 512;
 	if (create && !inode->i_zone[8])
@@ -176,7 +181,8 @@ static int _bmap(struct m_inode * inode, int block, int create)
 		}
 	brelse(bh);
 	// 如果二次间接块的二级块块号为 0, 表示申请磁盘失败或者原来对应块号就为 0, 则返回 0 退出.
-	// 否则就从设备上读取二次间接块的二级块, 并取该二级块上第 block 项中的逻辑块号(与上 511 是为了限定 block 值不超过 511).
+	// 否则就从设备上读取二次间接块的二级块, 
+	// 并取该二级块上第 block 项中的逻辑块号(与上 511 是为了限定 block 值不超过 511).
 	if (!i)
 		return 0;
 	if (!(bh = bread(inode->i_dev, i)))
@@ -326,13 +332,15 @@ struct m_inode * get_empty_inode(void)
 
 // 获取管道节点. 
 // 首先扫描 i 节点表, 寻找一个空闲 i 节点项, 然后取得一页空闲内存供管道使用. 
-// 然后将得到的 i 节点的引用计数置为 2(读者和写者), 初始化管道头和尾, 置 i 节点的管道类型标志. 返回 i 节点指针, 如果失败则返回 NULL. 
+// 然后将得到的 i 节点的引用计数置为 2(读者和写者), 初始化管道头和尾, 置 i 节点的管道类型标志. 
+// 返回 i 节点指针, 如果失败则返回 NULL. 
 struct m_inode * get_pipe_inode(void)
 {
 	struct m_inode * inode;
 
 	// 首先从内存 i 节点表中取得一个空闲 i 节点. 如果找不到空闲 i 节点则返回 NULL. 
-	// 然后为该 i 节点申请一页内存, 并让节点的 i_size 字段指向该页面. 如果已没有空闲内存, 则释放该 i 节点, 并返回 NULL. 
+	// 然后为该 i 节点申请一页内存, 并让节点的 i_size 字段指向该页面. 
+	// 如果已没有空闲内存, 则释放该 i 节点, 并返回 NULL. 
 	if (!(inode = get_empty_inode()))
 		return NULL;
 	if (!(inode->i_size = get_free_page())) {         			// 节点的 i_size 字段指向缓冲区. 
