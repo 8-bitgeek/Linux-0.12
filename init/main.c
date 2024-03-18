@@ -342,13 +342,14 @@ void init(void)
 	// 由于这里 sh 的运行方式是非交互式的, 因此在执行完 rc 文件中的命令后就会立刻退出, 进程 2 也随之结束. 
 	// 并于 execve() 函数说明请参见 fs/exec.c 程序.
 	// 函数 _exit() 退出时的出错码 1 - 操作未许可; 2 -- 文件或目录不存在.
-	if (!(pid = fork())) { 											// (kernel/sys_call.s)
+	if (!(pid = fork())) { 								// (kernel/sys_call.s)
 		// 以下代码是在 Task-2 中执行.
-		close(0); 													// int 0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
+		close(0); 										// int 0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
 		if (open("/etc/rc", O_RDONLY, 0))
-			_exit(1);												// 若打开文件失败, 则退出(lib/_exit.c).
-		execve("/bin/sh", argv_rc, envp_rc);						// 替换成 /bin/sh 程序并执行.
-		_exit(2);													// 若 execve() 执行失败则退出.
+			_exit(1);									// 若打开文件失败, 则退出(lib/_exit.c).
+		// 调用 int 0x80 中断, __NR_execve. (lib/execve.c) (kernel/sys_call.s sys_execve)
+		execve("/bin/sh", argv_rc, envp_rc);			// 替换成 /bin/sh 程序并执行.
+		_exit(2);										// 若 execve() 执行失败则退出.
     }
 	// 下面是父进程(Task-1)执行的语句. wait() 等待子进程停止或终止, 返回值应是子进程的进程号(pid). 
 	// 这三句的作用是父进程等待子进程的结束. &i 是存放返回状态信息的位置. 如果 wait() 返回值不等于子进程号, 则继续等待.

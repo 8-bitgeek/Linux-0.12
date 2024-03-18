@@ -224,7 +224,7 @@ struct task_struct {
 	/* file system info */
 	/* -1 if no tty, so it must be signed */
 	int tty;							// 进程使用 tty 终端的子设备号. -1 表示没有使用.
-	unsigned short umask;				// 文件创建属性屏蔽位.
+	unsigned short umask;				// 文件创建属性屏蔽位(哪一位置位就表示要屏蔽哪一位).
 	struct m_inode * pwd;				// 当前工作目录 i 节点结构指针.
 	struct m_inode * root;				// 根目录 i 节点结构指针.
 	struct m_inode * executable;		// 执行文件 i 节点结构指针.
