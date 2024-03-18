@@ -628,7 +628,7 @@ struct m_inode * namei(const char * pathname)
 // 文件打开 namei 函数.
 // filename - 文件名. 
 // flag - 打开文件标志, 它可取值: O_RDONLY(只读), O_WRONLY(只写) 或 O_RDWR(读写), 以及 O_CREAT(创建),
-// 		  O_EXCL(被创建文件必须不存在), O_APPEND(在文件尾添加数据) 等其他一些标志的组合. 
+// 		  O_EXCL(被创建文件必须不存在), O_APPEND(在文件尾添加数据) 等其他一些标志的组合. (include/fcntl.h)
 // mode - 如果本调用创建了一个新文件, 则 mode 就用于指定文件的许可属性. 
 //	  	  这些属性有: S_IRWXU(文件宿主具有读, 写和执行权限), S_IRUSR(用户具有读文件权限), 
 // 		  S_IRWXG(组成员有读, 写执行) 等等. 
@@ -670,7 +670,7 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 		iput(dir); 												// 否则表示出错.
 		return -EISDIR;
 	}
-	// 接着根据上面得到的最顶层目录名的 i 节点 dir, 
+	// 接着根据上面得到的最深层目录的 i 节点 dir, 
 	// 在其中查找 pathname 中*文件名*(/dev/tty1 中的 tty1)对应的目录项结构 de, 
 	// 并同时得到该目录项所在的高速缓冲区指针. 如果该高速缓冲指针为 NULL, 则表示没有找到对应文件名的目录项, 
 	// 因此只可能是创建文件操作. 此时如果不是创建文件, 则放回该目录的 i 节点, 返回出错号退出. 

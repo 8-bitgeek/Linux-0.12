@@ -259,21 +259,33 @@ struct task_struct {
  */
 // 对应上面任务结构的第 1 个任务(TASK-0)的信息.
 #define INIT_TASK {\
-	/* state etc */ 0, 15, 15, \
-	/* signals */	0, {{},}, 0, \
-	/* ec,brk... */	0, 0, 0, 0, 0, 0, \
-	/* pid etc.. */	0, 0, 0, 0, \
-	/* suppl grps*/ {NOGROUP,}, \
-	/* proc links*/ &init_task.task, 0, 0, 0, \
-	/* uid etc */	0, 0, 0, 0, 0, 0, \
-	/* timeout */	0, 0, 0, 0, 0, 0, 0, \
-	/* rlimits */   { {0x7fffffff, 0x7fffffff}, {0x7fffffff, 0x7fffffff}, \
+					/* state, counter, 	priority */ \
+					0, 			15, 	15, \
+					/* signal, sigaction[32], blocked */\
+					0, 			{{},}, 			0, \
+					/* exit_code, start_code, end_code, end_data, brk, start_stack */ \
+	                0, 				0, 			0, 			0, 		0, 		0, \
+					/* pid, pgrp, session, leader */ \
+	                0, 0, 0, 0, \
+					/* groups[] */ \
+	                {NOGROUP,}, \
+					/* *p_pptr, 	*p_cptr, *p_ysptr, *p_osptr */ \
+	                &init_task.task, 	0,  	0, 		0, \
+					/* uid, euid, suid, gid, egid, sgid */ \
+	              	0,		 0,		0, 	0, 		0,  0, \
+					/* timeout, alarm, utime, stime, cutime, cstime, start_time */ \
+	              	0, 			0, 		0, 		0, 		0, 		0, 		0, \
+					/* rlim[]: 进程资源使用统计数据 */ \
+	                { {0x7fffffff, 0x7fffffff}, {0x7fffffff, 0x7fffffff}, \
 		  			{0x7fffffff, 0x7fffffff}, {0x7fffffff, 0x7fffffff}, \
 		  			{0x7fffffff, 0x7fffffff}, {0x7fffffff, 0x7fffffff}}, \
-	/* flags */		0, \
-	/* math */		0, \
-	/* fs info */	-1, 0022, NULL, NULL, NULL, NULL, 0, \
-	/* filp */		{NULL,}, \
+					/* flags, used_math */ \
+	             	0, 			0, \
+					/* 以下是文件系统信息 */ \
+					/* tty, umask, pwd, root, executable, library, close_on_exec*/ \
+	              	-1, 	0022, NULL, NULL, 	NULL, 		NULL, 		0, \
+					/* filp[] */ \
+	            	{NULL,}, \
 	/* ldt */ \
 					{ \
 						{0, 0}, \

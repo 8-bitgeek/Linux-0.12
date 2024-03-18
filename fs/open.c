@@ -203,7 +203,7 @@ int sys_chown(const char * filename, int uid, int gid)
 
 // 检查字符设备类型.
 // 该函数仅用于下面文件打开系统调用 sys_open(), 用于检查若打开的文件是 tty 终端字符设备时, 
-// 需要对当前进程和 tty 表进行相应设置. 返回 0 检测处理成功, 返回 -1 表示失败, 对应字符设备不能打开.
+// 对当前进程和 tty 表进行相应设置. 返回 0 检测处理成功, 返回 -1 表示失败, 对应字符设备不能打开.
 static int check_char_dev(struct m_inode * inode, int dev, int flag)
 {
 	struct tty_struct * tty;
@@ -310,8 +310,8 @@ int sys_open(const char * filename, int flag, int mode)
 	// 如果允许(函数返回 0), 那么在 check_char_dev() 中会根据具体文件打开标志为进程设置控制终端. 
 	// 如果不允许打开使用该字符设备文件, 那么我们只能释放上面申请的文件项和句柄资源. 返回出错码.
 	/* ttys are somewhat special (ttyxx major==4, tty major==5) */
-	if (S_ISCHR(inode->i_mode)) 					// 如果是字符设备文件(比如 tty1 等).
-		if (check_char_dev(inode, inode->i_zone[0], flag)) {
+	if (S_ISCHR(inode->i_mode)) 					// 如果是字符设备文件(比如 tty1 等, 终端设备, 内存设备, 网络设备).
+		if (check_char_dev(inode, inode->i_zone[0], flag)) { 	// 对于设备文件, 其 zone[0] 中存放的是设备号.
 			iput(inode);
 			current->filp[fd] = NULL;
 			f->f_count = 0;

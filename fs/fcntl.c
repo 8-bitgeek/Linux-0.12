@@ -21,9 +21,9 @@ extern int sys_close(int fd);
 static int dupfd(unsigned int fd, unsigned int arg)
 {
 	// 首先检查函数参数的有效性. 
-	// 如果文件句柄值大于一个程序最多打开文件数 NR_OPEN, 或者该句柄的文件结构不存在, 则返回出错码并退出. 
+	// 如果文件句柄值大于一个程序最多打开文件数 NR_OPEN, 或者要复制的句柄文件结构不存在, 则返回出错码并退出. 
 	// 如果指定的新句柄值 arg 大于最多打开文件数, 也返回出错码并退出. 
-	// 注意, 实际上文件句柄就是进程文件结构指针数组项索引号.
+	// 文件句柄就是进程文件结构指针数组项索引号.
 	if (fd >= NR_OPEN || !current->filp[fd])
 		return -EBADF;
 	if (arg >= NR_OPEN)
@@ -31,7 +31,7 @@ static int dupfd(unsigned int fd, unsigned int arg)
 	// 然后在当前进程的文件结构指针数组中寻找索引号等于或大于 arg, 但还没有使用的项. 
 	// 若找到的新句柄值 arg 大于最多打开文件数(即没有空闲项), 则返回出错码并退出.
 	while (arg < NR_OPEN)
-		if (current->filp[arg])
+		if (current->filp[arg])  							// 如果非空闲项, 则查找下一个.
 			arg++;
 		else
 			break;

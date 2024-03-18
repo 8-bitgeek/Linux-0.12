@@ -326,14 +326,15 @@ void init(void)
 	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 
 	// 这里再把它以读和写的方式分别打开是为了复制产生标准输出(写)句柄 stdout 和标准出错输出句柄 stderr.
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
-	(void) open("/dev/tty1", O_RDWR, 0); 							// (fs/open.c)
-	(void) dup(0);													// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c)
-	(void) dup(0);													// 复制句柄, 产生句柄 2 号 -- stderr 标准出错输出设备.
+	(void) open("/dev/tty1", O_RDWR, 0); 				// (fs/open.c)
+	(void) dup(0);										// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c sys_dup())
+	(void) dup(0);										// 复制句柄, 产生句柄 2 号 -- stderr 标准出错输出设备.
 	// 下面打印缓冲区块数和总字节数, 每块 1024 字节, 以及主内存区空闲内存字节数.
-	printf("<<<<< %d buffers = %d bytes buffer space >>>>>\n\r", NR_BUFFERS, NR_BUFFERS * BLOCK_SIZE);
-	printf("<<<<< Free mem: %d bytes >>>>>\n\r", memory_end - main_memory_start);
-	// 下面 fork() 用于创建一个子进程(任务 2). 对于被创建的子进程, fork() 将返回 0 值, 对于原进程(父进程)则返回子进程的进程号 pid. 
-	// 所以第 202--206 行是子进程执行的内容. 该子进程关闭了句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 
+	printf("<<<<< %d buffers = %d bytes buffer space >>>>>\n\r", NR_BUFFERS, NR_BUFFERS * BLOCK_SIZE); 	// 高速缓冲区.
+	printf("<<<<< Free mem: %d bytes >>>>>\n\r", memory_end - main_memory_start); 						// 主内存.
+	// 下面 fork() 用于创建一个子进程(TASK-2). 
+	// 对于被创建的子进程, fork() 将返回 0 值, 对于原进程(父进程)则返回子进程的进程号 pid. 
+	// TASK-2 关闭了文件句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 
 	// 并使用 execve() 函数将进程自身替换成 /bin/sh 程序(即 shell 程序), 然后执行 /bin/sh 程序. 
 	// 所携带的参数和环境变量分别由 argv_rc 和 envp_rc 数组给出. 
 	// 关闭句柄 0 并立刻打开 /etc/rc 文件的作用是把标准输入 stdin 重定向到 /etc/rc/ 文件. 
@@ -343,13 +344,13 @@ void init(void)
 	// 函数 _exit() 退出时的出错码 1 - 操作未许可; 2 -- 文件或目录不存在.
 	if (!(pid = fork())) { 											// (kernel/sys_call.s)
 		// 以下代码是在 Task-2 中执行.
-		close(0);
+		close(0); 													// int 0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
 		if (open("/etc/rc", O_RDONLY, 0))
 			_exit(1);												// 若打开文件失败, 则退出(lib/_exit.c).
 		execve("/bin/sh", argv_rc, envp_rc);						// 替换成 /bin/sh 程序并执行.
 		_exit(2);													// 若 execve() 执行失败则退出.
     }
-	// 下面还是父进程(Task-1)执行的语句. wait() 等待子进程停止或终止, 返回值应是子进程的进程号(pid). 
+	// 下面是父进程(Task-1)执行的语句. wait() 等待子进程停止或终止, 返回值应是子进程的进程号(pid). 
 	// 这三句的作用是父进程等待子进程的结束. &i 是存放返回状态信息的位置. 如果 wait() 返回值不等于子进程号, 则继续等待.
   	if (pid > 0)
 		while (pid != wait(&i));
