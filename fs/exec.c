@@ -316,15 +316,16 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 // 该函数是系统中断调用(int 0x80)功能号 __NR_execve 调用的函数. 
 // 函数的参数是进入系统调用处理过程后直至调用本函数之前逐步压入栈中的值.  
 // 这些值包括:
-// 1: 第 86--88 行入栈的 edx, ecx 和 ebx 寄存器值, 分别对应 **envp, **argv 和 *filename;
-// 2: 第 94 行调用 sys_call_table 中 sys_execve 函数(指针)时压入栈的函数返回地址(tmp);
-// 3: 第 202 行在调用本函数 do_execve 前入栈的指向栈中调用系统中断的程序代码指针 eip.
+// 1: system_call 在调用系统调用处理函数前入栈的 edx, ecx 和 ebx 寄存器值, 分别对应 **envp, **argv 和 *filename;
+// 2: system_call 在调用用 sys_call_table 中 sys_execve 函数(指针)时(call sys_execve)压入栈的函数返回地址(tmp);
+// 3: sys_execve 在调用本函数 do_execve 前入栈的指向栈中调用系统中断的程序代码指针 eip.
 // 参数:
-// eip - 调用系统中断的程序代码指针.
-// tmp - 系统中断在调用 sys_execve 时的返回地址, 无用.
-// filename - 被执行程序文件名指针;
+// eip - sys_execve 在调用本函数前入栈的程序代码指针. 
+// 		 最后入栈的参数 eip 在参数表的第一个(实际上最后入栈了一个返回地址, 但是不作为参数).
+// tmp - system_call 在调用 sys_execve 时的返回地址, 无用.
+// filename - 要执行的程序文件名指针;
 // argv - 命令行参数指针数组的指针;
-// envp - 环境变更指针数组的指针.
+// envp - 环境变量指针数组的指针.
 // 返回: 如果调用成功, 则不返回; 否则设置出错号, 并返回 -1.
 int do_execve(unsigned long * eip, long tmp, char * filename,
 			  char ** argv, char ** envp)
@@ -332,7 +333,7 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	struct m_inode * inode;
 	struct buffer_head * bh;
 	struct exec ex;
-	unsigned long page[MAX_ARG_PAGES];							// 参数和环境串空间页面指针数组.
+	unsigned long page[MAX_ARG_PAGES];							// 参数和环境变量所在页面的指针数组.
 	int i, argc, envc;
 	int e_uid, e_gid;											// 有效用户 ID 和有效组 ID.
 	int retval;
@@ -345,7 +346,7 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	while (1) {
 		s = get_fs_byte(filename + index);
 		if (s) {
-			*(filename1 + index) = s;
+			*(filename1 + index) = s; 							// 拷贝 filename 到 filename1 中.
 			index++;
 		} else {
 			break;
@@ -355,8 +356,8 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	Log(LOG_INFO_TYPE, "<<<<< process pid = %d do_execve : %s >>>>>\n", current->pid, filename1);
 
 	// 在正式设置执行文件的运行环境之前, 让我们先干些杂事. 
-	// 内核准备了 128KB(32 个页面) 空间来存放正执行文件的命令行参数和环境字符串.
-	// 上行把 p 初始设置成位于 128KB 空间的最后 1 个长字处. 
+	// 内核准备了 128KB(32 个页面) 空间来存放要执行文件的命令行参数和环境字符串.
+	// 上面把 p 初始化设置成位于 128KB 空间的最后 1 个长字(4byte)处. 
 	// 在初始参数和环境空间的操作过程中, p 将用来指明在 128KB 空间中的当前位置.
 	// 另外, 参数 eip[1] 是调用本次系统调用的原用户程序代码段寄存器 CS 值, 
 	// 其中的段选择符当然必须是当前任务的代码段选择符(0x000f).

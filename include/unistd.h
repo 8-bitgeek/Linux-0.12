@@ -218,9 +218,10 @@ return -1; \
 type name(atype a, btype b, ctype c) \
 { \
 long __res; \
-__asm__ volatile ("int $0x80" 												/* 调用系统中断 0x80 */\
-	: "=a" (__res) 															/* 返回值 -> eax(__res) */\
-	: "0" (__NR_##name), "b" ((long)(a)), "c" ((long)(b)), "d" ((long)(c)));/* 输入为系统中断调用号 __NR_name, a 表示存放在 ebx 中的参数, b 表示存放在 ecx 中的参数, c 表示存放在 edx 中的参数 */\
+__asm__ volatile ("int $0x80" 												/* 调用系统中断 0x80 */ \
+	: "=a" (__res) 															/* 返回值 -> eax(__res) */ \
+	/* 输入为系统中断调用号 __NR_name, a 表示存放在 ebx 中的参数, b 表示存放在 ecx 中的参数, c 表示存放在 edx 中的参数 */ \
+	: "0" (__NR_##name), "b" ((long)(a)), "c" ((long)(b)), "d" ((long)(c))); \
 if (__res >= 0) \
 	return (type) __res; \
 errno = -__res; \
