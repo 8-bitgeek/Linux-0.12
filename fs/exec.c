@@ -127,7 +127,7 @@ static unsigned long * create_tables(char * p, int argc, int envc)
 	put_fs_long(0, argv);
 	while (envc-- > 0) {
 		put_fs_long((unsigned long) p, envp++);
-		while (get_fs_byte(p++)) /* nothing */ ;	// p指针指向下一个参数串.
+		while (get_fs_byte(p++)) /* nothing */ ;	// p 指针指向下一个参数串.
 	}
 	put_fs_long(0, envp);
 	return sp;										// 返回构造的当前新栈指针.
@@ -178,7 +178,7 @@ static int count(char ** argv)
  * 由 TYT(Tytso) 于 1991.11.24 日修改, 增加了 from_kmem 参数, 
  * 该参数指明了字符串或字符串数组是来自用户段还是内核段.
  *
- * from_kmem     指针 argv *        字符串 argv **
+ * from_kmem     指针 argv *   字符串 argv **
  *    0          用户空间		用户空间
  *    1          内核空间		用户空间
  *    2          内核空间		内核空间
@@ -188,11 +188,11 @@ static int count(char ** argv)
  */
 // 复制指定个数的参数字符串到参数和环境空间中.
 // 参数: argc - 欲添加的参数个数; argv - 参数指针数组; page - 参数和环境空间页面指针数组. 
-// p - 参数表空间中偏移指针, 始终指向已复制串的头部; from_kmem - 字符串来源标志. 
+// 		p - 参数表空间中偏移指针, 始终指向已复制串的头部; from_kmem - 字符串来源标志. 
 // 在 do_execve() 函数中, p 初始化为指向参数表(128KB)空间的最后一个长字处, 
 // 参数字符串是以堆栈操作方式逆向往其中复制存放的. 
 // 因此 p 指针会随着复制信息的增加而逐渐减小, 并始终指向参数字符串的头部. 
-// 字符串来源标志 from_kmem 应该是 TYT 为了给 execve() 增添执行脚本文件的功能而新加的参数. 
+// 字符串来源标志 from_kmem 应该是 TYT(创作者) 为了给 execve() 增添执行脚本文件的功能而新加的参数. 
 // 当没有运行脚本文件的功能时, 所有参数字符串都在用户数据空间中. 
 // 返回: 参数和环境空间当前头部指针. 若出错则返回 0.
 static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
@@ -378,7 +378,7 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 restart_interp:
 	if (!S_ISREG(inode->i_mode)) {						/* must be regular file */
 		retval = -EACCES;
-		goto exec_error2;								// 若不是常规文件则置出错码, 跳转到 376 行.
+		goto exec_error2;								// 若不是常规文件则置出错码, 跳转 exec_error2.
 	}
 	// 下面检查当前进程是否有权运行指定的执行文件. 即根据执行文件 i 节点中的属性, 看看本进程是否有权执行它. 
 	// 在把执行文件 i 节点的属性字段值取到 i 中后, 
@@ -572,7 +572,7 @@ restart_interp:
 	// 同样, 若 sh_bang 没有置位而需要复制的话, 那么此时指针 p 随着复制信息增加而逐渐向小地址方向移动,
 	// 因此这两个复制串函数执行完后, 环境参数串信息块位于程序参数串信息块的上方, 并且 p 指向程序的第1个参数串. 
 	// 事实上, p 是 128KB 参数和环境空间中的偏移值. 因此如果 p = 0, 则表示环境变量与参数空间页面已经被占满, 容纳不下了.
-	if (!sh_bang) {
+	if (!sh_bang) { 								// sh_bang: 是否执行脚本程序的标志, 0 - 否.
 		p = copy_strings(envc, envp, page, p, 0);
 		p = copy_strings(argc, argv, page, p, 0);
 		if (!p) {

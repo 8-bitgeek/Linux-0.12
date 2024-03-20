@@ -44,8 +44,8 @@ struct exec {
 /* 指明为纯可执行文件的代号 */	        // New Magic, 1975 年以后开始使用. 涉及虚存机制.
 #define NMAGIC 0410		             // 0410 == 0x108
 /* Code indicating demand-paged executable.  */
-/* 指明为需求分页处理的可执行文件 */	   // 其头结构占用文件开始处 1K 空间.
-#define ZMAGIC 0413		// 0413 == 0x10b
+/* 指明为需求分页处理的可执行文件 */      // 其头结构占用文件开始处 1K 空间.
+#define ZMAGIC 0413		            // 0413 == 0x10b
 #endif /* not OMAGIC */
 // 另外还有一个 OMAGIC, 是为节约磁盘容量, 把盘上执行文件的头结构与代码紧凑存放. 下面宏用于判断魔数字段的正确性. 如果魔数不能被识别, 则返回真.
 
@@ -69,7 +69,7 @@ struct exec {
 // 否则执行代码部分紧随执行头结构末端(32 字节)开始, 即文件是模块文件(OMAGIC 类型).
 #ifndef N_TXTOFF
 #define N_TXTOFF(x) \
- (N_MAGIC(x) == ZMAGIC ? _N_HDROFF((x)) + sizeof (struct exec) : sizeof (struct exec))
+   (N_MAGIC(x) == ZMAGIC ? _N_HDROFF((x)) + sizeof (struct exec) : sizeof (struct exec))
 #endif
 
 // 数据部分起始偏移值. 从代码部分末端开始.
