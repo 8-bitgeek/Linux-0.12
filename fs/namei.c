@@ -549,8 +549,8 @@ struct m_inode * _namei(const char * pathname, struct m_inode * base, int follow
 	struct buffer_head * bh;
 	struct dir_entry * de;
 
-	// 首先查找指定路径名中最顶层目录的目录名并得到其 i 节点. 若不存在, 则返回 NULL 退出. 
-	// 如果返回的最顶层名字的长度是 0, 则表示该路径名以一个目录名为最后一项. 
+	// 首先查找指定路径名中最深层目录的目录名并得到其 i 节点. 若不存在, 则返回 NULL 退出. 
+	// 如果返回的最深层文件名字的长度是 0, 则表示该路径名以一个目录名为结尾. 
 	// 因此说明我们已经找到对应目录的 i 节点, 可以直接返回该 i 节点退出.
 	if (!(base = dir_namei(pathname, &namelen, &basename, base)))
 		return NULL;

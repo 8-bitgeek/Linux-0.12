@@ -319,7 +319,7 @@ timer_interrupt:
 # do_execve() 在 (fs/exec.c).
 .align 4
 sys_execve:
-	lea EIP(%esp), %eax				# eax 指向堆栈中保存用户程序 eip 指针处.
+	lea EIP(%esp), %eax				# eax 指向堆栈中保存的用户程序 eip 指针处(%esp + EIP = %eip + 0x20(调用 int 0x80 的下一行代码处)).
 	pushl %eax
 	call do_execve
 	addl $4, %esp					# 丢弃调用时压入栈的 EIP 值.

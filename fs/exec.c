@@ -366,9 +366,9 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	// 因此下面根据 eip[1] 的值确认是否符合正常情况. 
 	// 然后再初始化 128KB 的参数和环境串空间, 把所有字节清零, 并取出执行文件的 i 节点. 
 	// 再根据函数参数分别计算出命令行参数和环境字符串的个数 argc 和 envc. 另外, 执行文件必须是常规文件.
-	if ((0xffff & eip[1]) != 0x000f)
+	if ((0xffff & eip[1]) != 0x000f) 					// 当前任务的代码段选择符必须是 0x0f.
 		panic("execve called from supervisor mode");
-	for (i = 0 ; i < MAX_ARG_PAGES ; i++)				/* clear page-table */
+	for (i = 0; i < MAX_ARG_PAGES; i++)					/* clear page-table */
 		page[i] = 0;
 	if (!(inode = namei(filename)))						/* get executables inode */
 		return -ENOENT;
@@ -386,12 +386,12 @@ restart_interp:
 	// 这两个标志主要是让一般用户能够执行特权用户(如超级用户 root)的程序, 例如改变密码的程序 passwd 等. 
 	// 如果 set-user-ID 标志置位, 则后面执行进程的有效用户 ID(euid) 就设置成执行文件的用户 ID, 否则设置成当前进程的 euid. 
 	// 如果执行文件 set-group-id 被置位的话, 则执行进程的有效组 ID(egid) 就设置为执行执行文件的组 ID. 
-	// 否则设置成当前进程的 egid. 这里暂把这两个判断出来的值保存在变量 e_uid 和 e_gid 中.
+	// 否则设置成当前进程的 egid. 这里暂时把这两个判断出来的值保存在变量 e_uid 和 e_gid 中.
 	i = inode->i_mode;
 	e_uid = (i & S_ISUID) ? inode->i_uid : current->euid;
 	e_gid = (i & S_ISGID) ? inode->i_gid : current->egid;
 	// 现在根据进程的 euid 和 egid 和执行文件的访问属性进行比较. 
-	// 如果执行文件属于运行进程的用户, 则把文件属性值 i 右移 6 位, 此时其最低 3 位是文件宿主的访问权限标志. 
+	// 如果执行文件属于运行进程的用户, 则把文件属性值 i 右移 6 位, 此时最低 3 位是文件宿主的访问权限标志. 
 	// 否则的话如果执行文件与当前进程的用户属于同组, 则使属性最低 3 位是执行文件组用户的访问权限标志. 
 	// 否则此时属性字最低 3 位就是其他用户访问该执行文件的权限. 
 	// 然后我们根据属性字 i 的最低 3 位值来判断当前进程是否有权限运行这个执行文件.
@@ -399,11 +399,10 @@ restart_interp:
 	// 并且其他用户也没有任何权限或者当前进程用户不是超级用户, 
 	// 则表明当前进程没有权力运行这个执行文件. 于是置不可执行出错码, 并跳转到 exec_error2 处去作退出处理.
 	if (current->euid == inode->i_uid)
-		i >>= 6;
-	else if (in_group_p(inode->i_gid))
-		i >>= 3;
-	if (!(i & 1) &&
-	    !((inode->i_mode & 0111) && suser())) {
+		i >>= 6; 									// 如果执行文件的宿主是当前进程的用户, 则检查宿主的访问权限.
+	else if (in_group_p(inode->i_gid)) 				// rwx-rwx-rwx: 宿主-组员-其它.
+		i >>= 3; 									// 否则检查组员的访问权限.
+	if (!(i & 1) && !((inode->i_mode & 0111) && suser())) { // 如果用户不具有可执行权限, 并且文件也不可执行, 用户也不是超级用户.
 		retval = -ENOEXEC;
 		goto exec_error2;
 	}
