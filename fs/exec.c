@@ -140,7 +140,7 @@ static unsigned long * create_tables(char * p, int argc, int envc)
  * count() 函数计算命令行参数/环境变更的个数.
  */
 // 计算参数个数.
-// 参数: argv - 参数指针数组, 最后一个指针项是 NULL.
+// 参数: argv - 参数指针数组, 最后一个指针项是 NULL(每个指针占 4 个字节).
 // 统计参数指针数组中指针的个数.
 // 返回: 参数个数.
 static int count(char ** argv)
@@ -149,7 +149,7 @@ static int count(char ** argv)
 	char ** tmp;
 
 	if (tmp = argv)
-		while (get_fs_long((unsigned long *) (tmp++)))
+		while (get_fs_long((unsigned long *) (tmp++))) 		// 如果获取到的地址不为 NULL, 则说明没到最后一个参数.
 			i++;
 
 	return i;
@@ -194,7 +194,7 @@ static int count(char ** argv)
 // 因此 p 指针会随着复制信息的增加而逐渐减小, 并始终指向参数字符串的头部. 
 // 字符串来源标志 from_kmem 应该是 TYT(创作者) 为了给 execve() 增添执行脚本文件的功能而新加的参数. 
 // 当没有运行脚本文件的功能时, 所有参数字符串都在用户数据空间中. 
-// 返回: 参数和环境空间当前头部指针. 若出错则返回 0.
+// 返回: 参数和环境空间中当前的指针. 若出错则返回 0.
 static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
 		unsigned long p, int from_kmem)
 {
@@ -202,7 +202,7 @@ static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
 	int len, offset = 0;
 	unsigned long old_fs, new_fs;
 
-	if (!p)
+	if (!p) 										// p == 0 表示没有参数和环境空间没有内存了.
 		return 0;									/* bullet-proofing */	/* 偏移指针验证 */
 	// 首先取当前段寄存器 ds(指向内核数据段) 和 fs 值, 分别保存到变量 new_fs 和 old_fs 中. 
 	// 如果字符串和字符串数组(指针)来自内核空间, 则设置 fs 段寄存器指向内核数据段.
@@ -217,7 +217,7 @@ static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
 	while (argc-- > 0) {
 		if (from_kmem == 1)							// 若串指针在内核空间, 则 fs 指向内核空间.
 			set_fs(new_fs);
-		if (!(tmp = (char *)get_fs_long(((unsigned long *)argv) + argc)))
+		if (!(tmp = (char *)get_fs_long(((unsigned long *)argv) + argc))) 	// tmp 指向参数中的某一个.
 			panic("argc is wrong");
 		if (from_kmem == 1)							// 若串指针在内核空间, 则 fs 指回用户空间.
 			set_fs(old_fs);
@@ -227,31 +227,30 @@ static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
 		len = 0;									/* remember zero-padding */
 		do {										/* 我们知道串是以 NULL 字节结尾的 */
 			len++;
-		} while (get_fs_byte(tmp++));
+		} while (get_fs_byte(tmp++)); 				// 循环结束后 tmp 指向当前参数字符串的末尾.
 		if (p - len < 0) {							/* this shouldn't happen - 128kB */
 			set_fs(old_fs);							/* 不会发生 -- 因为有 128KB 的空间 */
 			return 0;
 		}
 		// 接着我们逆向逐个字符地把字符串复制到参数和环境空间末端处. 
 		// 在循环复制字符串的字符过程中, 我们首先要判断参数和环境空间中相应位置处是否已经有内存页面. 
-		// 如果还没有就先为其申请 1 页内存页面. 偏移量 offset 被用途为在一个页面中的当前指针偏移值. 
+		// 如果还没有就先为其申请 1 页内存页面. 偏移量 offset 被用作在一个页面中的当前指针偏移值. 
 		// 因为刚开始执行本函数时, 偏移变量 offset 被初始化为 0, 
 		// 所以(offset - 1 < 0)肯定成立而使得 offset 重新被设置为当前 p 指针在页面范围内的偏移值.
 		while (len) {
 			--p; --tmp; --len;
 			if (--offset < 0) {
-				offset = p % PAGE_SIZE;
-				if (from_kmem == 2)					// 若串在内核空间则 fs 指回用户空间.
+				offset = p % PAGE_SIZE; 			// 设置 offset 为页内偏移量.
+				if (from_kmem == 2)					// 若参数在内核空间则 fs 指回用户空间.
 					set_fs(old_fs);
-				// 如果当前偏移值 p 所在的串空间页面指针数组项 page[p/PAGE_SIZE] == 0, 
-				// 表示此时 p 指针所处的空间内存页面还不存在, 
-				// 则需申请一空闲内存页, 并将该页面指针填入指针数组, 同时也使页面指针 pag 指向该新页面. 
+				// 如果当前偏移值 p 所在的页面指针数组项 page[p/PAGE_SIZE] == 0, 
+				// 表示此时 p 指针所处的空间内存页面还不存在, 则需申请一页空闲内存页, 
+				// 并将该页面指针填入指针数组, 同时也使页面指针 pag 指向该新页面. 
 				// 若申请不到空闲页面则返回 0.
-				if (!(pag = (char *) page[p / PAGE_SIZE]) &&
-				    !(pag = (char *) (page[p / PAGE_SIZE] =
-				      get_free_page())))
+				if (!(pag = (char *) page[p / PAGE_SIZE]) && 		
+				    !(pag = (char *) (page[p / PAGE_SIZE] = get_free_page())))
 					return 0;
-				if (from_kmem == 2)					// 若串在内核空间则 fs 指向内核空间.
+				if (from_kmem == 2)					// 若参数在内核空间则 fs 指向内核空间.
 					set_fs(new_fs);
 
 			}
@@ -333,12 +332,12 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	struct m_inode * inode;
 	struct buffer_head * bh;
 	struct exec ex;
-	unsigned long page[MAX_ARG_PAGES];							// 参数和环境变量所在页面的指针数组.
+	unsigned long page[MAX_ARG_PAGES];							// 参数和环境变量所在页面的地址指针数组.
 	int i, argc, envc;
 	int e_uid, e_gid;											// 有效用户 ID 和有效组 ID.
 	int retval;
-	int sh_bang = 0;											// 控制是否需要执行脚本程序.
-	unsigned long p = PAGE_SIZE * MAX_ARG_PAGES - 4;			// p 指向参数和环境空间的最后部.
+	int sh_bang = 0;											// 控制是否需要执行脚本程序. 置位表示禁止再次执行脚本处理代码.
+	unsigned long p = PAGE_SIZE * MAX_ARG_PAGES - 4;			// p 指向参数和环境空间的最后一个长字(4byte).
 
 	// 在内核中打印要执行的文件的文件名字.
 	char s, filename1[128];
@@ -360,16 +359,17 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	// 上面把 p 初始化设置成位于 128KB 空间的最后 1 个长字(4byte)处. 
 	// 在初始参数和环境空间的操作过程中, p 将用来指明在 128KB 空间中的当前位置.
 	// 另外, 参数 eip[1] 是调用本次系统调用的原用户程序代码段寄存器 CS 值, 
-	// 其中的段选择符当然必须是当前任务的代码段选择符(0x000f).
+	// 其中的 CS 段选择符当然必须是当前任务的代码段选择符(0x000f).
 	// 若不是该值, 那么 CS 只能会是内核代码段的选择符 0x0008. 
 	// 但这是绝对不允许的, 因为内核代码是常驻内存而不能被替换掉的. 
 	// 因此下面根据 eip[1] 的值确认是否符合正常情况. 
-	// 然后再初始化 128KB 的参数和环境串空间, 把所有字节清零, 并取出执行文件的 i 节点. 
-	// 再根据函数参数分别计算出命令行参数和环境字符串的个数 argc 和 envc. 另外, 执行文件必须是常规文件.
-	if ((0xffff & eip[1]) != 0x000f) 					// 当前任务的代码段选择符必须是 0x0f.
+	// 然后再初始化 128KB 的参数和环境空间, 把所有字节清零, 并取出执行文件的 i 节点. 
+	// 再根据参数分别计算出命令行参数和环境字符串的个数 argc 和 envc. 另外, 执行文件必须是常规文件.
+	if ((0xffff & eip[1]) != 0x000f) 					// 当前任务(current)的代码段选择符必须是 0x0f(用户态).
 		panic("execve called from supervisor mode");
 	for (i = 0; i < MAX_ARG_PAGES; i++)					/* clear page-table */
 		page[i] = 0;
+	// 将要执行的文件的 inode 信息读取出来.
 	if (!(inode = namei(filename)))						/* get executables inode */
 		return -ENOENT;
 	argc = count(argv);									// 命令行参数个数.
@@ -381,14 +381,14 @@ restart_interp:
 		goto exec_error2;								// 若不是常规文件则置出错码, 跳转 exec_error2.
 	}
 	// 下面检查当前进程是否有权运行指定的执行文件. 即根据执行文件 i 节点中的属性, 看看本进程是否有权执行它. 
-	// 在把执行文件 i 节点的属性字段值取到 i 中后, 
-	// 我们首先查看属性中是否设置了 "设置-用户-ID"(set-user-ID) 标志和 "设置-组-ID(set-group-id)" 标志. 
+	// 在把执行文件 i 节点的属性字段值复制到 i 后, 
+	// 我们首先查看属性中是否设置了 set-user-ID(i_mode 位 9 置位) 标志和 set-group-id(i_mode 位 10 置位) 标志. 
 	// 这两个标志主要是让一般用户能够执行特权用户(如超级用户 root)的程序, 例如改变密码的程序 passwd 等. 
 	// 如果 set-user-ID 标志置位, 则后面执行进程的有效用户 ID(euid) 就设置成执行文件的用户 ID, 否则设置成当前进程的 euid. 
 	// 如果执行文件 set-group-id 被置位的话, 则执行进程的有效组 ID(egid) 就设置为执行执行文件的组 ID. 
 	// 否则设置成当前进程的 egid. 这里暂时把这两个判断出来的值保存在变量 e_uid 和 e_gid 中.
 	i = inode->i_mode;
-	e_uid = (i & S_ISUID) ? inode->i_uid : current->euid;
+	e_uid = (i & S_ISUID) ? inode->i_uid : current->euid; 		// 如果文件的 set-user-ID 置位, 则以文件宿主用户执行.
 	e_gid = (i & S_ISGID) ? inode->i_gid : current->egid;
 	// 现在根据进程的 euid 和 egid 和执行文件的访问属性进行比较. 
 	// 如果执行文件属于运行进程的用户, 则把文件属性值 i 右移 6 位, 此时最低 3 位是文件宿主的访问权限标志. 
@@ -402,13 +402,13 @@ restart_interp:
 		i >>= 6; 									// 如果执行文件的宿主是当前进程的用户, 则检查宿主的访问权限.
 	else if (in_group_p(inode->i_gid)) 				// rwx-rwx-rwx: 宿主-组员-其它.
 		i >>= 3; 									// 否则检查组员的访问权限.
-	if (!(i & 1) && !((inode->i_mode & 0111) && suser())) { // 如果用户不具有可执行权限, 并且文件也不可执行, 用户也不是超级用户.
+	// 如果用户不具有可执行权限, 并且文件也不可执行(rwx-rwx-rwx 所有的 x 位都复位), 用户也不是超级用户, 则跳转到 exec_error2 执行.
+	if (!(i & 1) && !((inode->i_mode & 0111) && suser())) { 
 		retval = -ENOEXEC;
 		goto exec_error2;
 	}
 	// 程序执行到这里, 说明当前进程有运行指定执行文件的权限. 
-	// 因此从这里开始我们需要取出执行文件头部数据并根据其中的信息来分析设置运行环境, 
-	// 或者运行另一个 shell 程序来执行脚本程序. 
+	// 所以我们需要取出执行文件头部数据并根据其中的信息来分析设置运行环境, 或者运行另一个 shell 程序来执行脚本程序. 
 	// 首先读取执行文件第 1 块数据到高速缓冲块中. 并复制缓冲块数据到 ex 中. 
 	// 如果执行文件开始的两个字节是字符 "#!", 则说明执行文件是一个脚本文件. 
 	// 如果想运行脚本文件, 我们就需要执行脚本文件的解释程序(例如 shell 程序).
@@ -416,16 +416,14 @@ restart_interp:
 	// 运行方法是从脚本文件第 1 行(带字符 "#!")中取出其中的解释程序名及后面的参数(若有的话), 
 	// 然后将这些参数和脚本文件名放进执行文件(此时是解释程序)的命令行参数空间中. 
 	// 在这之前我们当然需要先把函数指定的原有命令行参数和环境字符串放到 128KB 空间中, 
-	// 而这里建立起来的命令行参数则放到它们前面位置处(因为是逆向放置).
-	// 最后让内核执行脚本文件的解释程序. 
-	// 下面就是在设置好解释程序的脚本文件名等参数后, 取出解释程序的 i 节点并跳转到 229 行执行解释程序.
-	// 由于我们需要跳转到执行过的代码 229 行. 
-	// 因此在下面确认并处理了脚本文件之后需要设置一个禁止再次执行下面的脚本处理代码标志 sh_bang.
-	// 在后面的代码中该标志也用来表示我们已经设置好执行文件的命令行参数, 不要重复设置.
+	// 而这里建立起来的命令行参数则放到它们前面位置处(因为是逆向放置). 最后让内核执行脚本文件的解释程序. 
 	if (!(bh = bread(inode->i_dev, inode->i_zone[0]))) {
 		retval = -EACCES;
 		goto exec_error2;
 	}
+	// 下面就是在设置好解释程序的脚本文件名等参数后, 取出解释程序的 i 节点并跳转到 restart_interp 执行解释程序.
+	// 在下面确认并处理了脚本文件之后需要设置一个禁止再次执行下面的脚本处理代码标志 sh_bang.
+	// 在后面的代码中该标志也用来表示我们已经设置好执行文件的命令行参数, 不要重复设置.
 	ex = *((struct exec *) bh->b_data);								/* read exec-header */
 	if ((bh->b_data[0] == '#') && (bh->b_data[1] == '!') && (!sh_bang)) {
 		/*
@@ -537,7 +535,7 @@ restart_interp:
 		// 因此在调用 namei() 函数之前我们需要先临时让 fs 指向内核数据空间, 
 		// 以让函数能从内核空间得到解释程序名, 并在 namei() 返回后恢复 fs 的默认设置. 
 		// 因此这里我们先临时保存原 fs 段寄存器(原指向用户数据段)的值, 将其设置成指向内核数据段, 然后取解释程序的 i 节点. 
-		// 之后再恢复 fs 的原值. 并跳转到 restart_interp(204 行) 处重新处理新的执行文件 -- 脚本文件的解释程序. 
+		// 之后再恢复 fs 的原值. 并跳转到 restart_interp 处重新处理新的执行文件 -- 脚本文件的解释程序. 
 		old_fs = get_fs();
 		set_fs(get_ds());
 		if (!(inode = namei(interp))) { 						/* get executables inode */
@@ -568,10 +566,10 @@ restart_interp:
 		goto exec_error2;
 	}
 	// 如果 sh_bang 标志没有设置, 则复制指定个数的命令行参数和环境字符串到参数和环境空间中. 
-	// 若 sh_bang 标志已经设置, 则表明将运行脚本解释程序, 此时一环境变量页面已经复制, 无须再复制. 
+	// 若 sh_bang 标志已经设置, 则表明将运行脚本解释程序, 此时环境变量页面已经复制完成, 无需再复制. 
 	// 同样, 若 sh_bang 没有置位而需要复制的话, 那么此时指针 p 随着复制信息增加而逐渐向小地址方向移动,
-	// 因此这两个复制串函数执行完后, 环境参数串信息块位于程序参数串信息块的上方, 并且 p 指向程序的第1个参数串. 
-	// 事实上, p 是 128KB 参数和环境空间中的偏移值. 因此如果 p = 0, 则表示环境变量与参数空间页面已经被占满, 容纳不下了.
+	// 因此这两个复制串函数执行完后, 环境参数串信息块位于程序参数串信息块的后面, 并且 p 指向程序的第 1 个参数. 
+	// 事实上, p 是在 128KB 参数和环境空间中的偏移值. 因此如果 p = 0, 则表示环境变量与参数空间页面已经被占满, 容纳不下了.
 	if (!sh_bang) { 								// sh_bang: 是否执行脚本程序的标志, 0 - 否.
 		p = copy_strings(envc, envp, page, p, 0);
 		p = copy_strings(argc, argv, page, p, 0);
@@ -604,7 +602,7 @@ restart_interp:
 	// 然后复位原进程的所有信号处理句柄, 但对于 SIG_IGN 句柄无须复位.
 	if (current->executable)
 		iput(current->executable);
-	current->executable = inode;
+	current->executable = inode; 				// 设置当前进程对应的可执行文件的 inode 信息.
 	current->signal = 0;
 	for (i = 0 ; i < 32 ; i++) {
 		current->sigaction[i].sa_mask = 0;

@@ -227,7 +227,7 @@ struct task_struct {
 	unsigned short umask;				// 文件创建属性屏蔽位(哪一位置位就表示要屏蔽哪一位).
 	struct m_inode * pwd;				// 当前工作目录 i 节点结构指针.
 	struct m_inode * root;				// 根目录 i 节点结构指针.
-	struct m_inode * executable;		// 执行文件 i 节点结构指针.
+	struct m_inode * executable;		// 当前进程对应的执行文件的 i 节点结构指针.
 	struct m_inode * library;			// 被加载库文件 i 节点结构指针.
 	unsigned long close_on_exec;		// 执行时关闭文件句柄位图标志. (include/fcntl.h) 见下面注释.
 	struct file * filp[NR_OPEN];		// 进程打开的文件结构指针表, 最多 20 项. 表项号(索引值)即是文件描述符的值.
