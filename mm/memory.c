@@ -378,8 +378,8 @@ unsigned long put_dirty_page(unsigned long page, unsigned long address)
 		page_table = (unsigned long *) tmp; 						// 设置页表地址.
 	}
 	// 最后在找到的页表 page_table 中设置相关页表项内容, 即把物理页面 page 的地址填入表项同时置位 3 个标志(U/S, R/W, P).
-	// 该页表项在页表中的索引值等于线性地址 位 21 ~ 位 12 组成的 10 位的值. 每个页表共可有 1024 项(0~0x3ff).
-	page_table[(address >> 12) & 0x3ff] = page | (PAGE_DIRTY | 7);
+	// 该页表项在页表中的索引值等于线性地址 address 位 21 ~ 位 12 组成的 10 位的值. 每个页表共可有 1024 项(0~0x3ff).
+	page_table[(address >> 12) & 0x3ff] = page | (PAGE_DIRTY | 7); 	// 线性地址 page_table[i] 指向页面的物理地址.
 	/* no need for invalidate */
 	/* 不需要刷新页变换高速缓冲 */
 	return page;

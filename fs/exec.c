@@ -626,19 +626,18 @@ restart_interp:
 	// 执行下面语句之后, p 此时更改成以数据段起始处为原点的偏移值, 但仍指向参数和环境空间数据开始处, 
 	// 即已转换成栈指针值. 然后调用内部函数 create_tables() 在栈空间中创建环境和参数变量指针表, 
 	// 供程序的 main() 函数作为参数使用, 并返回该栈指针.
-	p += change_ldt(ex.a_text, page); 				// ex.a_text 表示文件的代码长度. 此时 p = 64MB + 参数环境空间的偏移值.
-	p -= LIBRARY_SIZE + MAX_ARG_PAGES * PAGE_SIZE; 	// 此时 p 指向进程空间的 64MB - 4MB - (参数与环境空间数据占用).
+	p += change_ldt(ex.a_text, page); 				// ex.a_text 表示文件的代码长度. 此时 p = 64MB + 参数环境空间的偏移值(比如 31KB).
+	p -= LIBRARY_SIZE + MAX_ARG_PAGES * PAGE_SIZE; 	// 此时 p 指向进程空间的 64MB + 31KB - 4MB - 32KB = 60MB - 1KB).
 	p = (unsigned long) create_tables((char *)p, argc, envc);
 	// 接着再修改进程各字段值为新执行文件的信息. 
 	// 即令进程任务结构代码尾字段 end_code 等于执行文件的代码段长度 a_text; 
 	// 数据尾字段 end_data 等于执行文件的代码段长度加数据段长度(a_data + a_text); 
-	// 并令进程堆结尾字段 brk = a_text + a_data + a_bss.
+	// 并令进程堆结尾字段 brk = a_text + a_data + a_bss. 
+	// (**堆由低地址向高地址增长[由 brk 开始增长], 栈由高地址向低地址增长[由 sp 开始增长]**).
 	// brk 用于指明进程当前数据段(包括未初始化数据部分)末端位置, 供内核为进程分配内存时指定分配开始位置. 
 	// 然后设置进程栈开始字段为栈指针所在页面, 并重新设置进程的有效用户 id 和有效组 id.
-	current->brk = ex.a_bss +
-		(current->end_data = ex.a_data +
-		(current->end_code = ex.a_text));
-	current->start_stack = p & 0xfffff000;
+	current->brk = ex.a_bss + (current->end_data = ex.a_data + (current->end_code = ex.a_text));
+	current->start_stack = p & 0xfffff000; 			// 4KB 边界.
 	current->suid = current->euid = e_uid;
 	current->sgid = current->egid = e_gid;
 	// 最后将原调用系统中断的程序在堆栈上的代码指针替换为指向新执行程序的入口点, 
