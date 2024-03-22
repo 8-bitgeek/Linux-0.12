@@ -70,7 +70,7 @@ __asm__("pushl %%edi; pushl %%esi; cld ; rep ; movsl; popl %%esi; popl %%edi"::"
 // 内存映射字节图(1 字节代表 1 页内存). 每个页面对应的字节用于标志页面当前被引用(占用)次数. 
 // 它最大可以映射 15MB 的内存空间. 
 // 在初始化函数 mem_init() 中, 对于不能用作主内存区页面的位置均被设置成 USED(100).
-unsigned char mem_map [ PAGING_PAGES ] = {0, };
+unsigned char mem_map[PAGING_PAGES] = {0, };
 
 /*
  * Free a page of memory at physical address 'addr'. 
@@ -79,7 +79,7 @@ unsigned char mem_map [ PAGING_PAGES ] = {0, };
 /*
  * 释放物理地址 "addr" 处的一页内存. 用于函数 free_page_tables().
  */
-// 释放物理地址 addr 开始的 1 页面内存.
+// 释放物理地址 addr 开始的 1 页内存(4KB)(将该页面的引用计数减 1).
 // 物理地址 1MB 以下的内存空间用于内核程序和缓冲, 不作为分配页面的内存空间. 因此参数 addr 需要大于 1MB.
 void free_page(unsigned long addr)
 {
@@ -89,13 +89,14 @@ void free_page(unsigned long addr)
 	if (addr < LOW_MEM) return;
 	if (addr >= HIGH_MEMORY)
 		panic("trying to free nonexistent page");
-	// 如果对参数 addr 验证通过, 那么就根据这个物理地址换算出内存低端开始计起的内存页面号. 页面号 = (addr - LOW_MEME)/4096. 
-	// 可见页面号从 0 号开始计起. 此时 addr 中存放着页面号. 如果该页面号对应的页面映射字节不等于 0, 则减 1 返回.
-	// 此时该映射字节值应该为 0, 表示页面已释放. 如果对应页面原本就是 0, 表示该物理页面本来就是空闲的, 说明内核代码出问题. 于是显示出错信息并停机.
+	// 如果对参数 addr 验证通过, 那么就根据这个物理地址换算出内存低端开始计起的内存页面号. 
+	// 页面号 = (addr - LOW_MEM) / 4096. 可见页面号从 0 号开始计起. 此时 addr 中存放着页面号. 
+	// 如果该页面号对应的页面映射字节不等于 0, 则减 1 返回. 此时该映射字节值应该为 0, 表示页面已释放. 
+	// 如果对应页面原本就是 0, 表示该物理页面本来就是空闲的, 说明内核代码出问题. 于是显示出错信息并停机.
 	addr -= LOW_MEM;
-	addr >>= 12;
+	addr >>= 12; 									// 得到 addr 对应的页面号.
 	if (mem_map[addr]--) return;
-	// 执行到此处表示要释放空闲的页面, 则将该页面的引用次数重置为 0
+	// 执行到此处表示要释放空闲的页面, 则将该页面的引用次数重置为 0.
 	mem_map[addr] = 0;
 	panic("trying to free free page");
 }
@@ -110,8 +111,8 @@ void free_page(unsigned long addr)
 // 根据指定的线性地址和限长(页表个数), 释放对应内存页表指定的内存块并置项空闲.
 // 页目录位于物理地址 0 开始处, 共 1024 项, 每项 4 字节, 共占 4KB. 每个目录项指定一个页表. 
 // 内核页表物理地址 0x1000 处开始(紧接着目录空间), 共 4 个页表. 
-// 每个页表有 1024 项, 每项 4B. 因此也占 4KB(1 页)内存. 
-// 各进程(除了在内核代码中的进程 0 和 1)的页表所占据的页面在进程被创建时由内核为其在主内存区申请得到. 
+// 每个页表有 1024 项, 每项 4 字节. 因此也占 4KB(1 页)内存. 
+// 各进程(除了在内核代码中的进程 0 和 1)的页表所占据的页面在进程被创建时由内核为其在**主内存区**申请得到. 
 // 每个页表项对应 1 页物理内存, 因此一个页表最多可映射 4MB 的物理内存.
 // 参数: from - 起始线性基地址; size - 释放的字节长度.
 int free_page_tables(unsigned long from, unsigned long size)
@@ -119,7 +120,8 @@ int free_page_tables(unsigned long from, unsigned long size)
 	unsigned long *pg_table;
 	unsigned long * dir, nr;
 
-	// 首先检测参数 from 给出的线性基地址是否在 4MB 的边界处. 因为该函数只能处理这种情况. 若 from = 0, 则出错. 说明试图释放内核和缓冲所占空间.
+	// 首先检测参数 from 给出的线性基地址是否在 4MB 的边界处. 因为该函数只能处理这种情况. 
+	// 若 from = 0, 则出错: 说明试图释放内核和缓冲所占空间.
 	if (from & 0x3fffff)
 		panic("free_page_tables called with wrong alignment");
 	if (!from)
@@ -128,33 +130,34 @@ int free_page_tables(unsigned long from, unsigned long size)
 	// 因为 1 个页表可管理 4MB 物理内存, 所以这里用右移 22 位的方式把需要复制的内存长度值除以 4MB. 
 	// 其中加上 0x3fffff(即 4MB - 1)用于得到进位整数倍结果, 即除操作若有余数则进 1.
 	// 例如, 如果原 size = 4.01MB, 那么可得到结果 size = 2.
-	size = (size + 0x3fffff) >> 22;
-	// 接着计算给出的线性基地址对应的起始目录项, 对应的目录项号 = from >> 22. 因为每项占 4 字节, 并且由于页目录表从物理地址 0 开始存放,
+	size = (size + 0x3fffff) >> 22; 							// 所占的页目录项数.
+	// 接着计算给出的线性基地址对应的起始目录项的地址, 对应的目录项号 = from >> 22. 
+	// 因为每项占 4 字节, 并且由于页目录表从物理地址 0 开始存放,
 	// 因此实际目录项指针 = 目录项号 << 2, 也即(from >> 20), "与" 上 0xffc 确保目录项指针范围有效.
-	// dir 表示起始的页目录项物理地址
+	// dir 表示起始的页目录项物理地址.
 	dir = (unsigned long *) ((from >> 20) & 0xffc); 			/* _pg_dir = 0 */
 	// 此时 size 是释放的页表个数, 即页目录项数, 而 dir 是起始目录项指针. 现在开始循环操作页目录项, 依次释放每个页表中的页表项. 
-	// 如果当前目录项无效(P 位 = 0), 表示该目录项没有使用(对应的页表不存在), 则继续处理下一个页表项. 
+	// 如果当前目录项无效(P [位 0] = 0), 表示该目录项没有使用(对应的页表不存在), 则继续处理下一个页表项. 
 	// 否则从目录项中取出页表地址 pg_table, 并对该页表中的 1024 个表项进行处理, 释放有效页表(P 位 = 1)对应的物理内存页面, 
-	// 或者从交换设备中释放无效页表项(P 位 = 0)对应的页面, 即释放交换设备中对应的内存页面(因为页面可能已经交换出去). 
-	// 然后把该页表项清零, 并继续处理下一页表项. 当一个页表所有表项都处理完毕就释放该页表自身占据的内存页面, 
+	// 或者从交换设备中释放无效页表项(P [位 0] = 0)对应的页面, 即释放交换设备中对应的内存页面(因为页面可能已经交换出去). 
+	// 然后把该页表项清零, 并继续处理下一页表项. 当一个页表中的所有表项都处理完毕就释放该页表自身占据的内存页面, 
 	// 并继续处理下一页目录项. 最后刷新页变换高速缓冲, 并返回 0.
-	for ( ; size-- > 0 ; dir++) {
+	for ( ; size-- > 0; dir++) {
 		// 如果该目录项不存在页表项, 则直接跳过该页表项
-		if (!(1 & *dir))
+		if (!(1 & *dir)) 										// 如果 P (位 0) 复位, 则表示对应的页表不存在.
 			continue;
-		pg_table = (unsigned long *) (0xfffff000 & *dir);		// 取页表地址.
-		for (nr = 0 ; nr < 1024 ; nr++) {
-			if (*pg_table) {									// 若所指页表项内容不为 0, 则若该项有效, 则释放对应面.
-				if (1 & *pg_table)
+		pg_table = (unsigned long *) (0xfffff000 & *dir);		// 取页表地址(位 12 - 31).
+		for (nr = 0; nr < 1024; nr++) { 						// 循环处理页表中的各个项.
+			if (*pg_table) {									// 若所指页表项内容不为 0, 则若该项有效, 则释放对应页面.
+				if (1 & *pg_table) 								// 存在位 P = 1, 则释放内存中对应的页面.
 					free_page(0xfffff000 & *pg_table);
-				else											// 否则释放交换设备中对应页.
+				else											// 内存中不存在则释放交换设备中对应页面.
 					swap_free(*pg_table >> 1);
 				*pg_table = 0;									// 该页表项内容清零.
 			}
 			pg_table++;											// 指向页表中下一项.
 		}
-		free_page(0xfffff000 & *dir);							// 释放该页表所占内存页面.
+		free_page(0xfffff000 & *dir);							// 释放该页表所占的内存页面.
 		*dir = 0;												// 对应页表的目录项清零.
 	}
 	invalidate();												// 刷新 CPU 页变换高速缓冲.
@@ -342,37 +345,39 @@ static unsigned long put_page(unsigned long page, unsigned long address)
  * routine, but this time we mark it dirty too.
  */
 /*
- * 如果你也想设置页面已修改标志, 则上一个函数工作得不是很好: exec.c 程序需要这种设置. 因为 exec.c 中函数会在放置页面之前修改过页面内容. 
- * 为了实现 VM, 我们需要能正确设置已修改状态标志. 因而下面就有了与上面相同的函数, 但是该函数在放置页面时会把页面标志为已修改状态.
+ * 如果你也想设置页面已修改标志, 则上一个函数工作得不是很好: exec.c 程序需要这种设置. 
+ * 因为 exec.c 中函数会在放置页面之前修改过页面内容. 为了实现 VM, 我们需要能正确设置已修改状态标志. 
+ * 因而下面就有了与上面相同的函数, 但是该函数在放置页面时会把页面标志为已修改状态.
  */
 // 把一内容已修改过的物理内存页面映射到线性地址空间指定处.
-// 该函数与一个函数 put_page() 几乎完全一样, 除了本函数在第 223 行设置页表项内容时, 同时还设置了页面已修改标志(位 6, PAGE_DIRTY).
+// 该函数与上面的 put_page() 几乎完全一样, 但是本函数在设置页表项内容时, 同时还设置了页面已修改标志(位 6, PAGE_DIRTY).
 unsigned long put_dirty_page(unsigned long page, unsigned long address)
 {
 	unsigned long tmp, *page_table;
 
 	/* NOTE !!! This uses the fact that _pg_dir=0 */
 
-	// 首先判断参数给定物理内存页面 page 的有效性. 如果该页面位置低于 LOW_MEM(1MB) 或超出系统实际含有内存高端 HIGH_MEMORY, 则发出警告. 
-	// LOW_MEM 是主内存区可能有的最小起始位置. 当系统后果内存小于或等于 6MB 时, 主内存区始于 LOW_MEM 处. 
-	// 再查看一下该 page 页面是不已经申请的页面, 即判断其在内存页面映射字节图 mem_map[] 中相应字节是否以置位. 若没有则需发出警告.
+	// 首先判断参数给定的物理内存页面地址 page 的有效性. 
+	// 如果该页面位置低于 LOW_MEM(1MB) 或超出实际物理内存大小 HIGH_MEMORY, 则发出警告. 
+	// LOW_MEM 是主内存区可能有的最小起始位置. 当系统内存小于或等于 6MB 时, 主内存区始于 LOW_MEM 处. 
+	// 再查看一下该 page 页面是不是已经申请的页面, 即判断其在内存页面映射字节图 mem_map[] 中相应字节是否已置位. 若没有则发出警告.
 	if (page < LOW_MEM || page >= HIGH_MEMORY)
 		printk("Trying to put page %p at %p\n", page, address);
-	if (mem_map[(page-LOW_MEM)>>12] != 1)
+	if (mem_map[(page-LOW_MEM)>>12] != 1) 					// >> 12 得到对应 page 的页面号.
 		printk("mem_map disagrees with %p at %p\n", page, address);
-	// 然后根据参数指定的线性地址 address 计算其在页目录表中对应的目录项指针, 并从中取得一级页表地址. 
+	// 然后根据参数指定的线性地址 address 计算其在页目录表中对应的目录项指针, 并从中取得页表地址. 
 	// 如果该目录项有效(P = 1), 即指定的页表在内存中, 则从中取得指定页表地址放到 page_table 变量中. 
 	// 否则申请一空闲页面给页表使用, 并在对应目录项中置相应标志(7 - User, U/S, R/W). 然后将该页表地址放到 page_table 变量中.
-	page_table = (unsigned long *) ((address >> 20) & 0xffc);
-	if ((*page_table) & 1)
-		page_table = (unsigned long *) (0xfffff000 & *page_table);
-	else {
+	page_table = (unsigned long *) ((address >> 20) & 0xffc); 		// 得到页目录项地址.
+	if ((*page_table) & 1) 											// 如果 P == 1, 表示对应的页表存在.
+		page_table = (unsigned long *) (0xfffff000 & *page_table);	// 得到页表地址.
+	else {															// 如果页表不存在, 则申请一个空闲页来存放页表.
 		if (!(tmp = get_free_page()))
 			return 0;
-		*page_table = tmp | 7;
-		page_table = (unsigned long *) tmp;
+		*page_table = tmp | 7; 										// 生成页目录项, 并存储到页目录表(tmp | 7 表示 U/S R/W P 均置位).
+		page_table = (unsigned long *) tmp; 						// 设置页表地址.
 	}
-	// 最后在找到的页表 page_table 中设置相关页表项内容, 即把物理页面 page 的地址填入表项同时置位 3 个标志(U/S,W/R,P).
+	// 最后在找到的页表 page_table 中设置相关页表项内容, 即把物理页面 page 的地址填入表项同时置位 3 个标志(U/S, R/W, P).
 	// 该页表项在页表中的索引值等于线性地址 位 21 ~ 位 12 组成的 10 位的值. 每个页表共可有 1024 项(0~0x3ff).
 	page_table[(address >> 12) & 0x3ff] = page | (PAGE_DIRTY | 7);
 	/* no need for invalidate */

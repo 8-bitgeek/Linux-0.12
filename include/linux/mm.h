@@ -35,7 +35,7 @@ static inline void oom(void)
 // 在修改过页表信息之后, 就需要刷新该缓冲区. 
 // 这里使用重新加载页目录基址寄存器 cr3 的方法来进行刷新. 下面 eax = 0 是页目录的基址.
 #define invalidate() \
-__asm__("movl %%eax,%%cr3"::"a" (0))
+__asm__("movl %%eax, %%cr3"::"a" (0))
 
 /* these are not to be changed without changing head.s etc */
 /* 下面定义若需要改动, 则需要与 head.s 等文件的相关信息一起改变. */

@@ -63,16 +63,16 @@ typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号�
 
 // 下面是 sigaction 的数据结构. 
 // sa_handler 	是对应某信号指定要采取的行动. 可以用上面的 SIG_DEL, 或 SIG_IGN 来忽略该信号, 
-// 				也可以是指向处理该信号函数的一个指针. 
+// 				也可以是指向处理该信号的函数的指针. 
 // sa_mask 		给出了对信号的屏蔽码, 在信号程序执行时将阻塞对这些信号的处理. 
 // sa_flags 	指定改变信号处理过程的信号集. 它是由 40-43 行的位标志定义的. 
 // sa_restorer 	是恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈. (参见 kernel/signal.c)
 // 另外, 引起触发信号处理的信号也将被阻塞, 除非使用了 SA_NOMASK 标志. 
 struct sigaction {
-	void (*sa_handler)(int);     // 对应某信号指定要采取的行动(信号处理函数). 
+	void (*sa_handler)(int);     // 信号对应的处理函数. 
 								 // 可以用上面的 SIG_DEL 或 SIG_IGN 来忽略该信号, 
 								 // 也可以是指向处理该信号函数的一个指针.
-	sigset_t sa_mask;            // 对信号的屏蔽码, 在信号程序执行时将屏蔽对这些信号的处理. 
+	sigset_t sa_mask;            // 对信号的屏蔽码, 在信号处理程序执行时将屏蔽对这些信号的处理. 
 	int sa_flags;                // 改变信号处理过程的信号集. 它是由 40-43 行的位标志定义的. 
 	void (*sa_restorer)(void);   // 恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈.
 };

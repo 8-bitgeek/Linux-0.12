@@ -105,13 +105,13 @@ static unsigned long * create_tables(char * p, int argc, int envc)
 	unsigned long *argv, *envp;
 	unsigned long * sp;
 
-	// 栈指针是以4字节(1 节)为边界进行寻址的, 因此这里需让 sp 为 4 的整数倍值. 此时 sp 位于参数环境表的末端. 
+	// 栈指针是以 4 字节为边界进行寻址的, 因此这里需让 sp 为 4 的整数倍值. 此时 sp 位于参数环境表的末端. 
 	// 然后我们先把 sp 向下(低地址方向)移动, 在栈中空出环境变量指针占用的空间, 并让环境变量指针 envp 指向该处. 
 	// 多空出的一个位置用于在最后存放一个 NULL 值. 下面指针加 1, sp 将递增指针宽度字节值(4 字节). 
 	// 再把 sp 向下移动, 空出命令行参数指针占用的空间, 并让 argv 指针指向该处. 
 	// 同样, 多空处的一个位置用于存放一个 NULL 值. 此时 sp 指向参数指针块的起始处, 
 	// 我们将环境参数块指针 envp 和命令行参数块指针以及命令行参数个数值分别压入栈中.
-	sp = (unsigned long *) (0xfffffffc & (unsigned long) p);
+	sp = (unsigned long *) (0xfffffffc & (unsigned long) p);  // 使 sp 指向 4 字节边界.
 	sp -= envc + 1;
 	envp = sp;
 	sp -= argc + 1;
@@ -277,27 +277,26 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 	// 首先把代码和数据段长度均设置为 64MB. 然后取当前进程局部描述符表代码段描述符中代码段基址. 
 	// 代码段基址与数据段基址相同. 再使用这些新值重新设置局部表中代码段和数据段描述符中的基址和段限长. 
 	// 这里请注意, 由于被加载的新程序的代码和数据段基址与原程序的相同, 因此没有必要再重复设置它们, 
-	// 即 186 和 188 行上的两条设置段基址的语句多余, 可省略.
-	code_limit = TASK_SIZE;
+	code_limit = TASK_SIZE; 						// 64MB.
 	data_limit = TASK_SIZE;
-	code_base = get_base(current->ldt[1]);
+	code_base = get_base(current->ldt[1]); 			// 获取当前进程的代码段基地址(线性地址).
 	data_base = code_base;
-	set_base(current->ldt[1], code_base);
-	set_limit(current->ldt[1], code_limit);
-	set_base(current->ldt[2], data_base);
+	set_base(current->ldt[1], code_base); 			// 由于新的代码段基地址与之前一致, 可省略.
+	set_limit(current->ldt[1], code_limit); 		// 设置代码段限长为 64MB.
+	set_base(current->ldt[2], data_base);			// 由于新的数据段基地址与之前一致, 可省略.
 	set_limit(current->ldt[2], data_limit);
 	/* make sure fs points to the NEW data segment */
-	/* 要确信 fs 段寄存器已指向新的数据段 */
+	/* 要确保 fs 段寄存器已指向新的数据段 */
 	// fs 段寄存器中放入局部表数据段描述符的选择符(0x17). 即默认情况下 fs 都指向任务数据段.
 	__asm__("pushl $0x17\n\tpop %%fs"::);
 	// 然后将参数和环境空间已存放数据的页面(最多有 MAX_ARG_PAGES 页, 128KB)放到数据段末端. 
-	// 方法是从进程空间库代码位置开始处逆向一页一页地放. 库文件代码占用进程空间最后 4MB. 
-	// 函数 put_dirty_page() 用于把物理页面映射到进程逻辑空间中. 在 mm/memory.c 中.
-	data_base += data_limit - LIBRARY_SIZE;
-	for (i = MAX_ARG_PAGES - 1 ; i >= 0 ; i--) {
-		data_base -= PAGE_SIZE;
+	// 方法是从进程空间库代码位置开始处往前一页一页地放. 库文件代码占用进程空间最后 4MB. 
+	// 函数 put_dirty_page() 用于把物理页面映射到进程逻辑(线性)空间中. 在 mm/memory.c 中.
+	data_base += data_limit - LIBRARY_SIZE; 			// LIBRARY_SIZE = 4MB, data_base 此时指向进程空间末尾 4MB 开始处.
+	for (i = MAX_ARG_PAGES - 1; i >= 0; i--) {
+		data_base -= PAGE_SIZE; 						// 将参数和环境空间放到库文件代码前面(低地址处).
 		if (page[i])									// 若该页面存在, 就放置该页面.
-			put_dirty_page(page[i], data_base);
+			put_dirty_page(page[i], data_base); 		// 把物理页面 page[i] 映射到当前进程的线性空间 data_base 中.
 	}
 	return data_limit;									// 最后返回数据段限长(64MB).
 }
@@ -582,9 +581,7 @@ restart_interp:
 	/* note that current->library stays unchanged by an exec */
 	/* OK, 下面开始就没有返回的地方了 */
 	// 前面我们针对函数参数提供的信息对需要运行执行文件的命令行和环境空间进行了设置, 
-	// 但还没有为执行文件做过什么实质性的工作, 
-	// 即还没有做过为执行文件初始化进程任务结构信息, 建立页表等工作. 
-	// 现在我们就来做这些工作. 由于执行文件直接使用当前进程的 "躯壳", 
+	// 但是还没有为执行文件初始化进程任务结构信息, 建立页表等工作, 由于执行文件直接使用当前进程的 "躯壳", 
 	// 即当前进程将被改造成执行文件的进程, 因此我们需要首先释放当前进程占用的某些系统资源, 
 	// 包括关闭指定的已打开文件, 占用的页表和内存页面等. 
 	// 然后根据执行文件头结构信息修改当前进程使用的局部描述符表 LDT 中描述符的内容, 
@@ -603,20 +600,19 @@ restart_interp:
 	if (current->executable)
 		iput(current->executable);
 	current->executable = inode; 				// 设置当前进程对应的可执行文件的 inode 信息.
-	current->signal = 0;
-	for (i = 0 ; i < 32 ; i++) {
+	current->signal = 0; 						// 对信号和信号处理函数进行初始化.
+	for (i = 0; i < 32; i++) {
 		current->sigaction[i].sa_mask = 0;
 		current->sigaction[i].sa_flags = 0;
 		if (current->sigaction[i].sa_handler != SIG_IGN)
 			current->sigaction[i].sa_handler = NULL;
 	}
-	// 再根据设定的执行时关闭文件句柄(close_on_exec)位图标志, 关闭指定的打开文件并复位该标志
-	for (i = 0 ; i < NR_OPEN ; i++)
+	// 再根据设定的执行时关闭文件句柄(close_on_exec)位图标志, 关闭指定的打开文件并复位该标志.
+	for (i = 0; i < NR_OPEN; i++)
 		if ((current->close_on_exec >> i) & 1)
 			sys_close(i);
 	current->close_on_exec = 0;
-	// 然后根据当前进程指定的基地址和限长, 
-	// 释放原来程序的代码段和数据段所对应的内存页表指定的物理内存页面及页表本身. 
+	// 然后根据当前进程指定的基地址和限长, 释放原来程序的代码段和数据段所对应的内存页表指定的物理内存页面及页表本身. 
 	// 此时新执行文件并没有占用主内存区任何页面, 因此在处理器真正运行新执行文件代码时就会引起缺页异常中断, 
 	// 此时内存管理程序即会执行缺页处理页为新执行文件申请内存页面和设置相关页表项, 并且把相关执行文件页面读入内存中. 
 	// 如果 "上次任务使用了协处理器" 指向的是当前进程, 则将其置空, 并复位使用了协处理器的标志.
@@ -625,13 +621,13 @@ restart_interp:
 	if (last_task_used_math == current)
 		last_task_used_math = NULL;
 	current->used_math = 0;
-	// 然后我们根据新执行文件头结构中的代码长度字段 a_text 的值修改局部表中描述符基址和段限长, 
+	// 然后我们根据要执行文件的头结构中的代码长度字段 a_text 的值修改局部表中描述符基址和段限长, 
 	// 并将 128KB 的参数和环境空间页面放置在数据段末端.
 	// 执行下面语句之后, p 此时更改成以数据段起始处为原点的偏移值, 但仍指向参数和环境空间数据开始处, 
 	// 即已转换成栈指针值. 然后调用内部函数 create_tables() 在栈空间中创建环境和参数变量指针表, 
-	// 供程序的 main() 作为参数使用, 并返回该栈指针.
-	p += change_ldt(ex.a_text, page);
-	p -= LIBRARY_SIZE + MAX_ARG_PAGES * PAGE_SIZE;
+	// 供程序的 main() 函数作为参数使用, 并返回该栈指针.
+	p += change_ldt(ex.a_text, page); 				// ex.a_text 表示文件的代码长度. 此时 p = 64MB + 参数环境空间的偏移值.
+	p -= LIBRARY_SIZE + MAX_ARG_PAGES * PAGE_SIZE; 	// 此时 p 指向进程空间的 64MB - 4MB - (参数与环境空间数据占用).
 	p = (unsigned long) create_tables((char *)p, argc, envc);
 	// 接着再修改进程各字段值为新执行文件的信息. 
 	// 即令进程任务结构代码尾字段 end_code 等于执行文件的代码段长度 a_text; 
