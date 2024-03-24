@@ -53,7 +53,7 @@ buf = 16												# 缓冲区字段偏移
 // 每个字节标志中各位的含义见如下说明:
 // (1) mode 是键盘特殊键的按下状态标志.
 // 表示大小写转换键(caps), 交换键(alt), 控制键(ctrl)和换档键(shift)的状态.
-//	位 7 caps 键按下
+//	位 7 caps 键按下;
 // 	位 6 caps 键的状态(应该与 leds 中对应 caps 的标志位一样);
 //	位 5 右 alt 键按下;
 // 	位 4 左 alt 键按下;
@@ -61,19 +61,21 @@ buf = 16												# 缓冲区字段偏移
 //	位 2 左 ctrl 键按下;
 //	位 1 右 shift 键按下;
 //	位 0 左 shift 键按下;
-// (2) leds 是用于表示键盘指示灯的状态标志. 即表示数字锁定键(num-lock), 大小写转换键(caps-lock)和滚动锁定键(scroll-lock)的发光二极管(LED)状态.
+// (2) leds 是用于表示键盘指示灯的状态标志. 即表示数字锁定键(num-lock), 
+// 大小写转换键(caps-lock)和滚动锁定键(scroll-lock)的发光二极管(LED)状态.
 //	位 7-3 全 0 不用;
 //	位 2 cas-lock;
 //	位 1 num-lock(初始置 1, 也即设置数字锁定键(num-lock)发光管为亮);
-//	位 0 scroll-lock
-// (3) 当扫描码是 0xe0 或 0xe1 时, 置该标志. 表示其后还跟随着 1 个或 2 个字符扫描码. 通常若收到扫描码 0xe0 则意味着还有一个字符跟随其后; 
+//	位 0 scroll-lock;
+// (3) 当扫描码是 0xe0 或 0xe1 时, 置该标志. 表示其后还跟随着 1 个或 2 个字符扫描码. 
+// 通常若收到扫描码 0xe0 则意味着还有一个字符跟随其后; 
 // 若收扫描码 0xe1 则表示后面还跟随着 2 个字符.
-//	位 1 = 1 收到 0xe1 标志
-//	位 0 = 1 收到 0xe0 标志
+//	位 1 = 1 收到 0xe1 标志;
+//	位 0 = 1 收到 0xe0 标志;
 
 mode:	.byte 0		/* caps, alt, ctrl and shift mode */
 leds:	.byte 2		/* num-lock, caps, scroll-lock mode (nom-lock on) */
-e0:	.byte 0
+e0:		.byte 0
 
 
 /*
@@ -83,7 +85,7 @@ e0:	.byte 0
  */
 /*
  *  con_int 是实际的中断处理子程序, 用于读键盘扫描码并将其转换成相应的 ascii 字符. 
- *  [ 注: 这段英文注释已过时. ]
+ *  [注: 这段英文注释已过时.]
  */
 // 键盘中断处理程序入口点.
 // 接收到用户的一个按键操作时, 就会向中断控制器发出一个键盘中断信号当键盘控制器 IRQ1. 当 CPU 响应该请求时就会执行键盘中断处理程序.
@@ -106,12 +108,12 @@ keyboard_interrupt:
 	movl blankinterval, %eax						# 预置黑屏时间计数值为 blankcount(滴答数)
 	movl %eax, blankcount
 	xorl %eax, %eax									/* %eax is scan code */     /* eax 中是扫描码 */
-	inb $0x60, %al									# 读取扫描码 -> al
+	inb $0x60, %al									# 从端口 0x60 中读取扫描码到 al.
 	cmpb $0xe0, %al									# 扫描码是 0xe0 码? 若是则跳转到设置 e0 标志代码处.
 	je set_e0
 	cmpb $0xe1, %al									# 扫描码是 0xe1 吗? 若是则跳转到设置 e1 标志代码处.
 	je set_e1
-	call *key_table(, %eax, 4)						# 调用键处理程序 key_table + eax*4
+	call *key_table(, %eax, 4)						# 调用键处理程序 key_table + eax * 4
 	movb $0, e0										# 返回之后复位 e0 标志.
 
 # 下面这段代码针对使用 8255A 的 PC 标准键盘电路进行硬件复位处理. 
@@ -140,9 +142,9 @@ e0_e1:	inb $0x61, %al								# 取 PPI 端口 B 状态, 其位 7 用于允许/�
 	popl %ebx
 	popl %eax
 	iret
-set_e0:	movb $1, e0									# 由到扫描前导码 0xe0 时, 设置 e0 标志(位 0).
+set_e0:	movb $1, e0									# 收到扫描前导码 0xe0 时(表示后面还跟着一个字符), 设置 e0 标志(位 0).
 	jmp e0_e1
-set_e1:	movb $2, e0									# 收到扫描前导码 0xe1 时, 设置 e1 标志(位 1).
+set_e1:	movb $2, e0									# 收到扫描前导码 0xe1 时(表示后面还跟着两个字符), 设置 e1 标志(位 1).
 	jmp e0_e1
 
 /*

@@ -2,7 +2,7 @@
 
 //// 硬件端口字节输出函数.
 // 参数: value - 欲输出字节; port - 端口.
-#define outb(value,port) \
+#define outb(value, port) \
 __asm__ ("outb %%al,%%dx"::"a" (value), "d" (port))
 
 

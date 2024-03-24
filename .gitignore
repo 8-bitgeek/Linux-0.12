@@ -16,3 +16,4 @@ lib/lib.a
 system.S
 images/**
 .vscode/launch.json
+gshell/**
