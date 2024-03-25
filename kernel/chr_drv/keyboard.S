@@ -29,7 +29,7 @@
 #define KBD_US
 
 .text
-.globl keyboard_interrupt								# 声明为全局变量, 用于在初始化时设置键盘中断描述符
+.globl keyboard_interrupt								# 声明为全局变量, 用于在初始化时设置键盘中断描述符.
 
 /*
  * these are for the keyboard read functions
@@ -40,12 +40,12 @@
 // size 是键盘缓冲区(缓冲队列)长度(字节数).
 /* 值必须是2的次方! 并且与 tty_io.c 中的值匹配!!!! */
 size	= 1024		/* must be a power of two ! And MUST be the same
-			   as in tty_io.c !!!! */
+			   			as in tty_io.c !!!! */
 // 以下是键盘缓冲队列数据结构tty_queue中的偏移量(include/1/tty.h).
-head = 4												# 缓冲区头指针字段在 tty_queue 结构中的偏移
-tail = 8												# 缓冲区尾指针字段偏移
-proc_list = 12											# 等待该缓冲队列的进程字段偏移
-buf = 16												# 缓冲区字段偏移
+head = 4												# 缓冲区头指针字段在 tty_queue 结构中的偏移.
+tail = 8												# 缓冲区尾指针字段偏移.
+proc_list = 12											# 等待该缓冲队列的进程字段偏移.
+buf = 16												# 缓冲区字段偏移.
 
 
 // 在本程序中使用了 3 个标志字节. mode 是键盘特殊键(ctrl, alt 或 caps)的按下状态标志;
@@ -155,7 +155,7 @@ set_e1:	movb $2, e0									# 收到扫描前导码 0xe1 时(表示后面还跟�
 /*
  * 下面子程序把 ebx:eax 中的最多 8 个字符添入缓冲队列中. (ebx 是高字)所写入字符的顺序是 al, ah, eal, eah, bl, bh... 直到 eax 等于 0.
  */
-# 首先从缓冲队列地址表 table_list(tty_io.c) 取控制台的读缓冲队列 read_q 地址. 
+# 首先从缓冲队列地址表 table_list(kernel/chr_drv/tty_io.c) 取控制台的读缓冲队列 read_q 地址. 
 # 然后把 al 寄存器中的字符复制到读队列头指针处并把头指针前移 1 字节位置. 若头指针移出读缓冲区的末端, 就让其回绕到缓冲区开始处. 
 # 然后再看看此时缓冲队列是否已满, 即比较一下队列头指针是否与尾指针相等(相等表示满). 如果已满, 就把 ebx:eax 中可能还有的其余字符全部抛弃掉. 
 # 如果缓冲区还未满, 就把 ebx:eax 中数据联合右移 8 位(即把 ah 值移到 al, bl->ah, bh->bl), 然后重复上面对 al 的处理过程.
@@ -189,25 +189,25 @@ put_queue:
 # 如果在该扫描码之前收到过 0xe0 扫描码(e0 标志置位), 则说明按下的是键盘右边的 ctrl 或 alt 键, 
 # 则对应设置 ctrl 或 alt 在模式标志 mode 中的位.
 ctrl:
-	movb $0x04, %al									# 0x4 是 mode 中左 ctrl 键对应的位(位 2)
+	movb $0x04, %al									# 0x4 是 mode 中左 ctrl 键对应的位(位 2).
 	jmp 1f
 alt:
-	movb $0x10, %al									# 0x10 是 mode 中左 alt 键对应的位(位 4)
+	movb $0x10, %al									# 0x10 是 mode 中左 alt 键对应的位(位 4).
 1:	cmpb $0, e0										# e0 置位了吗(按下右边的 ctrl/alt 键吗)?
 	je 2f											# 不是则转.
-	addb %al, %al									# 是, 则改成置相应右键标志位(位 3 或位 5)
-2:	orb %al, mode									# 设置 mode 标志中对应的位
+	addb %al, %al									# 是, 则改成置相应右键标志位(位 3 或位 5).
+2:	orb %al, mode									# 设置 mode 标志中对应的位.
 	ret
 
 # 这段代码处理 ctrl 或 alt 松开时的扫描码, 复位模式标志 mode 中的对应位. 
 # 在处理时要根据 e0 标志是否置位来判断是否键盘右边的 ctrl 或 alt 键.
 unctrl:
-	movb $0x04, %al									# mode 中左 ctrl 键对应的位(位 2)
+	movb $0x04, %al									# mode 中左 ctrl 键对应的位(位 2).
 	jmp 1f
 unalt:
-	movb $0x10, %al									# 0x10 是 mode 中左 alt 键对应的位(位 4)
+	movb $0x10, %al									# 0x10 是 mode 中左 alt 键对应的位(位 4).
 1:	cmpb $0, e0										# e0 置位了码(释放的是右边的 ctrl/alt 键吗)?
-	je 2f											# 不是, 则转
+	je 2f											# 不是, 则转.
 	addb %al, %al									# 是, 则改成复位相应右键的标志位(位 3 或位 5).
 2:	notb %al										# 复位 mode 标志中对应的位.
 	andb %al, mode
@@ -232,35 +232,35 @@ unrshift:
 # 这段代码对收到 caps 键扫描码进行处理. 通过 mode 中位 7 可以知道 caps 键当前是否正处于在按下状态. 
 # 若是则返回, 否则就翻转 mode 标志中 caps 键按下的位(位 6)和 leds 标志中 caps-lock 位(位 2), 设置 mode 标志中 caps 键已按下标志位(位 7).
 caps:
-	testb $0x80, mode								# 测试 mode 中位 7 是否置位(即在按下状态).
-	jne 1f											# 如果已处于按下状态, 则返回
-	xorb $4, leds									# 翻转 leds 标志中 caps-lock 位(位 2)
-	xorb $0x40, mode								# 翻转 mode 标志中 caps 键按下的位(位 6)
-	orb $0x80, mode									# 设置 mode 标志中 caps 键已按下标志位(位 7)
+	testb $0x80, mode								# 测试 mode 中位 7 是否置位(即在按下状态)..
+	jne 1f											# 如果已处于按下状态, 则返回.
+	xorb $4, leds									# 翻转 leds 标志中 caps-lock 位(位 2).
+	xorb $0x40, mode								# 翻转 mode 标志中 caps 键按下的位(位 6).
+	orb $0x80, mode									# 设置 mode 标志中 caps 键已按下标志位(位 7).
 
 # 这段代码根据 leds 标志, 开启或关闭 LED 指示器.
 set_leds:
-	call kb_wait									# 等待键盘控制器输入缓冲空
+	call kb_wait									# 等待键盘控制器输入缓冲空.
 	movb $0xed, %al									/* set leds command */
-	outb %al, $0x60									# 发送键盘命令 0xed 到 0x60 端口
+	outb %al, $0x60									# 发送键盘命令 0xed 到 0x60 端口.
 	call kb_wait
 	movb leds, %al									# 取 leds 标志, 作为参数.
-	outb %al, $0x60									# 发送该参数
+	outb %al, $0x60									# 发送该参数.
 	ret
 
-uncaps:	andb $0x7f, mode							# caps 键松开, 则复位 mode 中的对应位(位 7)
+uncaps:	andb $0x7f, mode							# caps 键松开, 则复位 mode 中的对应位(位 7).
 	ret
 
 scroll:
 	testb $0x03, mode								# 若此时 shift 键也同时按下, 则
 	je 1f
-	call show_mem									# 显示内存状态信息(mm/memory.c)
+	call show_mem									# 显示内存状态信息(mm/memory.c).
 	jmp 2f
-1:	call show_state									# 否则显示进程状态信息(kernel/sched.c)
-2:	xorb $1, leds									# scroll 键按下, 则翻转 leds 中对应位(位0)
-	jmp set_leds									# 根据 leds 标志重新开启或关闭 LED 指示器
+1:	call show_state									# 否则显示进程状态信息(kernel/sched.c).
+2:	xorb $1, leds									# scroll 键按下, 则翻转 leds 中对应位(位0).
+	jmp set_leds									# 根据 leds 标志重新开启或关闭 LED 指示器.
 num:
-	xorb $2, leds									# num 键按下, 则翻转 leds 中的对应位(位 1)
+	xorb $2, leds									# num 键按下, 则翻转 leds 中的对应位(位 1).
 	jmp set_leds									# 根据 leds 标志重新开启或关闭 LED 指示器.
 
 /*
@@ -272,12 +272,12 @@ num:
  */
 cursor:
 	subb $0x47, %al									# 扫描码是是数字键盘上的键(其扫描码 >= 0x47)发出的?
-	jb 1f											# 如果小于则不处理, 返回
+	jb 1f											# 如果小于则不处理, 返回.
 	cmpb $12, %al									# 如果扫描码 > 0x53(0x53 - 0x47 = 12), 则
 	ja 1f											# 表示扫描码值超过 83(0x53), 不处理, 返回.
 	# 若等于 12, 说明 del 键已被按下, 则继续判断 ctrl 和 alt 是否也被同时按下.
 	jne cur2										/* check for ctrl-alt-del */
-	testb $0x0c, mode								# 有 ctrl 键按下了码? 无, 则跳转
+	testb $0x0c, mode								# 有 ctrl 键按下了吗? 无, 则跳转.
 	je cur2
 	testb $0x30, mode								# 有 alt 键按下吗?
 	jne reboot										# 有, 则跳转到重启动处理
@@ -287,11 +287,11 @@ cur2:
 	je cur											# 置位了,则跳转光标移动处理cur
 	testb $0x02, leds								/* not num-lock forces cursor */    # 测试 leds 中标志 num - lock 键标志是否置位
 	je cur											# 若没有置位(num 的 LED 不亮), 则也处理光标移动.
-	testb $0x03, mode								/* shift forces cursor */           # 测试模式标志 mode中shift 按下标志
+	testb $0x03, mode								/* shift forces cursor */           # 测试模式标志 mode 中 shift 按下标志
 	jne cur											# 如果有 shift 键按下, 则也进行光标移动处理
 	xorl %ebx, %ebx									# 否则查询小数字表, 取键的数字 ASCII 吗
 	movb num_table(%eax), %al						# 以 eax 作为索引值, 取对应数字字符 -> al
-	jmp put_queue									# 字符放入缓冲队列中. 由于要放入队列的字符数 <= 4, 在因此在执行 put_pueue 前需把 ebx 清零.
+	jmp put_queue									# 字符放入缓冲队列中. 由于要放入队列的字符数 <= 4, 在因此在执行 put_queue 前需把 ebx 清零.
 1:	ret
 
 # 这段代码处理光标移动或插入删除按键.
@@ -580,36 +580,36 @@ alt_map:
 # 首先根据 mode 标志选择 alt_map, shift_map 或 key_map 映射表之一.
 do_self:
 	lea alt_map, %ebx								# 取 alt 键同时按下时的映射表基址 alt_map.
-	testb $0x20, mode								/* alt-gr */    /* 右 alt 键同时按下了? */
+	testb $0x20, mode								/* alt-gr */    /* 右 alt 键(mode 位 5 置位)同时按下了? */
 	jne 1f                  						# 是, 则向前跳转到标号 1 处. 
-	lea shift_map, %ebx								# 取 shift 键同时按下时的映射表基址 shift_map
+	lea shift_map, %ebx								# 取 shift 键同时按下时的映射表基址 shift_map.
 	testb $0x03, mode								# 右 shift 键同时按下吗?
-	jne 1f											# 有, 则向前跳转到标号 1 处去映射字符
+	jne 1f											# 有, 则向前跳转到标号 1 处去映射字符.
 	lea key_map, %ebx								# 否则使用普通映射表 Key_map.
 # 然后根据扫描码取映射表中对应的 ASCII 字符. 若没有对应字符, 则返回(转 none).
-1:	movb (%ebx, %eax), %al							# 将扫描码作为索引值, 取对应的 ASCII 码 -> al
-	orb %al, %al									# 检测看是否有对应的 ASCII 码
+1:	movb (%ebx, %eax), %al							# 将扫描码作为索引值, 取对应的 ASCII 码 -> al.
+	orb %al, %al									# 检测看是否有对应的 ASCII 码.
 	je none											# 若没有(对应的 ASCII 码 = 0), 则返回.
 	# 若 ctrl 键已按下或 caps 键锁定, 并且字符在 'a'--'}'(0x61--0x7D) 范围内, 则将其转成大写字符(0x41~0x5D).
 	testb $0x4c, mode								/* ctrl or caps */  /* 控制键已按下或 caps 亮? */
-	je 2f											# 没有, 则向前跳转到标号 2 处
-	cmpb $'a, %al									# 将 al 中的字符与 'a' 比较
-	jb 2f											# 若 al 值 < 'a', 则转标号 2 处
-	cmpb $'}, %al									# 将 al 中的字符与 '}' 比较
-	ja 2f											# 若 al 值 > '}', 则转标号 2 处
+	je 2f											# 没有, 则向前跳转到标号 2 处.
+	cmpb $'a, %al									# 将 al 中的字符与 'a' 比较.
+	jb 2f											# 若 al 值 < 'a', 则转标号 2 处.
+	cmpb $'}, %al									# 将 al 中的字符与 '}' 比较.
+	ja 2f											# 若 al 值 > '}', 则转标号 2 处.
 	subb $32, %al									# 将 al 转换为大写字符(减 0x20).
 # 若 ctrl 键已按下, 并且字符在 '`'--'_'(0x40--0x5f) 之间, 即是大写字符, 则将其转换为控制字符(0x00--0x1F).
 2:	testb $0x0c, mode								/* ctrl */  /* ctrl 键同时按下了吗? */
-	je 3f											# 若没有则转标号3
-	cmpb $64, %al									# 将 al 与 '@'(64) 字符比较, 即判断字符所属范围
-	jb 3f											# 若值 < '@', 则转标号 3
-	cmpb $64 + 32, %al								# 将 al 与 '`'(96) 字符比较, 即判断字符所属范围
-	jae 3f											# 若值 >= '`', 则转标号 3
+	je 3f											# 若没有则转标号 3.
+	cmpb $64, %al									# 将 al 与 '@'(64) 字符比较, 即判断字符所属范围.
+	jb 3f											# 若值 < '@', 则转标号 3.
+	cmpb $64 + 32, %al								# 将 al 与 '`'(96) 字符比较, 即判断字符所属范围.
+	jae 3f											# 若值 >= '`', 则转标号 3.
 	subb $64, %al									# 否则 al 减 0x40, 转换为 0x00--0x1f 的控制字符.
 # 若左 alt 键同时按下, 则将字符的位 7 置位. 即此时值大于 0x7f 的扩展字符集中的字符.
 3:	testb $0x10, mode								/* left alt */  /* 左 alt 键同时按下? */
 	je 4f											# 没有, 则转标号 4.
-	orb $0x80, %al									# 字符的位 7 置位
+	orb $0x80, %al									# 字符的位 7 置位.
 # 将 al 中的字符放入读缓冲队列中.
 4:	andl $0xff, %eax								# 清 eax 的高字和 ah.
 	xorl %ebx, %ebx									# 由于放入队列字符数 <= 4, 因此需把 ebx 清零.
