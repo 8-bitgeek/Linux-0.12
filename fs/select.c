@@ -142,7 +142,8 @@ static int check_in(select_table * wait, struct m_inode * inode)
 	// 如果是则检查该终端读缓冲队列 secondary 中是否有字符可供读取, 若有则返回 1, 
 	// 若此时 secondary 为空则把当前任务添加到 secondary 的等待队列 proc_list 上并返回 0. 
 	// 如果是管道文件则判断目前管道中是否有字符可读, 若有则返回 1, 若没有(管道空)则把当前任务添加到管道 i 节点的等待队列上并返回 0. 
-	// 注意, PIPE_EMPTY() 宏使用管道当前头尾指针位置来判断管道是否为空. 管道 i 节点的 i_zone[0] 和 i_zone[1] 字段分别存放着管道当前的头尾指针. 
+	// 注意, PIPE_EMPTY() 宏使用管道当前头尾指针位置来判断管道是否为空. 
+	// 管道 i 节点的 i_zone[0] 和 i_zone[1] 字段分别存放着管道当前的头尾指针. 
 	if (tty = get_tty(inode))
 		if (!EMPTY(tty->secondary))
 			return 1;

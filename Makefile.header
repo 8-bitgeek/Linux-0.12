@@ -2,7 +2,7 @@
 # simplfy the porting and maintaining operation
 # author: falcon <wuzhangjin@gmail.com>
 # update: 2008-10-29
-# Makefile头文件
+# Makefile 头文件
 
 CCCOLOR="\033[34m"
 LINKCOLOR="\033[34;1m"
@@ -23,10 +23,19 @@ LD	= $(QUIET_LINK)ld
 #LDFLAGS = -m elf_i386 -x
 LDFLAGS = -m elf_i386
 CC	= $(QUIET_CC)gcc
+
+# -m32: 
+#   Generate code for a 32-bit environment. The -m32 option sets "int", "long", and pointer types to 32 bits, 
+#   and generates code that runs on any i386 system.
+# -fomit-frame-pointer: 
+#   Omit the frame pointer in functions that don't need one.
+# -fno-builtin:
+#   Don't recognize built-in functions that do not begin with __builtin_ as prefix.
+
 #CFLAGS  = -g -m32 -fomit-frame-pointer -fstrength-reduce #-Wall
 #CFLAGS  = -g -m32 -finline-functions -fomit-frame-pointer -fstrength-reduce -fno-stack-protector -fno-builtin-memset -fno-builtin-memcpy #-Wall
-#CFLAGS  = -g -m32    -fstrength-reduce -fomit-frame-pointer -fno-stack-protector -fno-builtin 
-CFLAGS	=-O0 -g3 -gdwarf-2 -m32 -fstrength-reduce -fomit-frame-pointer -fno-stack-protector -fno-builtin #-Wall
+#CFLAGS  = -g -m32 -fstrength-reduce -fomit-frame-pointer -fno-stack-protector -fno-builtin 
+CFLAGS	= -O0 -g3 -gdwarf-2 -m32 -fstrength-reduce -fomit-frame-pointer -fno-stack-protector -fno-builtin #-Wall
 
 CPP	= cpp -nostdinc
 AR	= $(QUIET_LINK)ar

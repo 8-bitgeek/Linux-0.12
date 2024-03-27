@@ -4,23 +4,24 @@
  *  (C) 1991  Linus Torvalds
  */
 
-#include <errno.h>                      						// 错误号头文件
+#include <errno.h>                      						// 错误号头文件.
 #include <sys/types.h>                  						// 类型头文件. 定义了基本的系统数据类型.
 
-#include <linux/sched.h>                						// 调度程序头文件, 定义任务结构 task_struct, 任务 0 数据等
+#include <linux/sched.h>                						// 调度程序头文件, 定义任务结构 task_struct, 任务 0 数据等.
 #include <linux/kernel.h>               						// 内核头文件. 含有一些内核常用函数的原型定义. 
 
 #include <asm/segment.h>                						// 段操作头文件. 定义了有关段寄存器操作的嵌入式汇编函数. 
 #include <asm/io.h>                     						// io 头文件. 定义硬件端口输入/输出宏汇编语句. 
 
-extern int tty_read(unsigned minor, char * buf, int count);     // 终端读
-extern int tty_write(unsigned minor, char * buf, int count);    // 终端写
+extern int tty_read(unsigned minor, char * buf, int count);     // 终端读.
+extern int tty_write(unsigned minor, char * buf, int count);    // 终端写.
 
 // 定义字符设备读写函数指针类型.
 typedef int (*crw_ptr)(int rw, unsigned minor, char * buf, int count, off_t * pos);
 
 // 串口终端读写操作函数.
-// 参数: rw - 读写命令; minor - 终端子设备号; buf - 缓冲区; count - 读写字节数; pos - 读写操作当前指针, 对于终端操作, 该指针无用.
+// 参数: rw - 读写命令; minor - 终端子设备号; buf - 缓冲区; 
+// 		count - 读写字节数; pos - 读写操作当前指针, 对于终端操作, 该指针无用.
 // 返回: 实际读写的字节数. 若失败则返回出错码.
 static int rw_ttyx(int rw, unsigned minor, char * buf, int count, off_t * pos)
 {
