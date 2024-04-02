@@ -92,13 +92,13 @@ int sys_read(unsigned int fd, char * buf, int count)
 	// 如果是字符型文件, 则进行读字符设备操作, 并返回读取的字符数. 如果是块设备文件, 则执行块设备读操作, 并返回读取的字节数. 
 	verify_area(buf, count);
 	inode = file->f_inode;
-	// 管道文件的读操作
+	// 管道文件的读操作.
 	if (inode->i_pipe)
 		return (file->f_mode & 1) ? read_pipe(inode, buf, count) : -EIO;
-	// 字符设备的读操作
+	// 字符设备的读操作.
 	if (S_ISCHR(inode->i_mode))
 		return rw_char(READ, inode->i_zone[0], buf, count, &file->f_pos);
-	// 块设备的读操作
+	// 块设备的读操作.
 	if (S_ISBLK(inode->i_mode))
 		return block_read(inode->i_zone[0], &file->f_pos, buf, count);
 	// 如果是目录文件或者是常规文件, 
@@ -138,16 +138,16 @@ int sys_write(unsigned int fd, char * buf, int count)
 	// 如果是块设备文件, 则进行块设备写操作, 并返回写入的字节数退出. 
 	// 若是常规文件, 则执行文件写操作, 并返回写入的字节数, 退出.
 	inode = file->f_inode;
-	// 管道的写操作
+	// 管道的写操作.
 	if (inode->i_pipe)
 		return (file->f_mode & 2) ? write_pipe(inode, buf, count) : -EIO;
-	// 字符设备的写操作
+	// 字符设备的写操作.
 	if (S_ISCHR(inode->i_mode))
 		return rw_char(WRITE, inode->i_zone[0], buf, count, &file->f_pos);
-	// 块设备的写操作
+	// 块设备的写操作.
 	if (S_ISBLK(inode->i_mode))
 		return block_write(inode->i_zone[0], &file->f_pos, buf, count);
-	// 文件的写操作
+	// 文件的写操作.
 	if (S_ISREG(inode->i_mode))
 		return file_write(inode, file, buf, count);
 	// 执行到这里, 说明我们无法判断文件的属性. 则打印节点文件属性, 并返回出错码退出.
