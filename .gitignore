@@ -15,5 +15,5 @@ kernel/math/math.a
 lib/lib.a
 system.S
 images/**
-.vscode/launch.json
+.vscode
 gshell/**
