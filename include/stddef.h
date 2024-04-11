@@ -4,16 +4,16 @@
 
 #ifndef _PTRDIFF_T
 #define _PTRDIFF_T
-typedef long ptrdiff_t;         // 两个指针相减结果的类型
+typedef long ptrdiff_t;         // 两个指针相减结果的类型.
 #endif
 
 #ifndef _SIZE_T
 #define _SIZE_T
-typedef unsigned long size_t;   // sizeof 返回的类型
+typedef unsigned long size_t;   // sizeof 返回的类型.
 #endif
 
 #undef NULL
-#define NULL ((void *)0)        // 空指针
+#define NULL ((void *)0)        // 空指针.
 
 // 下面定义了一个计算某成员在类型中偏移位置的宏. 
 // 使用该宏可以确定一个成员(字段)在包含它的结构类型中从结构开始处算起的字节偏移量. 
