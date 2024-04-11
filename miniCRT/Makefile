@@ -12,7 +12,7 @@ minicrt.a: malloc.o printf.o stdio.o string.o
 	ar -rs $@ $^ 				# -r replace existing or insert new file into the archive
 								# -s act as ranlib
 
-all: malloc.c # entry.c stdio.c string.c printf.c
+all: malloc.c stdio.c # entry.c string.c printf.c
 	$(CC) $(CC_FLAG) $^
 
 clean: *.o

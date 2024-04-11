@@ -167,8 +167,8 @@ int sys_ulimit()
 }
 
 // 返回从 1970 年 1 月 1 日 00:00:00 GMT 开始计时的时间值(秒). 
-// 如果tloc不为null, 则时间值也存储在那里. 
-// 由于参数是一个指针, 而其所指位置在用户空间, 因此需要使用函数put_fs_long()来访问该值. 
+// 如果 tloc 不为 null, 则时间值也存储在那里. 
+// 由于参数是一个指针, 而其所指位置在用户空间, 因此需要使用函数 put_fs_long() 来访问该值. 
 // 在进入内核中运行时, 段寄存器 fs 默认地指向当前用户数据空间. 因此该函数就可利用 fs 来访问用户空间中的值. 
 int sys_time(long * tloc)
 {
@@ -213,17 +213,13 @@ int sys_setreuid(int ruid, int euid)
 	int old_ruid = current->uid;
 
 	if (ruid > 0) {
-		if ((current->euid == ruid) ||
-                    (old_ruid == ruid) ||
-		    suser())
+		if ((current->euid == ruid) || (old_ruid == ruid) || suser())
 			current->uid = ruid;
 		else
 			return(-EPERM);
 	}
 	if (euid > 0) {
-		if ((old_ruid == euid) ||
-                    (current->euid == euid) ||
-		    suser()) {
+		if ((old_ruid == euid) || (current->euid == euid) || suser()) {
 			current->euid = euid;
 			current->suid = euid;
 		} else {
@@ -309,8 +305,7 @@ int sys_times(struct tms * tbuf)
 int sys_brk(unsigned long end_data_seg)
 {
 	// 如果参数值大于代码结尾, 并且小于(堆栈 - 16KB), 则设置新数据段结尾值. 
-	if (end_data_seg >= current->end_code &&
-	    end_data_seg < current->start_stack - 16384)
+	if (end_data_seg >= current->end_code && end_data_seg < current->start_stack - 16384)
 		current->brk = end_data_seg;
 	return current->brk;            			// 返回进程当前的数据段结尾值. 
 }
