@@ -25,7 +25,8 @@
  * 本系统所在的时区(timezone). 作为某些程序使用 gettimeofday 系统调用获取时区的默认值.
  */
 // 时区结构 timezone 第 1 个字段(tz_minuteswest)表示距格林尼治标准时间 GMT 以西的分钟数; 
-// 第 2 个字段(tz_dsttime)是夏令时 DST(Daylight Savings Time) 调整类型. 该结构定义在 include/sys/time.h 中. 
+// 第 2 个字段(tz_dsttime)是夏令时 DST(Daylight Savings Time) 调整类型. 
+// 该结构定义在 include/sys/time.h 中. 
 struct timezone sys_tz = { 0, 0};
 
 extern int session_of_pgrp(int pgrp);
@@ -663,21 +664,23 @@ int sys_gettimeofday(struct timeval *tv, struct timezone *tz)
  * various programs will get confused when the clock gets warped.
  */
 /*
- * 在第1次设置时区(timezone)时, 我们会改变时钟值以让系统使用格林尼治标准时间(GMT)运行, 而非使用本地时间. 推测起来
- * 说, 如果某人设置了时区时间, 那么我们就运行在程序知晓时区时间的环境中. 设置时区操作应该在系统启动阶段, 尽快地在/etc/rc
- * 脚本程序中进行. 这样时钟就可以设置正确. 否则的话, 若我们以后才设置时区而导致时钟时间改变, 可能会让一些程序的运行出现
- * 问题. 
+ * 在第 1 次设置时区(timezone)时, 我们会改变时钟值以让系统使用格林尼治标准时间(GMT)运行, 
+ * 而非使用本地时间. 推测起来说, 如果某人设置了时区时间, 那么我们就运行在程序知晓时区时间的环境中. 
+ * 设置时区操作应该在系统启动阶段, 尽快地在 /etc/rc 脚本程序中进行. 这样时钟就可以设置正确. 
+ * 否则的话, 若我们以后才设置时区而导致时钟时间改变, 可能会让一些程序的运行出现问题. 
  */
 // 设置系统当前时间. 
-// 参数tv是指向用户数据区中timeval结构信息的指针. 参数tz是用户数据区中timezone结构的指针. 该操作需要超级用户权限. 如果
-// 两者皆为空, 则什么也不做, 函数返回0. 
+// 参数 tv 是指向用户数据区中 timeval 结构信息的指针. 
+// 参数 tz 是用户数据区中 timezone 结构的指针. 该操作需要超级用户权限. 
+// 如果两者皆为空, 则什么也不做, 函数返回 0. 
 int sys_settimeofday(struct timeval *tv, struct timezone *tz)
 {
 	static int	firsttime = 1;
 	void 		adjust_clock();
 
-	// 设置系统当前时间需要超级用户权限. 如果tz指针不空, 则设置系统时区信息. 即复制用户timezone结构信息到系统中的sys_tz结构
-	// 中. 如果是第1次调用本系统调用并且参数tv指针不空, 则调整系统时钟值. 
+	// 设置系统当前时间需要超级用户权限. 如果 tz 指针不空, 则设置系统时区信息. 
+	// 即复制用户 timezone 结构信息到系统中的 sys_tz 结构中. 
+	// 如果是第 1 次调用本系统调用并且参数 tv 指针不空, 则调整系统时钟值. 
 	if (!suser())
 		return -EPERM;
 	if (tz) {
@@ -689,8 +692,10 @@ int sys_settimeofday(struct timeval *tv, struct timezone *tz)
 				adjust_clock();
 		}
 	}
-	// 如果参数的timeval结构指针tv不空, 则用该结构信息设置系统时钟. 首先从tv所指处获取以秒值(sec)加微秒值(usec)表示的系统
-	// 时间, 然后用秒值修改系统开机时间全局变量startup_time值, 并用微秒值设置系统嘀嗒误差值jiffies_offset. 
+	// 如果参数的 timeval 结构指针 tv 不空, 则用该结构信息设置系统时钟. 
+	// 首先从 tv 所指处获取以秒值(sec)加微秒值(usec)表示的系统时间, 
+	// 然后用秒值修改系统开机时间全局变量 startup_time 值, 
+	// 并用微秒值设置系统嘀嗒误差值 jiffies_offset. 
 	if (tv) {
 		int sec, usec;
 
@@ -720,22 +725,25 @@ int sys_settimeofday(struct timeval *tv, struct timezone *tz)
  * network....				- TYT, 1/1/92
  */
 /*
- * 把从CMOS中读取的时间值调整为GMT时间值保存, 而非本地时间值. 
+ * 把从 CMOS 中读取的时间值调整为 GMT 时间值保存, 而非本地时间值. 
  *
- * 这里的做法很蹩脚, 但要比其他方法好. 否则我们就需要写一个程序并让它在/etc/rc中运行来做这件事(并且该程序会被多次执行而带来
- * 混乱. 而且这样做也很难让程序把时钟精确地调整n小时候)或者把时区信息编译进内核中. 当然这样做就非常、非常差劲了...
+ * 这里的做法很蹩脚, 但要比其他方法好. 
+ * 否则我们就需要写一个程序并让它在 /etc/rc 中运行来做这件事(并且该程序会被多次执行而带来混乱. 
+ * 而且这样做也很难让程序把时钟精确地调整 n 小时候)或者把时区信息编译进内核中. 
+ * 当然这样做就非常、非常差劲了...
  *
- * 目前下面函数(XXX)的调整操作并没有考虑到夏令时问题. 依据BIOS有多么智能(愚蠢？)也许根本就不用考虑这方面. 当然, 最好的做
- * 法是完全不依赖于CMOS时钟, 而是让系统通过NTP(网络时钟协议)或者timed(时间服务器)获得时间, 如果机器联上网的话.... 
+ * 目前下面函数(XXX)的调整操作并没有考虑到夏令时问题. 依据 BIOS 有多么智能(愚蠢？)也许根本就不用考虑这方面. 
+ * 当然, 最好的做法是完全不依赖于 CMOS 时钟, 而是让系统通过 NTP(网络时钟协议)或者 timed(时间服务器)获得时间, 
+ * 如果机器联上网的话.... 
  */
-// 把系统启动时间调整为以GMT为标准的时间. 
-// startup_time是秒值, 因此这里需要把时区分钟值乘上60. 
+// 把系统启动时间调整为以 GMT 为标准的时间. 
+// startup_time 是秒值, 因此这里需要把时区分钟值乘上 60. 
 void adjust_clock()
 {
 	startup_time += sys_tz.tz_minuteswest * 60;
 }
 
-// 设置当前进程创建文件属性屏蔽码为mask & 0777. 并返回原屏蔽码. 
+// 设置当前进程创建文件属性屏蔽码为 mask & 0777. 并返回原屏蔽码. 
 int sys_umask(int mask)
 {
 	int old = current->umask;
@@ -744,7 +752,7 @@ int sys_umask(int mask)
 	return (old);
 }
 
-// 用于捕获未实现的System Call调用. 
+// 用于捕获未实现的 System Call 调用. 
 int sys_default(unsigned long arg1, unsigned long arg2, unsigned long arg3, unsigned long code){
     printk("System Call Number:%d\r\n",code);
     printk("Arg1:%X\r\n",arg1);
