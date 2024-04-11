@@ -235,7 +235,7 @@ static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
 		// 接着我们逆向逐个字符地把字符串复制到参数和环境空间末端处. 
 		// 在循环复制字符串的字符过程中, 我们首先要判断参数和环境空间中相应位置处是否已经有内存页面. 
 		// 如果还没有就先为其申请 1 页内存页面. 偏移量 offset 被用作在一个页面中的当前指针偏移值. 
-		// 因为刚开始执行本函数时, 偏移变量 offset 被初始化为 0, 
+		// 因为刚开始执行本函数时, 偏移量 offset 被初始化为 0, 
 		// 所以(offset - 1 < 0)肯定成立而使得 offset 重新被设置为当前 p 指针在页面范围内的偏移值.
 		while (len) {
 			--p; --tmp; --len;
@@ -311,7 +311,7 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
  * 'do_execve()' 函数执行一个新程序.
  */
 // execve() 系统中断调用函数. 加载并执行子进程(其他程序).
-// 该函数是系统中断调用(int 0x80)功能号 __NR_execve 调用的函数. 
+// 该函数是系统中断调用(int $0x80)功能号 __NR_execve 调用的函数. 
 // 函数的参数是进入系统调用处理过程后直至调用本函数之前逐步压入栈中的值.  
 // 这些值包括:
 // 1: system_call 在调用系统调用处理函数前入栈的 edx, ecx 和 ebx 寄存器值, 分别对应 **envp, **argv 和 *filename;
