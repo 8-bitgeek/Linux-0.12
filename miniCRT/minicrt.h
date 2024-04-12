@@ -19,7 +19,8 @@ typedef int FILE;
 #include <Windows.h>
 #endif
 
-// minicrt.c
+// entry.c
+void mini_crt_entry(void);
 
 // malloc.c
 int mini_crt_heap_init();

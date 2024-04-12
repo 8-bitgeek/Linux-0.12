@@ -5,7 +5,7 @@
 #endif
 
 extern int main(int argc, char * argv[]);
-void exit(int);
+static void exit(int);
 
 static void crt_fatal_error(const char * msg) {
     printf("fatal error: %s\n", msg);
@@ -22,8 +22,8 @@ void mini_crt_entry(void) {
     char ** argv;
     char * ebp_reg = 0;
     // ebp_reg = %ebp
-    asm("movl %%ebp, %0\n" \
-            :"=r"(ebp_reg));
+    asm("movl %%ebp, %0;" 
+        : "=r" (ebp_reg));
     argc = *(int *)(ebp_reg + 4);
     argv = (char **)(ebp_reg + 8);
 #endif
@@ -38,15 +38,15 @@ void mini_crt_entry(void) {
     exit(ret);
 }
 
-void exit(int exit_code) {
+static void exit(int exit_code) {
 #ifdef WIN32
     ExitProcess();
 #else
     // 调用  0x80 的 1 号系统调用.
-    asm("movl %0, %%ebx \n\t" \
-        "movl %1, %%eax \n\t" \
-        "int 0x80 \n\t" \
-        "hlt \n\t" \
-        : :"m"(exit_code));
+    asm("movl %0, %%ebx;"
+        "movl $1, %%eax;"
+        "int $0x80;"
+        "hlt;"
+        : : "m"(exit_code));
 #endif
 }
