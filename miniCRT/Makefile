@@ -6,14 +6,17 @@ CC = gcc
 #					   如果不关闭会发生 "__stack_chk_fail" 函数未定义的错误.
 CC_FLAG = -c -m32 -fno-builtin -nostdlib -fno-stack-protector
 
+objects = malloc.o printf.o stdio.o string.o
+
 # $^ 表示所有前置条件
 # $@ 表示当前目标
-minicrt.a: malloc.o printf.o stdio.o string.o
-	ar -rs $@ $^ 				# -r replace existing or insert new file into the archive
-								# -s act as ranlib
+minicrt.a: $(objects)
+	ar -rs $@ $^ 				
+# -r replace existing or insert new file into the archive
+# -s act as ranlib
 
-all: malloc.c stdio.c # entry.c string.c printf.c
+$(objects): malloc.c stdio.c string.c printf.c minicrt.h
 	$(CC) $(CC_FLAG) $^
 
-clean: *.o
-	rm -rf *.o
+clean: 
+	rm -rf *.o minicrt.h.gch minicrt.a 

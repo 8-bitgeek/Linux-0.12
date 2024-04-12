@@ -43,7 +43,7 @@ char * itoa(int n, char * str, int radix) {
  * @param dst the string to be compared.
  * @return negative if p1 < p2; vice versa.
  */
-int strcmp(const char * src, const chat * dst) {
+int strcmp(const char * src, const char * dst) {
     int ret = 0;
     unsigned char * p1 = (unsigned char *) src;
     unsigned char * p2 = (unsigned char *) dst;

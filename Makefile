@@ -37,13 +37,11 @@ LIBS	=lib/lib.a
 # -I: 
 # 	Add the directory dir to the list of directories to be searched for header files during preprocessing.
 .c.s:
-	$(CC) $(CFLAGS) \
-	-nostdinc -Iinclude -S -o $*.s $<
+	$(CC) $(CFLAGS) -nostdinc -Iinclude -S -o $*.s $<
 .s.o:
 	$(AS) -o $*.o $<
 .c.o:
-	$(CC) $(CFLAGS) \
-	-nostdinc -Iinclude -c -o $*.o $<
+	$(CC) $(CFLAGS) -nostdinc -Iinclude -c -o $*.o $<
 
 
 all: clean Image
@@ -129,10 +127,10 @@ dep:
 
 ### Dependencies:
 init/main.o: init/main.c include/unistd.h include/sys/stat.h \
- include/sys/types.h include/sys/time.h include/time.h \
- include/sys/times.h include/sys/utsname.h include/sys/param.h \
- include/sys/resource.h include/utime.h include/linux/tty.h \
- include/termios.h include/linux/sched.h include/linux/head.h \
- include/linux/fs.h include/linux/mm.h include/linux/kernel.h \
- include/signal.h include/asm/system.h include/asm/io.h include/stddef.h \
- include/stdarg.h include/fcntl.h include/string.h
+	include/sys/types.h include/sys/time.h include/time.h \
+	include/sys/times.h include/sys/utsname.h include/sys/param.h \
+	include/sys/resource.h include/utime.h include/linux/tty.h \
+	include/termios.h include/linux/sched.h include/linux/head.h \
+	include/linux/fs.h include/linux/mm.h include/linux/kernel.h \
+	include/signal.h include/asm/system.h include/asm/io.h include/stddef.h \
+	include/stdarg.h include/fcntl.h include/string.h
