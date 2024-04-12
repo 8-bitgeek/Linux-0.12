@@ -4,7 +4,11 @@ CC = gcc
 # -nostdlib 表示不使用任务来自 Glibc, gcc 库文件和启动文件, 它包含了 -nostartfiles 这个参数.
 # -fno-stack-protector 是关闭堆栈保护功能, 新版本的 GCC 会在 vfprintf 这样的变长参数函数中插入堆栈保护函数， 
 #					   如果不关闭会发生 "__stack_chk_fail" 函数未定义的错误.
-CC_FLAG = -c -m32 -fno-builtin -nostdlib -fno-stack-protector
+ifeq ($(V), 64)
+	CC_FLAG = -c -fno-builtin -nostdlib -fno-stack-protector -Wall
+else 
+	CC_FLAG = -c -m32 -fno-builtin -nostdlib -fno-stack-protector
+endif
 
 objects = malloc.o printf.o stdio.o string.o entry.o
 
@@ -20,3 +24,7 @@ $(objects): malloc.c stdio.c string.c printf.c entry.c minicrt.h
 
 clean: 
 	rm -rf *.o minicrt.h.gch minicrt.a 
+
+test: minicrt.a test.c
+	gcc -m32 -c -ggdb -fno-builtin -nostdlib -fno-stack-protector test.c
+	ld -m elf_i386 -static -e mini_crt_entry entry.o test.o minicrt.a -o test 
