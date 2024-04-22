@@ -17,3 +17,7 @@ system.S
 images/**
 .vscode
 gshell/**
+miniCRT/test
+miniCRT/minicrt.a
+miniCRT/temp.txt
+miniCRT/minicrt.h.gch
