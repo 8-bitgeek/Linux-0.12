@@ -42,7 +42,7 @@ static void exit(int exit_code) {
 #ifdef WIN32
     ExitProcess();
 #else
-    // 调用  0x80 的 1 号系统调用.
+    // 调用 0x80 的 1 号系统调用.
     asm("movl %0, %%ebx;"
         "movl $1, %%eax;"
         "int $0x80;"
