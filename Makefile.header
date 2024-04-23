@@ -41,7 +41,7 @@ CPP	= cpp -nostdinc
 AR	= $(QUIET_LINK)ar
 CPP_DISPLAY = $(QUIET_CC)cpp -nostdinc
 
-gcc_version=${(4.4)}
+gcc_version=${(4.8.5)}
 
 
 

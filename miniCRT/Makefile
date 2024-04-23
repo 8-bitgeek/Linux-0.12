@@ -35,4 +35,4 @@ test: minicrt.a test.o entry.o
 	ld $(LD_TEST_FLAG) entry.o test.o minicrt.a -o test 
 
 debug: test
-	DEBUG_TOOL test
+	$(DEBUG_TOOL) test
