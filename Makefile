@@ -46,6 +46,10 @@ LIBS	=lib/lib.a
 
 all: clean Image
 
+
+# objcopy 选项解释: 
+# -O binary: 指定输出目标文件(system.tmp)的格式(bfdname)为 binary.
+# -R 去掉源文件中的 .note .comment 区(section)再输出到目标文件.
 Image: boot/bootsect boot/setup tools/system
 	@cp -f tools/system system.tmp
 	@strip system.tmp
