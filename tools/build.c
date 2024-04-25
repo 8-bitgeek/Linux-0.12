@@ -53,10 +53,11 @@
 // 默认地把 Linux 根文件系统所在的设备设置为在第 2 个硬盘的第 1 个分区上(即设备号为 0x0306), 
 // 是因为 Linus 当时开发 Linux 时, 把第 1 个硬盘用作 MINIX 系统盘, 而第 2 个硬盘用作 Linux 的根文件系统盘.
 #define DEFAULT_MAJOR_ROOT 0x03         // 默认根设备主设备号 - 3(硬盘).
-#define DEFAULT_MINOR_ROOT 0x01         // 默认根设备次设备号 - 6(第 2 个硬盘的第 1 分区).
+// #define DEFAULT_MINOR_ROOT 0x06         // 默认根设备次设备号 - 6(第 2 个硬盘的第 1 分区).
+#define DEFAULT_MINOR_ROOT 0x01         // 默认根设备次设备号 - 1(第 1 个硬盘的第 1 分区).
 
-#define DEFAULT_MAJOR_SWAP 0x03         // 默认交换设备主设备号.
-#define DEFAULT_MINOR_SWAP 0x04         // 默认交换设备次设备号.
+#define DEFAULT_MAJOR_SWAP 0x03         // 默认交换设备主设备号(第 1 个硬盘).
+#define DEFAULT_MINOR_SWAP 0x04         // 默认交换设备次设备号(第 1 个硬盘第 4 个分区).
 
 /* max nr of sectors of setup: don't change unless you also change
  * bootsect etc */
@@ -82,6 +83,8 @@ void usage(void)
 }
 
 // 主程序开始.
+// 执行命令: 
+// 		boot/bootsect(bootsect.S) boot/setup(setup.S) tools/kernel(head.s, main...) Kernel_Image $(ROOT_DEV) $(SWAP_DEV)
 int main(int argc, char ** argv)
 {
 	int i,c,id;
@@ -95,7 +98,7 @@ int main(int argc, char ** argv)
 	if ((argc < 4) || (argc > 6))
 		usage();
 	// 若程序命令行上有多于 4 个参数, 那么如果根设备名不是软盘("FLOPPY"), 则取该设备文件的状态信息. 
-	// 若取状态出错则显示信息并退出, 否则取该设备名状态结构中的主设备号和次设备号作为根设备额号. 
+	// 若取状态出错则显示信息并退出, 否则取该设备名状态结构中的主设备号和次设备号作为根设备号. 
 	// 如果根设备就是 FLOPPY 设备, 则让主设备号取 0. 表示根设备是当前启动引导设备.
 	if (argc > 4) {
 		if (strcmp(argv[4], "FLOPPY")) {
@@ -103,16 +106,16 @@ int main(int argc, char ** argv)
 				perror(argv[4]);
 				die("Couldn't stat root device.");
 			}
-			major_root = MAJOR(sb.st_rdev);         // 取设备名状态结构中设备号.
-			minor_root = MINOR(sb.st_rdev);
+			major_root = MAJOR(sb.st_rdev);         // 取设备名状态结构中主设备号.
+			minor_root = MINOR(sb.st_rdev); 		// 取设备名状态结构中次设备号.
 		} else {
 			major_root = 0;
 			minor_root = 0;
 		}
 	// 若参数只有 4 个, 则让主设备号和次设备号等于系统默认的根设备号.                
 	} else {
-		major_root = DEFAULT_MAJOR_ROOT;
-		minor_root = DEFAULT_MINOR_ROOT;
+		major_root = DEFAULT_MAJOR_ROOT; 			// 0x03 第 1 个硬盘.
+		minor_root = DEFAULT_MINOR_ROOT; 			// 0x01 第 1 个分区.
 	}
 	// 若程序命令行上有 6 个参数, 那么如果最后一个表示交换设备的参数不是无("NONE"), 则取该设备文件的状态信息. 
 	// 若取状态出错则显示信息并退出, 否则取给设备名状态结构中的主设备号和次设备号作为交换设备号. 
@@ -140,21 +143,19 @@ int main(int argc, char ** argv)
 	// 终端的标准输出被定向到文件 Image, 因此被用于输出保存内核代码数据, 生成内核映像文件.        
 	fprintf(stderr, "Root device is (%d, %d)\n", major_root, minor_root);
 	fprintf(stderr, "Swap device is (%d, %d)\n", major_swap, minor_swap);
-	if ((major_root != 2) && (major_root != 3) &&
-	    (major_root != 0)) {
-		fprintf(stderr, "Illegal root device (major = %d)\n",
-			major_root);
+	if ((major_root != 2) && (major_root != 3) && (major_root != 0)) {
+		fprintf(stderr, "Illegal root device (major = %d)\n", major_root);
 		die("Bad root device --- major #");
 	}
+	// 如果交换设备不是默认设备并且也不是硬盘, 则显示出错信息并死机.
 	if (major_swap && major_swap != 3) {
-		fprintf(stderr, "Illegal swap device (major = %d)\n",
-			major_swap);
+		fprintf(stderr, "Illegal swap device (major = %d)\n", major_swap);
 		die("Bad root device --- major #");
 	}
 	// 下面开始执行读取各个文件内容并进行相应的复制处理. 首先初始化 1KB 的复制缓冲区, 置全 0. 
 	// 然后以只读方式打开参数 1 指定的文件(bootsect). 从中读取 32 字节的 MINIX 执行文件头结构内容到缓冲区 buf 中.        
-	for (i=0;i<sizeof buf; i++) buf[i]=0;
-	if ((id=open(argv[1], O_RDONLY, 0))<0)
+	for (i = 0; i < sizeof(buf); i++) buf[i]=0;
+	if ((id = open(argv[1], O_RDONLY, 0)) < 0)
 		die("Unable to open 'boot'");
 	if (read(id, buf, MINIX_HEADER) != MINIX_HEADER)
 		die("Unable to read header of 'boot'");
@@ -182,7 +183,7 @@ int main(int argc, char ** argv)
 		die("Illegal symbol table in 'boot'");
 	// 在上述判断都正确的条件下读取文件中随后的实际代码数据, 应该返回读取字节数为 512 字节. 
 	// 因为 bootsect 文件中包含的是 1 个扇区的引导扇区代码和数据, 并且最后 2 字节应该是和引导标志 0xAA55.        
-	i=read(id,buf,sizeof buf);
+	i = read(id, buf, sizeof(buf));
 	fprintf(stderr,"Boot sector %d bytes.\n",i);
 	if (i != 512)
 		die("Boot block must be exactly 512 bytes");
@@ -196,16 +197,16 @@ int main(int argc, char ** argv)
 	// 然后将该 512 字节的数据写到标准输出 stdout, 若写出字节数不对, 则显示出错信息并退出. 
 	// 在 linux/Makefile 中, build 程序标准输出被重定向到内核映像文件名 Image 上, 
 	// 因此引导扇区代码和数据会被写到 Image 开始的 512 字节处. 最后关闭 bootsect 模块文件.        
-	i=write(1, buf, 512);
-	if (i!=512)
+	i = write(1, buf, 512);
+	if (i != 512)
 		die("Write call failed");
-	close (id);
+	close(id);
 
 	// 以只读方式打开参数 2 指定的文件(setup), 从中读取 32 字节的 MINIX 执行文件头结构内容到缓冲区 buf 中. 
 	// 处理方式与上面相同. 首先以只读方式打开指定的文件 setup, 从中读取 32 字节的 MINIX 执行文件头结构内容到缓冲区 buf 中.	
 	if ((id = open(argv[2], O_RDONLY, 0)) < 0)
 		die("Unable to open 'setup'");
-	if (read(id,buf,MINIX_HEADER) != MINIX_HEADER)
+	if (read(id, buf, MINIX_HEADER) != MINIX_HEADER)
 		die("Unable to read header of 'setup'");
 	// 接下来根据 MINIX 头部结构判断 setup 是否为一个有效的 MINIX 执行文件. 
 	// 若是, 则从文件中读取 512 字节的引导扇区代码和数据.
@@ -230,7 +231,7 @@ int main(int argc, char ** argv)
 	// 同时统计写的长度(i), 该值不能大于(SETUP_SECTS * 512)字节, 
 	// 否则就得重新修改 build, bootsect 和 setup 程序中设定的 setup 所占扇区数并重新编译内核. 
 	// 若一切正常就显示 setup 实际长度值.        
-	for (i=0 ; (c=read(id, buf, sizeof buf)) > 0 ; i += c)
+	for (i = 0; (c = read(id, buf, sizeof buf)) > 0; i += c)
 		if (write(1, buf, c) != c)
 			die("Write call failed");
 	close(id);             						// 关闭 setup 模块文件.
@@ -240,10 +241,10 @@ int main(int argc, char ** argv)
 	fprintf(stderr, "Setup is %d bytes.\n",i);
 	// 在将缓冲区 buf 清零之后, 判断实际写的 setup 长度与(SETUP_SECTS * 512)的数值差, 
 	// 若 setup 长度小于该长度(4 * 512 字节), 则用 NULL 字符将 setup 填足为 4 * 512 字节.
-	for (c=0 ; c < sizeof(buf) ; c++)
+	for (c=0; c < sizeof(buf); c++)
 		buf[c] = '\0';
-	while (i < SETUP_SECTS*512) {
-		c = SETUP_SECTS*512 - i;
+	while (i < SETUP_SECTS * 512) {
+		c = SETUP_SECTS * 512 - i;
 		if (c > sizeof(buf))
 			c = sizeof(buf);
 		if (write(1, buf, c) != c)
@@ -266,12 +267,12 @@ int main(int argc, char ** argv)
 	if (((long *) buf)[5] != 0)             	// 执行入口点字段 a_entry 值应为 0.
 		die("Non-GCC header of 'system'");
 	*/
-	for (i=0 ; (c = read(id, buf, sizeof buf)) > 0; i += c)
+	for (i = 0; (c = read(id, buf, sizeof buf)) > 0; i += c)
 		if (write(1, buf, c) != c)
 			die("Write call failed");
 	close(id);
 	fprintf(stderr, "System is %d bytes.\n", i);
-	if (i > SYS_SIZE*16)
+	if (i > SYS_SIZE * 16)
 		die("System is too big");
 	return(0);
 }
