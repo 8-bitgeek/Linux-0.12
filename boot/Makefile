@@ -6,6 +6,7 @@ CPP_DISPLAY	+= -I../include
 ## 目标: all
 all: bootsect
 
+# CPP_DISPLAY = cpp -nostdinc   (cpp is C Preprocessor)
 bootsect.s: bootsect.S ../include/linux/config.h
 	$(CPP_DISPLAY) -traditional bootsect.S -o bootsect.s
 	

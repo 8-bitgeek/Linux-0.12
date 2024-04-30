@@ -152,12 +152,15 @@ int main(int argc, char ** argv)
 		fprintf(stderr, "Illegal swap device (major = %d)\n", major_swap);
 		die("Bad root device --- major #");
 	}
-	// 下面开始执行读取各个文件内容并进行相应的复制处理. 首先初始化 1KB 的复制缓冲区, 置全 0. 
-	// 然后以只读方式打开参数 1 指定的文件(bootsect). 从中读取 32 字节的 MINIX 执行文件头结构内容到缓冲区 buf 中.        
-	for (i = 0; i < sizeof(buf); i++) buf[i]=0;
-	if ((id = open(argv[1], O_RDONLY, 0)) < 0)
+	// 下面开始执行读取各个文件内容并进行相应的复制处理. 
+	// 首先初始化 1KB 的复制缓冲区, 全部置 0. 
+	// 然后以只读方式打开参数 1 指定的文件(bootsect). 
+	// 从中读取 32 字节的 MINIX 执行文件头结构内容到缓冲区 buf 中.        
+	for (i = 0; i < sizeof(buf); i++) 
+		buf[i] = 0;
+	if ((id = open(argv[1], O_RDONLY, 0)) < 0) 			// argv[1] = "boot/bootsect".
 		die("Unable to open 'boot'");
-	if (read(id, buf, MINIX_HEADER) != MINIX_HEADER)
+	if (read(id, buf, MINIX_HEADER) != MINIX_HEADER)	// 读取 32 字节文件头数据到 buf 中.
 		die("Unable to read header of 'boot'");
 	// 接下来根据 MINIX 头部结构判断 BOOTSECT 是否为一个有效的 MINIX 执行文件. 
 	// 若是, 则从文件中读取 512 字节的引导扇区代码和数据.
@@ -165,10 +168,10 @@ int main(int argc, char ** argv)
 	// 0x10 - a_flag 可执行; 
 	// 0x04 - a_cpu, Intel 8086 机器码.
 	if (((long *) buf)[0] != 0x04100301)
-		die("Non-Minix header of 'boot'");
-	// 判断头部长度字段 a_hdrlen(字节)是否正确(32 字节). (后三字节正好没用, 是 0)        
+		die("Non-MINIX header of 'boot'");
+	// 判断头部长度字段 a_hdrlen(字节)是否正确(32 字节). (后三字节正好没用, 是 0)
 	if (((long *) buf)[1] != MINIX_HEADER)
-		die("Non-Minix header of 'boot'");
+		die("Non-MINIX header of 'boot'");
 	// 判断数据段长 a_data 字段(long)内容是否为 0.        
 	if (((long *) buf)[3] != 0)
 		die("Illegal data segment in 'boot'");
@@ -182,7 +185,7 @@ int main(int argc, char ** argv)
 	if (((long *) buf)[7] != 0)
 		die("Illegal symbol table in 'boot'");
 	// 在上述判断都正确的条件下读取文件中随后的实际代码数据, 应该返回读取字节数为 512 字节. 
-	// 因为 bootsect 文件中包含的是 1 个扇区的引导扇区代码和数据, 并且最后 2 字节应该是和引导标志 0xAA55.        
+	// 因为 bootsect 文件中包含的是 1 个扇区的引导扇区代码和数据, 并且最后 2 字节应该是引导标志 0xAA55.        
 	i = read(id, buf, sizeof(buf));
 	fprintf(stderr,"Boot sector %d bytes.\n",i);
 	if (i != 512)
@@ -202,7 +205,7 @@ int main(int argc, char ** argv)
 		die("Write call failed");
 	close(id);
 
-	// 以只读方式打开参数 2 指定的文件(setup), 从中读取 32 字节的 MINIX 执行文件头结构内容到缓冲区 buf 中. 
+	// 以只读方式打开参数 2 指定的文件(boot/setup), 从中读取 32 字节的 MINIX 执行文件头结构内容到缓冲区 buf 中. 
 	// 处理方式与上面相同. 首先以只读方式打开指定的文件 setup, 从中读取 32 字节的 MINIX 执行文件头结构内容到缓冲区 buf 中.	
 	if ((id = open(argv[2], O_RDONLY, 0)) < 0)
 		die("Unable to open 'setup'");
@@ -236,9 +239,8 @@ int main(int argc, char ** argv)
 			die("Write call failed");
 	close(id);             						// 关闭 setup 模块文件.
 	if (i > SETUP_SECTS*512)
-		die("Setup exceeds " STRINGIFY(SETUP_SECTS)
-			" sectors - rewrite build/boot/setup");
-	fprintf(stderr, "Setup is %d bytes.\n",i);
+		die("Setup exceeds " STRINGIFY(SETUP_SECTS) " sectors - rewrite build/boot/setup");
+	fprintf(stderr, "Setup is %d bytes.\n", i);
 	// 在将缓冲区 buf 清零之后, 判断实际写的 setup 长度与(SETUP_SECTS * 512)的数值差, 
 	// 若 setup 长度小于该长度(4 * 512 字节), 则用 NULL 字符将 setup 填足为 4 * 512 字节.
 	for (c=0; c < sizeof(buf); c++)
@@ -267,9 +269,10 @@ int main(int argc, char ** argv)
 	if (((long *) buf)[5] != 0)             	// 执行入口点字段 a_entry 值应为 0.
 		die("Non-GCC header of 'system'");
 	*/
-	for (i = 0; (c = read(id, buf, sizeof buf)) > 0; i += c)
+	for (i = 0; (c = read(id, buf, sizeof buf)) > 0; i += c) {
 		if (write(1, buf, c) != c)
 			die("Write call failed");
+	}
 	close(id);
 	fprintf(stderr, "System is %d bytes.\n", i);
 	if (i > SYS_SIZE * 16)

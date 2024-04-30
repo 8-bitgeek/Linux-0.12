@@ -3,12 +3,12 @@
 # author: falcon <wuzhangjin@gmail.com>
 # update: 2008-10-10
 
-bootsect=$1
-setup=$2
-system=$3
-IMAGE=$4
-root_dev=$5
-swap_dev=$6
+bootsect=$1 			# boot/bootsect
+setup=$2 				# boot/setup
+system=$3 				# tools/kernel
+IMAGE=$4 				# Kernel_Image
+root_dev=$5 			# $(ROOT_DEV)
+swap_dev=$6 			# $(SWAP_DEV)
 
 # Set the biggest sys_size
 SYS_SIZE=$((0x3000*16))
