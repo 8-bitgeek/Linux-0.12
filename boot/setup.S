@@ -11,10 +11,13 @@
 ! system to read them from there before the area is overwritten
 ! for buffer-blocks.
 !
-! setup.s 负责从 BIOS 中获取系统数据, 并将这些数据放到系统内存适当地方. 此时 setup.s 和 system 已经由 bootsect 引导块加载到内存中.
+! setup.s 负责从 BIOS 中获取系统数据, 并将这些数据放到系统内存适当地方. 
+! 此时 setup.s 和 system 已经由 bootsect 引导块加载到内存中.
 !
-! 这段代码询问 bios 有关内存/磁盘/其他参数, 并将这些参数放到一个 "安全的" 地方: 0x90000-0x901ff, 也即原来 bootsect 代码块曾经的地方,
-! 然后在被缓冲块覆盖掉之前由保护模式的 system 读取
+! 这段代码询问 bios 有关内存/磁盘/其他参数, 
+! 并将这些参数放到一个 "安全的" 地方: 0x90000-0x901ff, 
+! 也即原来 bootsect 代码块曾经的地方,
+! 然后在被缓冲块覆盖掉之前由保护模式的 system 读取.
 
 ! NOTE! These had better be the same as in bootsect.s!
 ! 以下这些参数最好和 bootsect.s 中的相同!
@@ -147,18 +150,14 @@ no_disk1:
 	rep
 	stosb
 is_disk1:
-
-! now we want to move to protected mode ...
-! 现在我们要进入保护模式中了...
-
+	! now we want to move to protected mode ...
+	! 现在我们要进入保护模式中了...
 	cli											! no interrupts allowed!	! 从此开始不允许中断.
-
 	! first we move the system to it's rightful place
 	! 首先我们将 system 模块移到正确的位置.
 	! bootsect 引导程序会把 system 模块读入到内存 0x10000(64KB) 开始的位置. 由于当时假设 system 模块最大长度不会超过 0x80000(512KB), 
 	! 即其末端不会超过内存地址 0x90000, 所以 bootsect 会把自己移动到 0x90000 开始的地方, 并把 setup 加载到它的后面. 
 	! 下面这段程序的用途是把整个 system 模块移动到 0x00000 位置, 即把从 0x10000 到 0x8ffff 的内存数据块(512KB)整块地向内存低端移动了 0x10000(64KB) 的位置.
-
 	mov	ax, #0x0000
 	cld											! 'direction' = 0, movs moves forward
 do_move:
@@ -200,22 +199,24 @@ end_move:
 	out	#0x60, al								! 数据要写到 0x60 端口.
 	call	empty_8042							! 若此时输入缓冲器为空, 则表示 A20 线已经选通.
 
-! well, that went ok, I hope. Now we have to reprogram the interrupts :-(
-! we put them right after the intel-reserved hardware interrupts, at
-! int 0x20-0x2F. There they won't mess up anything. Sadly IBM really
-! messed this up with the original PC, and they haven't been able to
-! rectify it afterwards. Thus the bios puts interrupts at 0x08-0x0f,
-! which is used for the internal hardware interrupts as well. We just
-! have to reprogram the 8259's, and it isn't fun.
+	! well, that went ok, I hope. Now we have to reprogram the interrupts :-(
+	! we put them right after the intel-reserved hardware interrupts, at
+	! int 0x20-0x2F. There they won't mess up anything. Sadly IBM really
+	! messed this up with the original PC, and they haven't been able to
+	! rectify it afterwards. Thus the bios puts interrupts at 0x08-0x0f,
+	! which is used for the internal hardware interrupts as well. We just
+	! have to reprogram the 8259's, and it isn't fun.
 
-! .word	0x00eb, 0x00eb 是直接使用机器码表示的两条相对跳转指令, 起延时作用. 0xeb 是直接近跳转指令的操作码, 带 1 个字节的相对位移值. 
-! 因此跳转范围是 -127 -- 127. CPU 通过把这个相对位移值加到 EIP 寄存器中就形成一个新的有效地址. 此时 EIP 指向下一条被执行的指令.
-! 执行时所花费的 CPU 时钟周期数是 7 至 10 个. 0x00eb 表示跳转值是 0 的一条指令, 因此还是直接执行下一条指令. 
-! 这两条指令共可提供 14--20 个 CPU 时钟周期的延迟时间. 在 as86 上没有表示相应指令的助记符, 因此 Linus 在 setup.s 等一些汇编程序中就直接使用机器码来表示这种指令.
-! 另外, 每个空操作指令 NOP 的时钟周期数是 3 个, 因此若要达到相同的延迟效果就需要 6~7 个 NOP 指令.
+	! .word	0x00eb, 0x00eb 是直接使用机器码表示的两条相对跳转指令, 起延时作用. 
+	! 0xeb 是直接近跳转指令的操作码, 带 1 个字节的相对位移值. 因此跳转范围是 -127 -- 127. 
+	! CPU 通过把这个相对位移值加到 EIP 寄存器中就形成一个新的有效地址. 此时 EIP 指向下一条被执行的指令.
+	! 执行时所花费的 CPU 时钟周期数是 7 至 10 个. 0x00eb 表示跳转值是 0 的一条指令, 因此还是直接执行下一条指令. 
+	! 这两条指令共可提供 14--20 个 CPU 时钟周期的延迟时间. 在 as86 上没有表示相应指令的助记符, 
+	! 因此 Linus 在 setup.s 等一些汇编程序中就直接使用机器码来表示这种指令.
+	! 另外, 每个空操作指令 NOP 的时钟周期数是 3 个, 因此若要达到相同的延迟效果就需要 6~7 个 NOP 指令.
 
-! 8259 芯片主片端口是 0x20-0x21, 从片端口是 0xA0-0xA1. 输出值 0x11 表示初始化命令开始, 它是 ICW1 命令字, 表示边沿触发, 
-! 多片 8269 级连, 最后要发送 ICW4 命令字.
+	! 8259 芯片主片端口是 0x20-0x21, 从片端口是 0xA0-0xA1. 输出值 0x11 表示初始化命令开始, 它是 ICW1 命令字, 表示边沿触发, 
+	! 多片 8269 级连, 最后要发送 ICW4 命令字.
 
 	mov	al, #0x11								! initialization sequence
 	out	#0x20, al								! send it to 8259A-1		! 发送到 8259A 主芯片.

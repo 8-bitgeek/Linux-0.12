@@ -1,7 +1,7 @@
 !
 ! SYS_SIZE is the number of clicks (16 bytes) to be loaded.
 ! 0x3000 is 0x30000 bytes = 196kB, more than enough for current
-! versions of linux
+! versions of linux.
 ! SYS_SIZE 是要加载的系统模块长度, 单位是节, 每节 16 字节. 0x3000 共为 0x30000 字节 = 196KB. 
 ! 若以 1024 字节为 1KB 计, 则因该就 192KB. 对应当前内核版本这个空间长度已足够了. 
 ! 当该值为 0x8000 时, 表示内核最大为 512KB. 因为内存 0x90000 处开始存放移动后的 bootsect 和 setup 的代码, 
@@ -9,10 +9,10 @@
 !
 ! 头文件 linux/config.h 中定义了内核用到的一些常数符号和 Linus 自己使用的默认硬盘参数块. 
 ! 例如定义了以下一些常数: 
-! DEF_INITSEG	0x9000							//引导扇区程序将被移动到得段值. 
-! DEF_SYSSEG	0x1000							//引导扇区程序把系统模块加载到内存的段值. 
-! DEF_SETUPSEG	0x9020							//setup 程序所处内存段位置. 
-! DEF_SYSSIZE	0x3000							//内核系统模块默认最大节数(16 字节 = 1 节). 
+! DEF_INITSEG	0x9000							// 引导扇区程序将被移动到得段值. 
+! DEF_SYSSEG	0x1000							// 引导扇区程序把系统模块加载到内存的段值. 
+! DEF_SETUPSEG	0x9020							// setup 程序所处内存段位置. 
+! DEF_SYSSIZE	0x3000							// 内核系统模块默认最大节数(16 字节 = 1 节). 
 !
 #include <linux/config.h>
 SYSSIZE = DEF_SYSSIZE             				! 定义一个标号或符号. 指明编译连接后 system 模块的大小. 

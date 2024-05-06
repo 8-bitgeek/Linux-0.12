@@ -23,9 +23,11 @@
 # CFLAGS  = -g -m32 -fomit-frame-pointer -fstrength-reduce #-Wall
 # CFLAGS  = -g -m32 -finline-functions -fomit-frame-pointer -fstrength-reduce -fno-stack-protector -fno-builtin-memset -fno-builtin-memcpy #-Wall
 # CFLAGS  = -g -m32 -fstrength-reduce -fomit-frame-pointer -fno-stack-protector -fno-builtin 
+# AS86	=$(QUIET_CC)as86 -0 -a
+# LD86	=$(QUIET_LINK)ld86 -0
 
-AS86	=$(QUIET_CC)as86 -0 -a
-LD86	=$(QUIET_LINK)ld86 -0
+AS86	=as86 -0 -a
+LD86	=ld86 -0
 AS	= as --32
 LD	= ld
 LDFLAGS = -m elf_i386
