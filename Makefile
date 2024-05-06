@@ -51,14 +51,15 @@ all: clean Image
 # objcopy 选项解释: 
 # 		-O binary: 指定输出目标文件(system.tmp)的格式(bfdname)为 binary.
 # 		-R: 去掉源文件中的 .note .comment 区(section)再输出到目标文件.
+# sync: synchronize cached writes to persistant storage.
 Image: boot/bootsect boot/setup tools/system
 	@cp -f tools/system system.tmp
 	@strip system.tmp
 	@objcopy -O binary -R .note -R .comment system.tmp tools/kernel
+# There is no Kernal_Image at begain, we create it by build.sh
 	@tools/build.sh boot/bootsect boot/setup tools/kernel Kernel_Image $(ROOT_DEV) $(SWAP_DEV)
 	@rm system.tmp
 	@rm -f tools/kernel
-	@cp Kernel_Image ../linux-0.12-080324
 	@sync
 
 boot/bootsect: boot/bootsect.S

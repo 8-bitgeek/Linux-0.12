@@ -4,7 +4,7 @@ LDFLAGS	+= -Ttext 0
 CPP_DISPLAY	+= -I../include
 
 ## 目标: all
-all: bootsect
+all: bootsect setup head.o
 
 # CPP_DISPLAY = cpp -nostdinc -I../include  (cpp is C Preprocessor)
 bootsect.s: bootsect.S ../include/linux/config.h
