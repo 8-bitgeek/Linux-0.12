@@ -1,8 +1,4 @@
-
-#
-# if you want the ram-disk device, define this to be the
-# size in blocks.
-#
+# if you want the ram-disk device, define this to be the size in blocks.
 RAMDISK =  #-DRAMDISK=1024
 
 # This is a basic Makefile for setting the general configuration
@@ -11,8 +7,9 @@ include Makefile.header
 # -Ttext org: 
 # 	Locate text section in the output file at the absolute address given by org(0).
 # -e entry:
-#	Use entry as the explicit symbol for beginning execution of you program, rather than the default entry point.
-#	If there is no symbol named entry, the linker will try to parse entry as a number, and use that as the entry address.
+#	Use entry as the explicit symbol for beginning execution of you program, 
+# 	rather than the default entry point. If there is no symbol named entry, 
+# 	the linker will try to parse entry as a number, and use that as the entry address.
 LDFLAGS	+= -Ttext 0 -e startup_32
 CFLAGS	+= $(RAMDISK)
 CPP	+= -Iinclude
@@ -69,16 +66,14 @@ boot/bootsect: boot/bootsect.S
 boot/setup: boot/setup.S
 	@make setup -C boot
 
-boot/head.o: boot/head.s
-	@make head.o -C boot
-
-tools/build: tools/build.c
-	$(CC) $(CFLAGS) \
-	-o tools/build tools/build.c
-
 # objdump -S: 
 #	Display source code intermixed with disassembly, if possible.
-tools/system:	boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
+#
+# ARCHIVES	=	kernel/kernel.o mm/mm.o fs/fs.o
+# DRIVERS 	=	kernel/blk_drv/blk_drv.a kernel/chr_drv/chr_drv.a
+# MATH		=	kernel/math/math.a
+# LIBS		=	lib/lib.a
+tools/system: boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
 	$(LD) $(LDFLAGS) boot/head.o init/main.o \
 		  $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS) -o tools/system
 	@nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > System.map
@@ -86,11 +81,18 @@ tools/system:	boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
 
 # make -C {dir}: 
 # 	Change to directory {dir} before reading the makefiles or doing anything else.
-kernel/math/math.a:
-	@make -C kernel/math
+boot/head.o: boot/head.s
+	@make head.o -C boot
 
-fs/fs.o:
-	@make -C fs
+# Dependencies:
+init/main.o: init/main.c include/unistd.h include/sys/stat.h \
+	include/sys/types.h include/sys/time.h include/time.h \
+	include/sys/times.h include/sys/utsname.h include/sys/param.h \
+	include/sys/resource.h include/utime.h include/linux/tty.h \
+	include/termios.h include/linux/sched.h include/linux/head.h \
+	include/linux/fs.h include/linux/mm.h include/linux/kernel.h \
+	include/signal.h include/asm/system.h include/asm/io.h include/stddef.h \
+	include/stdarg.h include/fcntl.h include/string.h
 
 kernel/kernel.o:
 	@make -C kernel
@@ -98,14 +100,23 @@ kernel/kernel.o:
 mm/mm.o:
 	@make -C mm
 
-lib/lib.a:
-	@make -C lib
+fs/fs.o:
+	@make -C fs
 
 kernel/blk_drv/blk_drv.a:
 	@make -C kernel/blk_drv
 
 kernel/chr_drv/chr_drv.a:
 	@make -C kernel/chr_drv
+
+kernel/math/math.a:
+	@make -C kernel/math
+
+lib/lib.a:
+	@make -C lib
+
+tools/build: tools/build.c
+	$(CC) $(CFLAGS) -o tools/build tools/build.c
 
 clean:
 	@rm -f Kernel_Image System.map System_s.map system.S tmp_make core boot/bootsect boot/setup
@@ -126,13 +137,3 @@ dep:
 	@(for i in init/*.c; do echo -n "init/"; $(CPP) -M $$i; done) >> tmp_make
 	@cp tmp_make Makefile
 	@for i in fs kernel mm lib; do make dep -C $$i; done
-
-### Dependencies:
-init/main.o: init/main.c include/unistd.h include/sys/stat.h \
-	include/sys/types.h include/sys/time.h include/time.h \
-	include/sys/times.h include/sys/utsname.h include/sys/param.h \
-	include/sys/resource.h include/utime.h include/linux/tty.h \
-	include/termios.h include/linux/sched.h include/linux/head.h \
-	include/linux/fs.h include/linux/mm.h include/linux/kernel.h \
-	include/signal.h include/asm/system.h include/asm/io.h include/stddef.h \
-	include/stdarg.h include/fcntl.h include/string.h
