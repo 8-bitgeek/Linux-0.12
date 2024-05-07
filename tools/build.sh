@@ -57,6 +57,3 @@ dd if=$system seek=5 bs=512 count=$((2888-1-4)) of=$IMAGE 2>&1 >/dev/null
 # Set "device" for the root image file
 echo -ne "\x$DEFAULT_MINOR_ROOT\x$DEFAULT_MAJOR_ROOT" | dd ibs=1 obs=1 count=2 seek=508 of=$IMAGE conv=notrunc  2>&1 >/dev/null
 echo -ne "\x$DEFAULT_MINOR_SWAP\x$DEFAULT_MAJOR_SWAP" | dd ibs=1 obs=1 count=2 seek=506 of=$IMAGE conv=notrunc  2>&1 >/dev/null
-
-# dd bs=1024 if=root of=$IMAGE seek=256 skip=256
-
