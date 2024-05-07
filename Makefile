@@ -78,14 +78,9 @@ tools/build: tools/build.c
 
 # objdump -S: 
 #	Display source code intermixed with disassembly, if possible.
-tools/system:	boot/head.o init/main.o \
-	$(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
+tools/system:	boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
 	$(LD) $(LDFLAGS) boot/head.o init/main.o \
-	$(ARCHIVES) \
-	$(DRIVERS) \
-	$(MATH) \
-	$(LIBS) \
-	-o tools/system
+		  $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS) -o tools/system
 	@nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > System.map
 	@objdump -S tools/system > system.S
 
