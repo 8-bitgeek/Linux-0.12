@@ -41,7 +41,7 @@ clean:
 
 dep:
 	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	@(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
+	@(for i in *.c; do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
 		$(CPP) -M $$i;done) >> tmp_make
 	@cp tmp_make Makefile
 	@for i in chr_drv blk_drv math; do make dep -C $$i; done
