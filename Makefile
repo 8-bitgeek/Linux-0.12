@@ -121,7 +121,7 @@ tools/build: tools/build.c
 clean:
 	@rm -f Kernel_Image System.map System_s.map system.S tmp_make core boot/bootsect boot/setup
 	@rm -f init/*.o tools/system boot/*.o typescript* info bochsout.txt
-	@for i in mm fs kernel lib boot; do make clean -C $$i; done
+	@for i in mm fs kernel lib boot miniCRT; do make clean -C $$i; done
 
 debug:
 	@dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
