@@ -22,16 +22,14 @@ CFLAGS	+= -finline-functions -nostdinc -I../include
 CPP	+= -I../include
 
 .c.s:
-	@$(CC) $(CFLAGS) \
-	-S -o $*.s $<
+	@$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
 	@$(AS) -o $*.o $<
 .c.o:
-	@$(CC) $(CFLAGS) \
-	-c -o $*.o $<
+	@$(CC) $(CFLAGS) -c -o $*.o $<
 
 OBJS  = sched.o sys_call.o traps.o asm.o fork.o panic.o printk.o vsprintf.o sys.o exit.o signal.o mktime.o
-	#sched.o sys_call.o traps.o asm.o fork.o panic.o printk.o vsprintf.o sys.o exit.o signal.o mktime.o	
+
 kernel.o: $(OBJS)
 	@$(LD) $(LDFLAGS) -o kernel.o $(OBJS)
 	@sync

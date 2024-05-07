@@ -82,6 +82,7 @@ tools/system: boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
 # make -C {dir}: 
 # 	Change to directory {dir} before reading the makefiles or doing anything else.
 boot/head.o: boot/head.s
+# as --32 -o head.o head.s
 	@make head.o -C boot
 
 # Dependencies:
