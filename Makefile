@@ -62,7 +62,7 @@ Image: boot/bootsect boot/setup tools/system
 	@rm -f tools/kernel
 	@sync
 
-# run `objdump -m i8086 -b binary -D boot/bootsect` to dissamble.
+# run `objdump -m i8086 -b binary --start-address=0x20 -D boot/bootsect` to dissamble it.
 boot/bootsect: boot/bootsect.S
 	@make bootsect -C boot
 
@@ -90,7 +90,7 @@ tools/system:	boot/head.o init/main.o \
 	@objdump -S tools/system > system.S
 
 # make -C {dir}: 
-# 	Change to directory {dir}  before reading the makefiles or doing anything else.
+# 	Change to directory {dir} before reading the makefiles or doing anything else.
 kernel/math/math.a:
 	@make -C kernel/math
 

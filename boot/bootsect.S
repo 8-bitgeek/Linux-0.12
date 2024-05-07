@@ -75,7 +75,7 @@ SWAP_DEV = 0				! 交换设备使用与系统引导是同样的设备.
 
 
 entry start					! 告知链接程序, 本程序从 start 标号开始执行.
-start:						! 位于文件的 0x20 处, 即前面占用 32 字节.
+start: 						! 实际上位于编译链接生成的 bootsect 文件的 0x20 处, 因为前 32 字节是文件头.
     mov	ax, #BOOTSEG		! 将 DS 段寄存器置为 0x07c0.
 	mov	ds, ax
 	mov	ax, #INITSEG		! 将 ES 段寄存器置为 0x9000.
@@ -85,7 +85,7 @@ start:						! 位于文件的 0x20 处, 即前面占用 32 字节.
 	sub	di, di				! 目的地址  es:di = 0x9000:0x0000
 	rep						! 重复执行并递减 cx 的值, 直到 cx = 0 为止.
 	movw					! 即 movs 指令. 从内存 [si] 处移动 cx 个字到 [di] 处.
-	jmpi	go, INITSEG		! 段间跳转(Jump Intersegment). 这里 INITSEG 指出跳转到得段地址, 
+	jmpi go, INITSEG		! 段间跳转(Jump Intersegment). 这里 INITSEG 指出跳转到得段地址, 
 							! 标号 go 是段内偏移地址.
 
 ! 从现在开始, CPU 移动到 0x90000 位置处的代码中执行. 
