@@ -71,8 +71,8 @@ start:
 	! 检测屏幕当前行列值. 若显示卡是 VGA 卡时则请求用户选择显示行列值, 并保存到 0x9000E 处.
 	mov	ax, #0x5019								! 在 ax 中预置屏幕默认行列值(ah = 80 列; al = 25 行).
 	cmp	bl, #0x10								! 若中断返回 bl 值为 0x10, 则表示不是 VGA 显示卡, 跳转
-	je	novga
-	call	chsvga								! 检测显示卡厂家和类型, 修改显示行列值
+	je novga
+	call chsvga								! 检测显示卡厂家和类型, 修改显示行列值
 novga:
 	mov	[14], ax								! 保存屏幕当前行列值(0x9000E, 0x9000F).
 

@@ -40,8 +40,8 @@ startup_32:
 	movl $0x10, %eax					# reload all the segment registers
 	mov %ax, %ds						# after changing gdtgdbgdb 调试 32 位 调试 32 位. CS was already
 	mov %ax, %es						# reloaded in 'setup_gdt'
-	mov %ax, %fs						# 因为修改了 gdt, 所以需要重新装载所有的段寄存器. CS 代码段寄存器已经在 setup_gdt 中重新加载过了.
-	mov %ax, %gs
+	mov %ax, %fs						# 因为修改了 gdt, 所以需要重新装载所有的段寄存器. 
+	mov %ax, %gs 						# CS 代码段寄存器已经在 setup_gdt 中重新加载过了.
 	# 由于段描述符中的段限长从 setup.s 中的 8MB 改成了本程序设置的 16MB, 因此这里再次对所有段寄存器执行加载操作是必须的. 
 	# 另外, 通过使用 bochs 跟踪观察, 如果不对 CS 再次执行加载, 那么在执行到 movl $0x10, %eax 时 CS 代码段不可见部分中的限长还是 8MB.
 	# 这样看来应该重新加载 CS. 但是由于 setup.s 中的内核代码段描述符与本程序中重新设置的代码段描述符除了段限长以外其余部分完全一样, 
@@ -50,8 +50,9 @@ startup_32:
 	# 跳转到 movl $0x10, $eax 来确保 CS 确实被重新加载.
 	lss stack_start, %esp
 
-	# 下面代码用于测试 A20 地址线是否已经开启. 采用的方法是向内存地址 0x000000 处写入任意一个数值, 然后看内存地址 0x100000(1M) 处是否也是这个数值. 
-	# 如果一直相同的话, 就一直比较下去, 即死循环, 死机. 表示地址 A20 线没有选通, 结果内核就不能使用 1MB 以上内存.
+	# 下面代码用于测试 A20 地址线是否已经开启. 采用的方法是向内存地址 0x000000 处写入任意一个数值, 
+	# 然后看内存地址 0x100000(1M) 处是否也是这个数值. 如果一直相同的话, 就一直比较下去, 即死循环, 死机. 
+	# 表示地址 A20 线没有选通, 结果内核就不能使用 1MB 以上内存.
 	xorl %eax, %eax
 1:	incl %eax							# check that A20 really IS enabled
 	# '1:' 是一个局部符号构成的标号. 标号由符号后跟一个冒号组成. 此时该符号表示活动位置计数的当前值, 并可以作为指令的操作数. 
@@ -59,7 +60,8 @@ startup_32:
 	# 这些符号名使用名称 '0', '1', ..., '9' 来引用. 为了定义一个局部符号, 需把标号写成 'N:' 形式(其中 N 表示一个数字). 
 	# 为了引用先前最近定义的这个符号, 需要写成 'Nb', 其中 N 是定义标号时使用的数字. 
 	# 为了引用一个局部标号的下一个定义, 而要与成 'Nf', 这里gdb 调试 32 位 N 是 10 个前向引用之一. 
-	# 上面 'b' 表示 "向后(backwards)", 'f' 表示 "向前gdb 调试 32 位(forwards)". 在汇编程序的某一处, 我们最大可以向后/向前引用 10 个标号.
+	# 上面 'b' 表示 "向后(backwards)", 'f' 表示 "向前gdb 调试 32 位(forwards)". 
+	# 在汇编程序的某一处, 我们最大可以向后/向前引用 10 个标号.
 	movl %eax, 0x000000					# loop forgdb 调试 32 位ever if it isn't
 	cmpl %eax, 0x100000
 	je 1b								# '1b' 表示向后跳转到标号 1 去. 若是 '5f' 则表示向前跳转到标号 5 去.
@@ -141,7 +143,7 @@ check_x87:
 setup_idt:
 	lea ignore_int, %edx			# 将 ignore_int 的有效地址(偏移值)值加载到 eax 寄存器.
 	movl $0x00080000, %eax			# 将段选择符 0x08 置入 eax 的高 16 位中.
-	movw %dx, %ax					/* selector = 0x0008 = cs */	# 偏移值的低 16 位置入 eax 的低 16 位中. 此时 eax 含有门描述符低 4 字节的值.
+	movw %dx, %ax					/* selector = 0x0008 = cs */ # 偏移值的低 16 位置入 eax 的低 16 位中. 此时 eax 含有门描述符低 4 字节的值.
 	movw $0x8E00, %dx				/* interrupt gate - dpl=0, present */	# 此时 edx 含有门描述符高 4 字节的值.
 
 	lea idt, %edi					# idt 是中断描述符表的地址.
@@ -208,7 +210,8 @@ pg3:
  * on a 64kB border.
  */
 /*
- * 当 DMA(直接存储器访问)不能访问缓冲块时, 下面的 tmp_floppy_area 内存块就可供软盘驱动程序使用. 其地址需要对齐调整, 这样就不会跨越 64KB 边界.
+ * 当 DMA(直接存储器访问)不能访问缓冲块时, 下面的 tmp_floppy_area 内存块就可供软盘驱动程序使用. 
+ * 其地址需要对齐调整, 这样就不会跨越 64KB 边界.
  */
 
 tmp_floppy_area:
@@ -228,7 +231,8 @@ after_page_tables:
 L6:
 	jmp L6							# main should never return here, but
 									# just in case, we know what happens.
-									# main 程序绝对不应该返回到这里. 不过为了以防万一, 所以添加了该语句. 这样我们就知道发生什么问题了.
+									# main 程序绝对不应该返回到这里. 
+									# 不过为了以防万一, 所以添加了该语句. 这样我们就知道发生什么问题了.
 
 /* This is the default interrupt "handler" :-) */
 /* 下面是默认的中断 "向量句柄" */
@@ -241,14 +245,15 @@ ignore_int:
 	pushl %eax
 	pushl %ecx
 	pushl %edx
-	push %ds						# 这里请注意!! ds, es, fs, gs 等虽然是 16 位寄存器, 但入栈后仍然会以 32 位的形式入栈, 即需要占用 4 个字节的堆栈空间.
-	push %es
+	push %ds						# 这里请注意!! ds, es, fs, gs 等虽然是 16 位寄存器, 
+	push %es 						# 但入栈后仍然会以 32 位的形式入栈, 即需要占用 4 个字节的堆栈空间.
 	push %fs
 	movl $0x10, %eax				# 设置段选择符(使 ds, es, fs 指向 gdt 表中的数据段).
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
-	pushl $int_msg					# 把调用 printk 函数的参数指针(地址)入栈. 注意! 若 int_msg 前不加 '$', 则表示把 int_msg 符处的长字('Unkn')入栈.
+	pushl $int_msg					# 把调用 printk 函数的参数指针(地址)入栈. 注意! 
+									# 若 int_msg 前不加 '$', 则表示把 int_msg 符处的长字('Unkn')入栈.
 	call printk						# 该函数在 /kernel/printk.c 中.
 	popl %eax
 	pop %fs
@@ -341,12 +346,14 @@ setup_paging:							# 首先对 5 页内存(1 页目录 + 4 页页表)清零.
 	ret									/* this also flushes prefetch-queue */
 
 # 在改变分页处理标志后要求使用转移指令刷新预取指令队列, 这里用的是返回指令 ret.
-# 该返回指令的另一个作用是将 pushl $main 压入堆栈中的 main 程序的地址弹出, 并跳转到 /init/main.c 程序去运行. 本程序到此就真正结束了.
+# 该返回指令的另一个作用是将 pushl $main 压入堆栈中的 main 程序的地址弹出, 
+# 并跳转到 /init/main.c 程序去运行. 本程序到此就真正结束了.
 
 .align 2								# 按 4 字节方式对齐内存地址边界.
 .word 0									# 这里先空出 2 字节, 这样. long _idt 的长字是 4 字节对齐的.
 
-# 下面是加载中断描述符表寄存器 idtr 的指令 lidt 要求的 6 字节操作数. 前 2 字节是 idt 表的限长, 后 4 字节是 idt 表在线性地址空间中的 32 位基地址.
+# 下面是加载中断描述符表寄存器 idtr 的指令 lidt 要求的 6 字节操作数. 
+# 前 2 字节是 idt 表的限长, 后 4 字节是 idt 表在线性地址空间中的 32 位基地址.
 idt_descr:
 	.word 256 * 8 - 1					# idt contains 256 entries
 	.long idt
