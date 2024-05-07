@@ -62,6 +62,7 @@ Image: boot/bootsect boot/setup tools/system
 	@rm -f tools/kernel
 	@sync
 
+# run `objdump -m i8086 -b binary -D boot/bootsect` to dissamble.
 boot/bootsect: boot/bootsect.S
 	@make bootsect -C boot
 

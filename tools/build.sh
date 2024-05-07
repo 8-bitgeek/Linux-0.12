@@ -10,7 +10,7 @@ IMAGE=$4 				# Kernel_Image
 root_dev=$5 			# $(ROOT_DEV)
 swap_dev=$6 			# $(SWAP_DEV)
 
-# Set the biggest sys_size.
+# Set the biggest sys_size(192KB).
 SYS_SIZE=$((0x3000*16))
 
 # set the default "device" file for root image file.
@@ -45,11 +45,12 @@ dd bs=32 if=$bootsect of=$IMAGE skip=1 2>&1 >/dev/null
 # Write setup(4 * 512bytes, four sectors) to stdout.
 [ ! -f "$setup" ] && echo "there is no setup binary file there" && exit -1
 dd bs=32 if=$setup of=$IMAGE skip=1 seek=16 count=64 2>&1 >/dev/null
-#dd if=$setup seek=1 bs=512 count=4 of=$IMAGE 2>&1 >/dev/null
 
 # Write system(< SYS_SIZE) to stdout
 [ ! -f "$system" ] && echo "there is no system binary file there" && exit -1
-system_size=`wc -c $system |cut -d" " -f1`
+# Get bytes of ${system} file.
+system_size=`wc -c $system | cut -d" " -f1`
+# If ${system} bigger than 192KB, then exit.
 [ $system_size -gt $SYS_SIZE ] && echo "the system binary is too big" && exit -1
 dd if=$system seek=5 bs=512 count=$((2888-1-4)) of=$IMAGE 2>&1 >/dev/null
 
