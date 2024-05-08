@@ -15,24 +15,28 @@ else
 	LD_TEST_FLAG = -m elf_i386 -static -e mini_crt_entry 
 endif
 
+ifneq ($(V), 1)
+	Q = @
+endif
+
 objects = malloc.o printf.o stdio.o string.o entry.o
 
 # $^ 表示所有前置条件
 # $@ 表示当前目标
 minicrt.a: $(objects)
-	ar -rs $@ $^ 				
+	$(Q)ar -rs $@ $^ 				
 # -r replace existing or insert new file into the archive
 # -s act as ranlib
 
 $(objects): malloc.c stdio.c string.c printf.c entry.c minicrt.h
-	$(CC) $(CC_FLAG) $^
+	$(Q)$(CC) $(CC_FLAG) $^
 
 clean: 
-	rm -rf *.o minicrt.h.gch minicrt.a 
+	$(Q)rm -rf *.o minicrt.h.gch minicrt.a 
 
 test: minicrt.a test.o entry.o
-	gcc $(CC_TEST_FLAG) test.c
-	ld $(LD_TEST_FLAG) entry.o test.o minicrt.a -o test 
+	$(Q)gcc $(CC_TEST_FLAG) test.c
+	$(Q)ld $(LD_TEST_FLAG) entry.o test.o minicrt.a -o test 
 
 debug: test
 	$(DEBUG_TOOL) test

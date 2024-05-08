@@ -4,37 +4,38 @@
 # Note! Dependencies are done automagically by 'make dep', which also
 # removes any old dependencies. DON'T put your own dependencies here
 # unless it's something special (ie not a .c file).
-#
 
 include ../../Makefile.header
+
+ifneq ($(V), 1)
+	Q=@
+endif
 
 CFLAGS	+= -finline-functions -nostdinc -I../../include
 CPP	+= -I../../include
 
 .c.s:
-	@$(CC) $(CFLAGS) \
-	-S -o $*.s $<
+	$(Q)$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
-	@$(AS) -o $*.o $<
+	$(Q)$(AS) -o $*.o $<
 .c.o:
-	@$(CC) $(CFLAGS) \
-	-c -o $*.o $<
+	$(Q)$(CC) $(CFLAGS) -c -o $*.o $<
 
 OBJS  = ll_rw_blk.o floppy.o hd.o ramdisk.o
 	# ll_rw_blk.o floppy.o hd.o ramdisk.o
 blk_drv.a: $(OBJS)
-	@$(AR) rcs blk_drv.a $(OBJS)
-	@sync
+	$(Q)$(AR) rcs blk_drv.a $(OBJS)
+	$(Q)sync
 
 clean:
-	@rm -f core *.o *.a tmp_make
-	@for i in *.c;do rm -f `basename $$i .c`.s;done
+	$(Q)rm -f core *.o *.a tmp_make
+	$(Q)for i in *.c; do rm -f `basename $$i .c`.s; done
 
 dep:
-	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	@(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
+	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
+	$(Q)(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
 		$(CPP) -M $$i;done) >> tmp_make
-	@cp tmp_make Makefile
+	$(Q)cp tmp_make Makefile
 
 ### Dependencies:
 floppy.s floppy.o: floppy.c ../../include/linux/sched.h ../../include/linux/head.h \

@@ -9,29 +9,27 @@ CFLAGS	+= -fno-defer-pop -nostdinc -I../include
 CPP	+= -I../include
 
 .c.s:
-	@$(CC) $(CFLAGS) \
-	-S -o $*.s $<
+	$(Q)$(CC) $(CFLAGS) -S -o $*.s $<
 .c.o:
-	@$(CC) $(CFLAGS) \
-	-c -o $*.o $<
+	$(Q)$(CC) $(CFLAGS) -c -o $*.o $<
 .s.o:
 	$(AS) -o $*.o $<
 
-OBJS=	open.o read_write.o inode.o file_table.o buffer.o super.o \
-	block_dev.o char_dev.o file_dev.o stat.o exec.o pipe.o namei.o \
-	bitmap.o fcntl.o ioctl.o truncate.o select.o
+OBJS = open.o read_write.o inode.o file_table.o buffer.o super.o \
+	   block_dev.o char_dev.o file_dev.o stat.o exec.o pipe.o namei.o \
+	   bitmap.o fcntl.o ioctl.o truncate.o select.o
 
 fs.o: $(OBJS)
-	@$(LD) $(LDFLAGS) -o fs.o $(OBJS)
+	$(Q)$(LD) $(LDFLAGS) -o fs.o $(OBJS)
 
 clean:
-	@rm -f core *.o *.a tmp_make
-	@for i in *.c;do rm -f `basename $$i .c`.s;done
+	$(Q)rm -f core *.o *.a tmp_make
+	$(Q)for i in *.c;do rm -f `basename $$i .c`.s;done
 
 dep:
-	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	@(for i in *.c;do $(CPP) -M $$i;done) >> tmp_make
-	@cp tmp_make Makefile
+	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
+	$(Q)(for i in *.c;do $(CPP) -M $$i;done) >> tmp_make
+	$(Q)cp tmp_make Makefile
 
 ### Dependencies:
 bitmap.o: bitmap.c ../include/string.h ../include/linux/sched.h \

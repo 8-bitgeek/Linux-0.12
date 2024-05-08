@@ -9,27 +9,27 @@ CFLAGS	+= -finline-functions -nostdinc -I../include
 CPP	+= -I../include
 
 .c.o:
-	@$(CC) $(CFLAGS) -c -o $*.o $<
+	$(Q)$(CC) $(CFLAGS) -c -o $*.o $<
 .s.o:
-	@$(AS) -o $*.o $<
+	$(Q)$(AS) -o $*.o $<
 .c.s:
-	@$(CC) $(CFLAGS) -S -o $*.s $<
+	$(Q)$(CC) $(CFLAGS) -S -o $*.s $<
 
 OBJS	= memory.o swap.o page.o
 
 all: mm.o
 
 mm.o: $(OBJS)
-	@$(LD) $(LDFLAGS) -o mm.o $(OBJS)
+	$(Q)$(LD) $(LDFLAGS) -o mm.o $(OBJS)
 
 clean:
-	@rm -f core *.o *.a tmp_make
-	@for i in *.c;do rm -f `basename $$i .c`.s;done
+	$(Q)rm -f core *.o *.a tmp_make
+	$(Q)for i in *.c;do rm -f `basename $$i .c`.s;done
 
 dep:
-	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	@(for i in *.c;do $(CPP) -M $$i;done) >> tmp_make
-	@cp tmp_make Makefile
+	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
+	$(Q)(for i in *.c;do $(CPP) -M $$i;done) >> tmp_make
+	$(Q)cp tmp_make Makefile
 
 ### Dependencies:
 memory.o: memory.c ../include/signal.h ../include/sys/types.h \

@@ -23,20 +23,20 @@ bootsect.s: bootsect.S ../include/linux/config.h
 # 		-0: produce header with 16-bit magic
 # 		-s: strip symbols
 bootsect: bootsect.s
-	$(AS86) -o bootsect.o bootsect.s
-	$(LD86) -s -o bootsect bootsect.o
+	$(Q)$(AS86) -o bootsect.o bootsect.s
+	$(Q)$(LD86) -s -o bootsect bootsect.o
 	
 setup.s: setup.S ../include/linux/config.h
-	$(CPP_DISPLAY) -traditional setup.S -o setup.s
+	$(Q)$(CPP_DISPLAY) -traditional setup.S -o setup.s
 	
 setup: setup.s
-	$(AS86) -o setup.o setup.s
-	$(LD86) -s -o setup setup.o
+	$(Q)$(AS86) -o setup.o setup.s
+	$(Q)$(LD86) -s -o setup setup.o
 
 # AS = as --32
 # 		--32: implies Intel i386 architecture.
 head.o: head.s
-	$(AS) -o head.o head.s
+	$(Q)$(AS) -o head.o head.s
 	
 clean:
-	@rm -f bootsect bootsect.o bootsect.s setup setup.o setup.s head.o
+	$(Q)rm -f bootsect bootsect.o bootsect.s setup setup.o setup.s head.o

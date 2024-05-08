@@ -15,16 +15,14 @@ CFLAGS	+= -finline-functions -nostdinc -I../include
 CPP	+= -I../include
 
 .c.s:
-	$(Q)$(CC) $(CFLAGS) \
-	-S -o $*.s $<
+	$(Q)$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
 	$(Q)$(AS) -o $*.o $<
 .c.o:
-	$(Q)$(CC) $(CFLAGS) \
-	-c -o $*.o $<
+	$(Q)$(CC) $(CFLAGS) -c -o $*.o $<
 
 OBJS   = ctype.o _exit.o open.o close.o errno.o write.o dup.o setsid.o \
-	execve.o wait.o string.o malloc.o debug.o
+		 execve.o wait.o string.o malloc.o debug.o
 lib.a: $(OBJS)
 	$(Q)$(AR) rcs lib.a $(OBJS)
 	$(Q)sync
