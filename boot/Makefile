@@ -1,5 +1,9 @@
 include ../Makefile.header
 
+ifneq ($(V), 1)
+	Q=@
+endif
+
 LDFLAGS	+= -Ttext 0
 CPP_DISPLAY	+= -I../include
 
@@ -8,7 +12,7 @@ all: bootsect setup head.o
 
 # CPP_DISPLAY = cpp -nostdinc -I../include  (cpp is C Preprocessor)
 bootsect.s: bootsect.S ../include/linux/config.h
-	$(CPP_DISPLAY) -traditional bootsect.S -o bootsect.s
+	$(Q)$(CPP_DISPLAY) -traditional bootsect.S -o bootsect.s
 	
 # AS86 = as86 -0 -a
 # LD86 = ld86 -0

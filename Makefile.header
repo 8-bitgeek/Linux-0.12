@@ -47,3 +47,6 @@ CFLAGS	= -O0 -g3 -gdwarf-2 -m32 -fstrength-reduce -fomit-frame-pointer -fno-stac
 
 
 gcc_version=${(4.8.5)}
+
+# If turn on verbose output.
+V=1

@@ -1,8 +1,12 @@
-# if you want the ram-disk device, define this to be the size in blocks.
-RAMDISK =  #-DRAMDISK=1024
-
 # This is a basic Makefile for setting the general configuration
 include Makefile.header
+
+ifneq ($(V), 1)
+	Q=@
+endif
+
+# if you want the ram-disk device, define this to be the size in blocks.
+RAMDISK =  #-DRAMDISK=1024
 
 # -Ttext org: 
 # 	Locate text section in the output file at the absolute address given by org(0).
@@ -50,21 +54,21 @@ all: clean Image
 # 		-R: 去掉源文件中的 .note .comment 区(section)再输出到目标文件.
 # sync: synchronize cached writes to persistant storage.
 Image: boot/bootsect boot/setup tools/system
-	@cp -f tools/system system.tmp
-	@strip system.tmp
-	@objcopy -O binary -R .note -R .comment system.tmp tools/kernel
+	$(Q)cp -f tools/system system.tmp
+	$(Q)strip system.tmp
+	$(Q)objcopy -O binary -R .note -R .comment system.tmp tools/kernel
 # There is no Kernal_Image at begain, we create it by build.sh
-	@tools/build.sh boot/bootsect boot/setup tools/kernel Kernel_Image $(ROOT_DEV) $(SWAP_DEV)
-	@rm system.tmp
-	@rm -f tools/kernel
-	@sync
+	$(Q)tools/build.sh boot/bootsect boot/setup tools/kernel Kernel_Image $(ROOT_DEV) $(SWAP_DEV)
+	$(Q)rm system.tmp
+	$(Q)rm -f tools/kernel
+	$(Q)sync
 
 # run `objdump -m i8086 -b binary --start-address=0x20 -D boot/bootsect` to dissamble it.
 boot/bootsect: boot/bootsect.S
-	@make bootsect -C boot
+	$(Q)make bootsect -C boot
 
 boot/setup: boot/setup.S
-	@make setup -C boot
+	$(Q)make setup -C boot
 
 # objdump -S: 
 #	Display source code intermixed with disassembly, if possible.
@@ -73,17 +77,18 @@ boot/setup: boot/setup.S
 # DRIVERS 	=	kernel/blk_drv/blk_drv.a kernel/chr_drv/chr_drv.a
 # MATH		=	kernel/math/math.a
 # LIBS		=	lib/lib.a
+# LDFLAGS 	= 	-m elf_i386 -Ttext 0 -e startup_32 
 tools/system: boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
 	$(LD) $(LDFLAGS) boot/head.o init/main.o \
 		  $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS) -o tools/system
-	@nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > System.map
-	@objdump -S tools/system > system.S
+	$(Q)nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > System.map
+	$(Q)objdump -S tools/system > system.S
 
 # make -C {dir}: 
 # 	Change to directory {dir} before reading the makefiles or doing anything else.
 boot/head.o: boot/head.s
 # as --32 -o head.o head.s
-	@make head.o -C boot
+	$(Q)make head.o -C boot
 
 # Dependencies:
 init/main.o: init/main.c include/unistd.h include/sys/stat.h \
@@ -96,45 +101,45 @@ init/main.o: init/main.c include/unistd.h include/sys/stat.h \
 	include/stdarg.h include/fcntl.h include/string.h
 
 kernel/kernel.o:
-	@make -C kernel
+	$(Q)make -C kernel
 
 mm/mm.o:
-	@make -C mm
+	$(Q)make -C mm
 
 fs/fs.o:
-	@make -C fs
+	$(Q)make -C fs
 
 kernel/blk_drv/blk_drv.a:
-	@make -C kernel/blk_drv
+	$(Q)make -C kernel/blk_drv
 
 kernel/chr_drv/chr_drv.a:
-	@make -C kernel/chr_drv
+	$(Q)make -C kernel/chr_drv
 
 kernel/math/math.a:
-	@make -C kernel/math
+	$(Q)make -C kernel/math
 
 lib/lib.a:
-	@make -C lib
+	$(Q)make -C lib
 
 tools/build: tools/build.c
 	$(CC) $(CFLAGS) -o tools/build tools/build.c
 
 clean:
-	@rm -f Kernel_Image System.map System_s.map system.S tmp_make core boot/bootsect boot/setup
-	@rm -f init/*.o tools/system boot/*.o typescript* info bochsout.txt
-	@for i in mm fs kernel lib boot miniCRT; do make clean -C $$i; done
+	$(Q)rm -f Kernel_Image System.map System_s.map system.S tmp_make core boot/bootsect boot/setup
+	$(Q)rm -f init/*.o tools/system boot/*.o typescript* info bochsout.txt
+	$(Q)for i in mm fs kernel lib boot miniCRT; do make clean -C $$i; done
 
 debug:
-	@dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
-	@qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd \
+	$(Q)dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
+	$(Q)qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd \
 	-serial pty -S -gdb tcp::1234
 
 start:
-	@dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
-	@qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd
+	$(Q)dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
+	$(Q)qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd
 
 dep:
-	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	@(for i in init/*.c; do echo -n "init/"; $(CPP) -M $$i; done) >> tmp_make
-	@cp tmp_make Makefile
-	@for i in fs kernel mm lib; do make dep -C $$i; done
+	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
+	$(Q)(for i in init/*.c; do echo -n "init/"; $(CPP) -M $$i; done) >> tmp_make
+	$(Q)cp tmp_make Makefile
+	$(Q)for i in fs kernel mm lib; do make dep -C $$i; done

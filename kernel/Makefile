@@ -8,6 +8,13 @@
 
 include ../Makefile.header
 
+ifneq ($(V), 1)
+	Q=@
+endif
+
+# -r: Generate relocatable output, generate an output file that can in turn 
+# 	  serve as input to ld. this is often called partical linking.
+# LDFLAGS = -m elf_i386 -r 
 LDFLAGS	+= -r
 
 # NOTE!: do not try to add -On to CFLAGS with gcc4.x, which will optimize the
@@ -22,29 +29,30 @@ CFLAGS	+= -finline-functions -nostdinc -I../include
 CPP	+= -I../include
 
 .c.s:
-	@$(CC) $(CFLAGS) -S -o $*.s $<
+	$(Q)$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
-	@$(AS) -o $*.o $<
+	$(Q)$(AS) -o $*.o $<
 .c.o:
-	@$(CC) $(CFLAGS) -c -o $*.o $<
+	$(Q)$(CC) $(CFLAGS) -c -o $*.o $<
 
 OBJS  = sched.o sys_call.o traps.o asm.o fork.o panic.o printk.o vsprintf.o sys.o exit.o signal.o mktime.o
 
+# LDFLAGS = -m elf_i386 -r 
 kernel.o: $(OBJS)
-	@$(LD) $(LDFLAGS) -o kernel.o $(OBJS)
-	@sync
+	$(Q)$(LD) $(LDFLAGS) -o kernel.o $(OBJS)
+	$(Q)sync
 
 clean:
-	@rm -f core *.o *.a tmp_make keyboard.s
-	@for i in *.c;do rm -f `basename $$i .c`.s;done
-	@for i in chr_drv blk_drv math; do make clean -C $$i; done
+	$(Q)rm -f core *.o *.a tmp_make keyboard.s
+	$(Q)for i in *.c;do rm -f `basename $$i .c`.s;done
+	$(Q)for i in chr_drv blk_drv math; do make clean -C $$i; done
 
 dep:
-	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	@(for i in *.c; do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
+	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
+	$(Q)(for i in *.c; do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
 		$(CPP) -M $$i;done) >> tmp_make
-	@cp tmp_make Makefile
-	@for i in chr_drv blk_drv math; do make dep -C $$i; done
+	$(Q)cp tmp_make Makefile
+	$(Q)for i in chr_drv blk_drv math; do make dep -C $$i; done
 
 ### Dependencies:
 exit.s exit.o: exit.c ../include/errno.h ../include/signal.h \

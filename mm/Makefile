@@ -1,5 +1,8 @@
-
 include ../Makefile.header
+
+ifneq ($(V), 1)
+	Q=@
+endif
 
 LDFLAGS += -r
 CFLAGS	+= -finline-functions -nostdinc -I../include

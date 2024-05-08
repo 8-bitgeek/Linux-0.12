@@ -4,21 +4,22 @@
 # Note! Dependencies are done automagically by 'make dep', which also
 # removes any old dependencies. DON'T put your own dependencies here
 # unless it's something special (ie not a .c file).
-#
 
 include ../../Makefile.header
+
+ifneq ($(V), 1)
+	Q=@
+endif
 
 CFLAGS	+= -finline-functions -nostdinc -I../../include
 CPP	+= -I../../include
 
 .c.s:
-	@$(CC) $(CFLAGS) \
-	-S -o $*.s $<
+	$(Q)$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
-	@$(AS) -o $*.o $<
+	$(Q)$(AS) -o $*.o $<
 .c.o:
-	@$(CC) $(CFLAGS) \
-	-c -o $*.o $<
+	$(Q)$(CC) $(CFLAGS) -c -o $*.o $<
 
 OBJS  = math_emulate.o error.o convert.o ea.o get_put.o \
 	add.o mul.o div.o compare.o
@@ -26,18 +27,18 @@ OBJS  = math_emulate.o error.o convert.o ea.o get_put.o \
 #	add.o mul.o div.o compare.o
 
 math.a: $(OBJS)
-	@$(AR) rcs math.a $(OBJS)
-	@sync
+	$(Q)$(AR) rcs math.a $(OBJS)
+	$(Q)sync
 
 clean:
-	@rm -f core *.o *.a tmp_make
-	@for i in *.c;do rm -f `basename $$i .c`.s;done
+	$(Q)rm -f core *.o *.a tmp_make
+	$(Q)for i in *.c;do rm -f `basename $$i .c`.s;done
 
 dep:
-	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	@(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
+	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
+	$(Q)(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
 		$(CPP) -M $$i;done) >> tmp_make
-	@cp tmp_make Makefile
+	$(Q)cp tmp_make Makefile
 
 ### Dependencies:
 add.s add.o: add.c ../../include/linux/math_emu.h ../../include/linux/sched.h \

@@ -1,5 +1,9 @@
 include ../Makefile.header
 
+ifneq ($(V), 1)
+	Q=@
+endif
+
 LDFLAGS += -r
 CFLAGS	+= -fno-defer-pop -nostdinc -I../include
 CPP	+= -I../include

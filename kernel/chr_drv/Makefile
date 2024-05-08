@@ -4,41 +4,41 @@
 # Note! Dependencies are done automagically by 'make dep', which also
 # removes any old dependencies. DON'T put your own dependencies here
 # unless it's something special (ie not a .c file).
-#
 
 include ../../Makefile.header
+
+ifneq ($(V), 1)
+	Q=@
+endif
 
 CFLAGS	+= -finline-functions -nostdinc -I../../include
 CPP_DISPLAY	+= -I../../include
 CPP += -I../../include
 
 .c.s:
-	@$(CC) $(CFLAGS) \
-	-S -o $*.s $<
+	$(Q)$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
-	@$(AS) -o $*.o $<
+	$(Q)$(AS) -o $*.o $<
 .c.o:
-	@$(CC) $(CFLAGS) \
-	-c -o $*.o $<
+	$(Q)$(CC) $(CFLAGS) -c -o $*.o $<
 
-OBJS  = tty_io.o console.o keyboard.o serial.o rs_io.o \
-	tty_ioctl.o pty.o
+OBJS  = tty_io.o console.o keyboard.o serial.o rs_io.o tty_ioctl.o pty.o
 chr_drv.a: $(OBJS)
-	@$(AR) rcs chr_drv.a $(OBJS)
-	@sync
+	$(Q)$(AR) rcs chr_drv.a $(OBJS)
+	$(Q)sync
 	
 keyboard.s: keyboard.S ../../include/linux/config.h
-	$(CPP_DISPLAY) -traditional keyboard.S -o keyboard.s
+	$(Q)$(CPP_DISPLAY) -traditional keyboard.S -o keyboard.s
 	
 clean:
-	@rm -f core *.o *.a tmp_make keyboard.s
-	@for i in *.c;do rm -f `basename $$i .c`.s;done
+	$(Q)rm -f core *.o *.a tmp_make keyboard.s
+	$(Q)for i in *.c;do rm -f `basename $$i .c`.s;done
 
 dep:
-	@sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	@(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
+	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
+	$(Q)(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
 		$(CPP) -M $$i;done) >> tmp_make
-	@cp tmp_make Makefile
+	$(Q)cp tmp_make Makefile
 
 ### Dependencies:
 console.s console.o: console.c ../../include/linux/sched.h \
