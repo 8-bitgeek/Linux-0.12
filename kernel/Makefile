@@ -44,7 +44,7 @@ kernel.o: $(OBJS)
 
 clean:
 	$(Q)rm -f core *.o *.a tmp_make keyboard.s
-	$(Q)for i in *.c;do rm -f `basename $$i .c`.s;done
+	$(Q)for i in *.c; do rm -f `basename $$i .c`.s; done
 	$(Q)for i in chr_drv blk_drv math; do make clean -C $$i; done
 
 dep:

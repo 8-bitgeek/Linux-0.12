@@ -32,12 +32,12 @@ keyboard.s: keyboard.S ../../include/linux/config.h
 	
 clean:
 	$(Q)rm -f core *.o *.a tmp_make keyboard.s
-	$(Q)for i in *.c;do rm -f `basename $$i .c`.s;done
+	$(Q)for i in *.c; do rm -f `basename $$i .c`.s; done
 
 dep:
 	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	$(Q)(for i in *.c;do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
-		$(CPP) -M $$i;done) >> tmp_make
+	$(Q)(for i in *.c; do echo -n `echo $$i | sed 's,\.c,\.s,'`" "; \
+		$(CPP) -M $$i; done) >> tmp_make
 	$(Q)cp tmp_make Makefile
 
 ### Dependencies:
