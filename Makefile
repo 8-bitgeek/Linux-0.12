@@ -121,7 +121,7 @@ lib/lib.a:
 	$(Q)make -C lib
 
 tools/build: tools/build.c
-	$(CC) $(CFLAGS) -o tools/build tools/build.c
+	$(Q)$(CC) $(CFLAGS) -o tools/build tools/build.c
 
 clean:
 	$(Q)rm -f Kernel_Image System.map System_s.map system.S tmp_make core boot/bootsect boot/setup
@@ -131,7 +131,7 @@ clean:
 debug:
 	$(Q)dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
 	$(Q)qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd \
-	-serial pty -S -gdb tcp::1234
+						 -serial pty -S -gdb tcp::1234
 
 start:
 	$(Q)dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
