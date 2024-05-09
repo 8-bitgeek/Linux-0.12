@@ -28,14 +28,18 @@ LDFLAGS	+= -r
 CFLAGS	+= -finline-functions -nostdinc -I../include	
 CPP	+= -I../include
 
+# .c 编译成 .s 文件的规则
 .c.s:
 	$(Q)$(CC) $(CFLAGS) -S -o $*.s $<
+# .s 编译成 .o 文件的规则
 .s.o:
 	$(Q)$(AS) -o $*.o $<
+# .c 编译成 .o 文件的规则
 .c.o:
 	$(Q)$(CC) $(CFLAGS) -c -o $*.o $<
 
-OBJS  = sched.o sys_call.o traps.o asm.o fork.o panic.o printk.o vsprintf.o sys.o exit.o signal.o mktime.o
+OBJS  = sched.o sys_call.o traps.o asm.o fork.o panic.o printk.o \
+		vsprintf.o sys.o exit.o signal.o mktime.o
 
 # LDFLAGS = -m elf_i386 -r 
 kernel.o: $(OBJS)
