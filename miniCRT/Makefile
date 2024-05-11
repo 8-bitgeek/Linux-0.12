@@ -1,4 +1,5 @@
 CC = gcc
+LD = ld
 DEBUG_TOOL = cgdb
 
 # -fno-builtin 关闭 GCC 的内置函数功能， 默认情况下 GCC 会把 strlen, strcmp 等这些常用函数展开成它的内部实现.
@@ -35,8 +36,8 @@ clean:
 	$(Q)rm -rf *.o minicrt.h.gch minicrt.a 
 
 test: minicrt.a test.o entry.o
-	$(Q)gcc $(CC_TEST_FLAG) test.c
-	$(Q)ld $(LD_TEST_FLAG) entry.o test.o minicrt.a -o test 
+	$(Q)$(CC) $(CC_TEST_FLAG) test.c
+	$(Q)$(LD) $(LD_TEST_FLAG) entry.o test.o minicrt.a -o test 
 
 debug: test
 	$(DEBUG_TOOL) test
