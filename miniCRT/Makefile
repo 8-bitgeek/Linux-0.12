@@ -1,3 +1,8 @@
+V = 1
+ifneq ($(V), 1)
+	Q = @
+endif
+
 CC = gcc
 LD = ld
 DEBUG_TOOL = cgdb
@@ -6,38 +11,32 @@ DEBUG_TOOL = cgdb
 # -nostdlib 表示不使用任务来自 Glibc, gcc 库文件和启动文件, 它包含了 -nostartfiles 这个参数.
 # -fno-stack-protector 是关闭堆栈保护功能, 新版本的 GCC 会在 vfprintf 这样的变长参数函数中插入堆栈保护函数， 
 #					   如果不关闭会发生 "__stack_chk_fail" 函数未定义的错误.
-ifeq ($(M), 64)
-	CC_FLAG = -c -g -fno-builtin -nostdlib -fno-stack-protector -Wall 
-	CC_TEST_FLAG = -c -g -fno-builtin -nostdlib -fno-stack-protector 
-	LD_TEST_FLAG = -static -e mini_crt_entry 
-else 
-	CC_FLAG = -c -g -m32 -fno-builtin -nostdlib -fno-stack-protector 
-	CC_TEST_FLAG = -m32 -c -g -fno-builtin -nostdlib -fno-stack-protector 
-	LD_TEST_FLAG = -m elf_i386 -static -e mini_crt_entry 
-endif
+CFLAGS = -m32 -c -g -fno-builtin -nostdlib -fno-stack-protector
+LDFLAGS = -m elf_i386 -static -e mini_crt_entry
 
-ifneq ($(V), 1)
-	Q = @
-endif
+OBJS = malloc.o printf.o stdio.o string.o entry.o
 
-objects = malloc.o printf.o stdio.o string.o entry.o
-
-# $^ 表示所有前置条件
-# $@ 表示当前目标
-minicrt.a: $(objects)
+# $^ 措代所有前置条件
+# $@ 措代当前目标
+# ar 选项: 
+# 	-r: replace existing or insert new file into the archive
+# 	-s: act as ranlib
+minicrt.a: $(OBJS)
 	$(Q)ar -rs $@ $^ 				
-# -r replace existing or insert new file into the archive
-# -s act as ranlib
 
-$(objects): malloc.c stdio.c string.c printf.c entry.c minicrt.h
-	$(Q)$(CC) $(CC_FLAG) $^
-
-clean: 
-	$(Q)rm -rf *.o minicrt.h.gch minicrt.a 
+# $* 指代所匹配的字符串
+# $* 指代第一个前置条件
+.c.o: 
+	$(Q)$(CC) $(CFLAGS) -o $*.o $<
 
 test: minicrt.a test.o entry.o
-	$(Q)$(CC) $(CC_TEST_FLAG) test.c
-	$(Q)$(LD) $(LD_TEST_FLAG) entry.o test.o minicrt.a -o test 
+	$(Q)$(LD) $(LDFLAGS) entry.o test.o minicrt.a -o test
+
+run: test
+	$(Q)./test
 
 debug: test
-	$(DEBUG_TOOL) test
+	$(Q)$(DEBUG_TOOL) test
+
+clean: 
+	$(Q)rm -f *.o minicrt.h.gch minicrt.a test
