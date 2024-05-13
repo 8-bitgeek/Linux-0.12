@@ -10,7 +10,8 @@ int mini_crt_io_init() {
 
 static int open(const char *pathname, int flags, int mode) {
     int fd = 0;
-    asm("movl $5, %%eax;"
+    asm(
+        "movl $5, %%eax;"
         "movl %1, %%ebx;"
         "movl %2, %%ecx;"
         "movl %3, %%edx;"
@@ -22,7 +23,8 @@ static int open(const char *pathname, int flags, int mode) {
 
 static int read(int fd, void * buffer, unsigned size) {
     int ret = 0;
-    asm("movl $3, %%eax;"
+    asm(
+        "movl $3, %%eax;"
         "movl %1, %%ebx;"
         "movl %2, %%ecx;"
         "movl %3, %%edx;"
@@ -35,7 +37,8 @@ static int read(int fd, void * buffer, unsigned size) {
 
 static int write(int fd, const void * buffer, unsigned size) {
     int ret = 0;
-    asm("movl $4, %%eax;"
+    asm(
+        "movl $4, %%eax;"
         "movl %1, %%ebx;"
         "movl %2, %%ecx;"
         "movl %3, %%edx;"
@@ -48,7 +51,8 @@ static int write(int fd, const void * buffer, unsigned size) {
 
 static int close(int fd) {
     int ret = 0;
-    asm("movl $6, %%eax;"
+    asm(
+        "movl $6, %%eax;"
         "movl %1, %%ebx;"
         "int $0x80;"
         "movl %%eax, %0;"
@@ -59,7 +63,8 @@ static int close(int fd) {
 
 static int seek(int fd, int offset, int mode) {
     int ret = 0;
-    asm("movl $19, %%eax;"
+    asm(
+        "movl $19, %%eax;"
         "movl %1, %%ebx;"
         "movl %2, %%ecx;"
         "movl %3, %%edx;"

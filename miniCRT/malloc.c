@@ -87,7 +87,8 @@ static int brk(void * end_data_segment) {
     // include/unistd.h #define __NR_brk 45
     // 汇编指令每条以 "" 为单位, 多条指令之间用 ; 号, '\n\t' 或者换行来进行分割.
     // kernel/sys.c  sys_brk();
-    asm volatile ("movl $45, %%eax    \n\t"
+    asm volatile (
+        "movl $45, %%eax    \n\t"
         "movl %1, %%ebx     \n\t"
         "int $0x80          \n\t"
         "movl %%eax, %0     \n\t"
