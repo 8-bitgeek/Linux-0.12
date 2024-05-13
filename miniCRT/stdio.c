@@ -8,10 +8,6 @@ int mini_crt_io_init() {
     return 1;
 }
 
-#ifdef WIN32
-#include <Windows.h>
-// do something.
-#else
 static int open(const char *pathname, int flags, int mode) {
     int fd = 0;
     asm("movl $5, %%eax;"
@@ -114,4 +110,3 @@ int fclose(FILE * fp) {
 int fseek(FILE * fp, int offset, int set) {
     return seek((int) fp, offset, set);
 }
-#endif

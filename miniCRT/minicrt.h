@@ -3,21 +3,14 @@ void mini_crt_entry(void);
 typedef int FILE;
 #define EOF (-1)
 
-#ifdef WIN32
-#else
 #define stdin       ((FILE *)0)
 #define stdout      ((FILE *)1)
 #define stderr      ((FILE *)2)
-#endif
 
-#ifndef WIN32
 #define va_list             char *
 #define va_start(ap, arg)   (ap = (va_list) &arg + sizeof(arg))
 #define va_arg(ap, t)       (*(t*)(ap += sizeof(t)) - sizeof(t))
 #define va_end(ap)          (ap = (va_list)0)
-#else
-#include <Windows.h>
-#endif
 
 // entry.c
 void mini_crt_entry(void);

@@ -81,7 +81,6 @@ void * malloc(unsigned size) {
     return NULL;
 }
 
-#ifndef WIN32
 static int brk(void * end_data_segment) {
     int ret = 0;
     // brk system call number: 45.
@@ -96,9 +95,6 @@ static int brk(void * end_data_segment) {
         : "m"(end_data_segment));               // 'm' 表示内存变量.
     return ret;
 }
-#else           // If define WIN32.
-#include <Windows.h>
-#endif
 
 int mini_crt_heap_init() {
     void * base = NULL;
@@ -106,8 +102,6 @@ int mini_crt_heap_init() {
     // 32MB heap size.
     unsigned heap_size = 1024 * 1024 * 32;
 
-#ifdef WIN32
-#else 
     // get current task's brk as base: pass 0 to sys_brk then return current brk.
     base = (void *) brk(0);                     // default task.brk = code_size + data_size + bss_size.
     void * end = ADDR_ADD(base, heap_size);
@@ -115,7 +109,6 @@ int mini_crt_heap_init() {
     if (!end) {
         return 0;
     }
-#endif
     header = (heap_header *) base;              // header at end of bss.
     header->size = heap_size;
     header->type = HEAP_BLOCK_FREE;
