@@ -40,7 +40,6 @@ void free(void * ptr) {
     if (header->next != NULL && header->next->type == HEAP_BLOCK_FREE) { // if next is free then merge it.
         // merge
         header->size += header->next->size;
-        header->next->next->prev = header;
         header->next = header->next->next;
     }
     // if no adjoin free space then do nothing but just free current space.

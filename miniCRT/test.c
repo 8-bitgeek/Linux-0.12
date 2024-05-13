@@ -24,6 +24,8 @@ int main(int argc, char * argv[]) {
         char * buf;
         fread(&len, 1, sizeof(int), fp);
         buf = malloc(len + 1);
+        fread(buf, 1, len, fp);
+        buf[len] = '\0';
         printf("%d %s\n", len, buf);
         free(buf);
         free(v[i]);
