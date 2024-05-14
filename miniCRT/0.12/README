@@ -1,0 +1,15 @@
+## 编译 miniCRT
+
+```shell
+make 
+```
+
+## miniCRT 使用
+
+`-e` 指定入口函数.
+
+```shell
+gcc -c -ggdb -fno-builtin -nostdlib -fno-stack-protector test.c     # 编译
+ld -static -e mini_crt_entry entry.o test.o minicrt.a -o test       # 链接 
+./test                                                              # 运行
+```
