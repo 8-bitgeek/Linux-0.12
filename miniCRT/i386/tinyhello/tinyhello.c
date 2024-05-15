@@ -1,8 +1,6 @@
 #include "tinylib.h"
 
-char * str = "Hello world!\n";
-
-void print(int cnt) {
+void print(char * str, int cnt) {
     asm(
         "movl %0, %%edx;"
         "movl %1, %%ecx;"
@@ -22,7 +20,8 @@ void exit() {
 }
 
 void nomain() {
+    char * str = "Hello world!\n";
     int cnt = sum(10, 3);
-    print(cnt);
+    print(str, cnt);
     exit();
 }
