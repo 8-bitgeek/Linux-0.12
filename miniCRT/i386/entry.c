@@ -10,13 +10,15 @@ static void crt_fatal_error(const char * msg) {
 
 void mini_crt_entry(void) {
     int ret;
-
     int argc;
     char ** argv;
     char * ebp_reg = 0;
+
     // ebp_reg = %ebp
-    asm("movl %%ebp, %0;" 
-        : "=r" (ebp_reg));
+    asm (
+        "movl %%ebp, %0;" 
+        : "=r" (ebp_reg)
+        :);
     argc = *(int *)(ebp_reg + 4);
     argv = (char **)(ebp_reg + 8);
 
@@ -31,8 +33,9 @@ void mini_crt_entry(void) {
 }
 
 static void exit(int exit_code) {
-    // 调用 0x80 的 1 号系统调用.
-    asm("movl %0, %%ebx;"
+    // sys_call #1
+    asm (
+        "movl %0, %%ebx;"
         "movl $1, %%eax;"
         "int $0x80;"
         "hlt;"
