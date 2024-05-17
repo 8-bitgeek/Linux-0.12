@@ -8,3 +8,5 @@ struct exec {
     unsigned a_trsize;              /* length of relocation info for text, in bytes */
     unsigned a_drsize;              /* length of relocation info for data, in bytes */
 };
+
+#define ZMAGIC 0413

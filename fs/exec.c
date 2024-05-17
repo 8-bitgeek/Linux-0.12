@@ -649,7 +649,7 @@ restart_interp:
 exec_error2:
 	iput(inode);									// 放回 i 节点.
 exec_error1:
-	for (i = 0 ; i < MAX_ARG_PAGES ; i++)
+	for (i = 0; i < MAX_ARG_PAGES; i++)
 		free_page(page[i]);							// 释放存放参数和环境串的内存页面.
 	return(retval);									// 返回出错码.
 }

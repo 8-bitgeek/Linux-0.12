@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <elf.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "a.out.h"
 
 int main() {
-    const char * filename = "simplesection.o";
+    const char * filename = "test";
     FILE * fp = fopen(filename, "r");
     Elf32_Ehdr ehdr;
     if (fp != NULL) {
@@ -21,10 +24,25 @@ int main() {
     fseek(fp, sh_st_offset, 0);
     fread(sh_st_data, shdr[ehdr.e_shstrndx].sh_size, 1, fp);
 
+    int a_text, a_data, a_bss = 0;
     for (int i = 0; i < ehdr.e_shnum; i++) {
         printf("section %s offset: 0x%08x.\n", &sh_st_data[shdr[i].sh_name], shdr[i].sh_offset);
+        // code section
+        if (!strcmp(&sh_st_data[shdr[i].sh_name], ".text")) {
+            a_text = shdr[i].sh_size;
+        } else if (!strcmp(&sh_st_data[shdr[i].sh_name], ".data")) {
+            a_data = shdr[i].sh_size;
+        } else if (!strcmp(&sh_st_data[shdr[i].sh_name], ".bss")) {
+            a_bss = shdr[i].sh_size;
+        }
     }
 
+    struct exec exec_hdr;
+    exec_hdr.a_magic = ZMAGIC;
+    exec_hdr.a_text = a_text;
+    exec_hdr.a_data = a_data;
+    exec_hdr.a_bss = a_bss;
+    printf("Size of .text: 0x%08x .data: 0x%08x .bss: 0x%08x\n", a_text, a_data, a_bss);
 
     fclose(fp);
     return 0;
