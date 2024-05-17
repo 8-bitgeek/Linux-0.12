@@ -2,8 +2,9 @@
 
 #include "a.out.h"
 
-int main() {
-    FILE * fp = fopen("test2", "r");
+int main(int argc, char * argv[]) {
+    char * filename = argv[1];
+    FILE * fp = fopen(filename, "r");
     struct exec exec_hdr;
     printf("sizeof struct exec: %ld\n", sizeof(struct exec));
     fread(&exec_hdr, sizeof(exec_hdr), 1, fp);

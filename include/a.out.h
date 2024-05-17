@@ -30,7 +30,7 @@ struct exec {
 #endif
 
 #ifndef OMAGIC
-/* Code indicating object file or impure executable.  */
+/* Code indicating object file or impure executable. */
 /* 指明为目标文件或者不纯的可执行文件的代号 */
 // 历史上最早在 PDP-11 计算机上, 魔数(幻数)是八进制数 0407(0x107). 它位于执行程序头结构开始处. 
 // 原本是 PDP-11 的一条跳转指令, 表示跳转到随后 7 个字后的代码开始处.
@@ -38,15 +38,15 @@ struct exec {
 // 现在已没有程序使用这种方法, 但这个八进制数却作为识别文件类型的标志(魔数)保留了下来.
 // OMAGIC 可以认为是 Old Magic 的意思.
 #define OMAGIC 0407
-/* Code indicating pure executable.  */
+/* Code indicating pure executable. */
 /* 指明为纯可执行文件的代号 */	        // New Magic, 1975 年以后开始使用. 涉及虚存机制.
 #define NMAGIC 0410		             // 0410 == 0x108
-/* Code indicating demand-paged executable.  */
+/* Code indicating demand-paged executable. */
 /* 指明为需求分页处理的可执行文件 */      // 其头结构占用文件开始处 1K 空间.
 #define ZMAGIC 0413		            // 0413 == 0x10b
 #endif /* not OMAGIC */
-// 另外还有一个 OMAGIC, 是为节约磁盘容量, 把盘上执行文件的头结构与代码紧凑存放. 下面宏用于判断魔数字段的正确性. 如果魔数不能被识别, 则返回真.
-
+// 另外还有一个 OMAGIC, 是为节约磁盘容量, 把盘上执行文件的头结构与代码紧凑存放. 
+// 下面宏用于判断魔数字段的正确性. 如果魔数不能被识别, 则返回真.
 #ifndef N_BADMAG
 #define N_BADMAG(x)					\
  (N_MAGIC(x) != OMAGIC && N_MAGIC(x) != NMAGIC		\
