@@ -1,5 +1,6 @@
+// sizeof(struct exec) == 32bytes.
 struct exec {
-    unsigned long  a_magic;         /* Use macros N_MAGIC, etc for access */
+    unsigned a_magic;               /* Use macros N_MAGIC, etc for access */
     unsigned a_text;                /* length of text, in bytes */
     unsigned a_data;                /* length of data, in bytes */
     unsigned a_bss;                 /* length of uninitialized data area for file, in bytes */
@@ -10,3 +11,4 @@ struct exec {
 };
 
 #define ZMAGIC 0413
+#define CODELIMIT 0x3000000
