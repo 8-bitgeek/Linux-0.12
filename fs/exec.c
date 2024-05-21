@@ -310,7 +310,7 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 /*
  * 'do_execve()' 函数执行一个新程序.
  */
-// execve() 系统中断调用函数. 加载并执行子进程(其他程序).
+// execve() 系统中断调用函数(kernel/sys_call.s #sys_execve). 加载并执行子进程(其他程序).
 // 该函数是系统中断调用(int $0x80)功能号 __NR_execve 调用的函数. 
 // 函数的参数是进入系统调用处理过程后直至调用本函数之前逐步压入栈中的值.  
 // 这些值包括:
@@ -318,15 +318,16 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 // 2: system_call 在调用用 sys_call_table 中 sys_execve 函数(指针)时(call sys_execve)压入栈的函数返回地址(tmp);
 // 3: sys_execve 在调用本函数 do_execve 前入栈的指向栈中调用系统中断的程序代码指针 eip.
 // 参数:
-// eip - sys_execve 在调用本函数前入栈的程序代码指针. 
+// eip - sys_execve 在调用本函数前入栈的用户态时调用 `int $0x80` 的下一行代码指针. 
 // 		 最后入栈的参数 eip 在参数表的第一个(实际上最后入栈了一个返回地址, 但是不作为参数).
+// 		 用户态在调用 `int $0x80` 时, 会发生特权级变化, 因此会入栈 cs 和 eip, eip[1] = cs(先入栈 cs, 再入栈 eip).
 // tmp - system_call 在调用 sys_execve 时的返回地址, 无用.
 // filename - 要执行的程序文件名指针;
 // argv - 命令行参数指针数组的指针;
 // envp - 环境变量指针数组的指针.
 // 返回: 如果调用成功, 则不返回; 否则设置出错号, 并返回 -1.
 int do_execve(unsigned long * eip, long tmp, char * filename,
-			  char ** argv, char ** envp)
+			  char ** argv, char ** envp) 						// 先入栈的参数在参数列表的后面.
 {
 	struct m_inode * inode;
 	struct buffer_head * bh;
@@ -336,9 +337,9 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	int e_uid, e_gid;											// 有效用户 ID 和有效组 ID.
 	int retval;
 	int sh_bang = 0;											// 控制是否需要执行脚本程序. 置位表示禁止再次执行脚本处理代码.
-	unsigned long p = PAGE_SIZE * MAX_ARG_PAGES - 4;			// p 指向参数和环境空间的最后一个长字(4byte).
+	unsigned long p = PAGE_SIZE * MAX_ARG_PAGES - 4;			// p 指向参数和环境空间的最后一个长字(4k * 32 - 4).
 
-	// 在内核中打印要执行的文件的文件名字.
+	// 在内核中打印要执行的文件的名字.
 	char s, filename1[128];
 	int index = 0;
 	while (1) {
@@ -356,16 +357,15 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	// 在正式设置执行文件的运行环境之前, 让我们先干些杂事. 
 	// 内核准备了 128KB(32 个页面) 空间来存放要执行文件的命令行参数和环境字符串.
 	// 上面把 p 初始化设置成位于 128KB 空间的最后 1 个长字(4byte)处. 
-	// 在初始参数和环境空间的操作过程中, p 将用来指明在 128KB 空间中的当前位置.
+	// 在初始参数和环境空间的操作过程中, **p 将用来指明在 128KB 空间中的当前位置**.
 	// 另外, 参数 eip[1] 是调用本次系统调用的原用户程序代码段寄存器 CS 值, 
 	// 其中的 CS 段选择符当然必须是当前任务的代码段选择符(0x000f).
 	// 若不是该值, 那么 CS 只能会是内核代码段的选择符 0x0008. 
 	// 但这是绝对不允许的, 因为内核代码是常驻内存而不能被替换掉的. 
-	// 因此下面根据 eip[1] 的值确认是否符合正常情况. 
 	// 然后再初始化 128KB 的参数和环境空间, 把所有字节清零, 并取出执行文件的 i 节点. 
 	// 再根据参数分别计算出命令行参数和环境字符串的个数 argc 和 envc. 另外, 执行文件必须是常规文件.
 	if ((0xffff & eip[1]) != 0x000f) 					// 当前任务(current)的代码段选择符必须是 0x0f(用户态).
-		panic("execve called from supervisor mode");
+		panic("execve called from supervisor mode!");
 	for (i = 0; i < MAX_ARG_PAGES; i++)					/* clear page-table */
 		page[i] = 0;
 	// 将要执行的文件的 inode 信息读取出来.

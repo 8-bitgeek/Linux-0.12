@@ -111,7 +111,7 @@ reschedule:
 # RPL(Request Privilege Level): 请求特权级, 存放在选择符的位 0/1 上.
 # RPL 和 CPL 会与 DPL 进行对比, 如果大于(特权级低)则不允许调用.
 
-# 在 TASK-0 调用该中断创建 TASK1 时, TASK-0 的 CPL = 3, 用户态代码通过陷阱门(调用门)来调用该中断代码.
+# 在 TASK-0 调用该中断创建 TASK-1 时, TASK-0 的 CPL = 3, 用户态代码通过陷阱门(调用门)来调用该中断代码.
 # 该中断的 DPL = 0, 需要进行特权级切换, 中断和任务使用不同的堆栈(中断处理程序使用任务 ss0, sp0 字段指定的堆栈).
 
 # int 0x80 -- Linux 系统调用入口点(调用中断 int 0x80, eax 中是调用号).
@@ -153,8 +153,8 @@ system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	# 该数组中设置了内核所有 82 个系统调用 C 处理函数的地址.
 sys_call:
 	# call 指令会将下一行代码的地址(`pushl %eax`)压入栈中.
-	call *%ebx 							# ebx 中含有被调用函数的地址. 
-										# 调用 eax 中对应的系统调用函数. (此处不会发生特权级切换)
+	call *%ebx 							# ebx 中含有被调用函数的地址, * 表示间接调用. 
+										# 调用 eax 调用号指定的系统调用函数. (此处不会发生特权级切换)
 	# call *sys_call_table(, %eax, 4)	# 间接调用指定功能 C 函数.
 	pushl %eax							# 把系统调用返回值入栈.
 
@@ -319,7 +319,8 @@ timer_interrupt:
 # do_execve() 在 (fs/exec.c).
 .align 4
 sys_execve:
-	lea EIP(%esp), %eax				# eax 指向堆栈中保存的用户程序 eip 指针处(%esp + EIP = %eip + 0x20(调用 int 0x80 的下一行代码处)).
+	# eax 指向堆栈中保存的用户程序 eip 指针处(存放的用户调用 `int $0x80` 的下一行代码地址).
+	lea EIP(%esp), %eax				# (%esp + 0x20) 即栈顶 -> 栈底方向的第 0x20 的偏移处.
 	pushl %eax
 	call do_execve
 	addl $4, %esp					# 丢弃调用时压入栈的 EIP 值.
