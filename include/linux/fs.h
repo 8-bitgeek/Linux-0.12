@@ -219,7 +219,7 @@ extern void wait_on(struct m_inode * inode);                    // 等待指定�
 extern int bmap(struct m_inode * inode, int block);              // 逻辑块(区段, 磁盘块)位图操作. 取数据块 block 在设备上对应的逻辑块号.
 extern int create_block(struct m_inode * inode,int block);      // 创建数据块 block 在设备上对应的逻辑块, 并返回在设备上的逻辑块号.
 
-extern struct m_inode * namei(const char * pathname);           // 获取指定路径名的 i 节点号.
+extern struct m_inode * namei(const char * pathname);           // 获取指定路径名的 i 节点.
 extern struct m_inode * lnamei(const char * pathname);          // 取指定路径名的 i 节点, 不跟随符号链接.
 extern int open_namei(const char * pathname, int flag, int mode,
 	struct m_inode ** res_inode);                           	// 根据路径名为打开文件操作作准备.
