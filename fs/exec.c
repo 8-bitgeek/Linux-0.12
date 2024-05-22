@@ -178,7 +178,7 @@ static int count(char ** argv)
  * 由 TYT(Tytso) 于 1991.11.24 日修改, 增加了 from_kmem 参数, 
  * 该参数指明了字符串或字符串数组是来自用户段还是内核段.
  *
- * from_kmem     指针 argv *   字符串 argv **
+ * from_kmem     指针 *argv    字符串 **argv
  *    0          用户空间		用户空间
  *    1          内核空间		用户空间
  *    2          内核空间		内核空间
@@ -195,10 +195,10 @@ static int count(char ** argv)
 // 字符串来源标志 from_kmem 应该是 TYT(创作者)为了给 execve() 增添执行脚本文件的功能而新加的参数. 
 // 当没有运行脚本文件的功能时, 所有参数字符串都在用户数据空间中. 
 // 返回: 参数和环境空间中当前的指针. 若出错则返回 0.
-static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
+static unsigned long copy_strings(int argc, char ** argv, unsigned long * page,
 		unsigned long p, int from_kmem)
 {
-	char *tmp, *pag;
+	char * tmp, * pag;
 	int len, offset = 0;
 	unsigned long old_fs, new_fs;
 
@@ -215,11 +215,11 @@ static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
 	// 并在内核数据空间中取了字符串指针 tmp 之后就立刻恢复 fs 段寄存器原值(fs 再指回用户空间). 
 	// 否则不用修改 fs 值而直接从用户空间取字符串指针到 tmp.
 	while (argc-- > 0) {
-		if (from_kmem == 1)							// 若串指针在内核空间, 则 fs 指向内核空间.
+		if (from_kmem == 1)							// 若参数字符串指针在内核空间, 则 fs 指向内核空间.
 			set_fs(new_fs);
-		if (!(tmp = (char *)get_fs_long(((unsigned long *)argv) + argc))) 	// tmp 指向参数中的某一个.
+		if (!(tmp = (char *) get_fs_long(((unsigned long *) argv) + argc))) 	// tmp 指向参数字符串数组中的某一个.
 			panic("argc is wrong");
-		if (from_kmem == 1)							// 若串指针在内核空间, 则 fs 指回用户空间.
+		if (from_kmem == 1)							// 若参数字符串指针在内核空间, 则 fs 指回用户空间.
 			set_fs(old_fs);
 		// 然后从用户空间取该字符串, 并计算参数字符串长度 len. 此后 tmp 指向该字符串末端. 
 		// 如果该字符串长度超过此时参数和环境空间中还剩余的空闲长度, 则空间不够了. 
@@ -288,11 +288,11 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 	/* make sure fs points to the NEW data segment */
 	/* 要确保 fs 段寄存器已指向新的数据段 */
 	// fs 段寄存器中放入局部表数据段描述符的选择符(0x17). 即默认情况下 fs 都指向任务数据段.
-	__asm__("pushl $0x17\n\tpop %%fs"::);
+	__asm__("pushl $0x17\n\tpop %%fs" : :);
 	// 然后将参数和环境空间已存放数据的页面(最多有 MAX_ARG_PAGES 页, 128KB)放到数据段末端. 
 	// 方法是从进程空间库代码位置开始处往前一页一页地放. 库文件代码占用进程空间最后 4MB. 
 	// 函数 put_dirty_page() 用于把物理页面映射到进程逻辑(线性)空间中. 在 mm/memory.c 中.
-	data_base += data_limit - LIBRARY_SIZE; 			// LIBRARY_SIZE = 4MB, data_base 此时指向进程空间末尾 4MB 开始处.
+	data_base += data_limit - LIBRARY_SIZE; 			// LIBRARY_SIZE = 4MB, data_base 此时指向当前进程线性地址空间的末尾 4MB 开始处.
 	for (i = MAX_ARG_PAGES - 1; i >= 0; i--) {
 		data_base -= PAGE_SIZE; 						// 将参数和环境空间放到库文件代码前面(低地址处).
 		if (page[i])									// 若该页面存在, 就放置该页面.
@@ -556,6 +556,7 @@ restart_interp:
 	// 同样, 若 sh_bang 没有置位而需要复制的话, 那么此时指针 p 随着复制信息增加而逐渐向小地址方向移动,
 	// 因此这两个复制串函数执行完后, 环境参数串信息块位于程序参数串信息块的后面, 并且 p 指向程序的第 1 个参数. 
 	// 事实上, p 是在 128KB 参数和环境空间中的偏移值. 因此如果 p = 0, 则表示环境变量与参数空间页面已经被占满, 容纳不下了.
+	// page 中的空间分布  开始-->|             | argv (page 低地址空间处) | envp (page 高地址空间处) |<--page 空间末端
 	if (!sh_bang) { 								// sh_bang: 是否执行脚本程序的标志, 0 - 否.
 		p = copy_strings(envc, envp, page, p, 0);
 		p = copy_strings(argc, argv, page, p, 0);
@@ -579,7 +580,7 @@ restart_interp:
 	// 注意, 虽然此时新执行文件代码和数据还没有从文件中加载到内存中, 
 	// 但其参数和环境已经在 copy_strings() 中使用 get_free_page() 分配了物理内存页来保存数据, 
 	// 并在 chang_ldt() 函数中使用 put_page() 到了进程逻辑空间的末端处. 
-	// 另外, 在create_tables() 中也会由于在用户栈上存放参数和环境指针表而引起缺页异常, 
+	// 另外, 在 create_tables() 中也会由于在用户栈上存放参数和环境指针表而引起缺页异常, 
 	// 从而内存管理程序也会就此为用户栈空间映射物理内存页.
 	//
 	// 这里我们首先放回进程原执行程序的 i 节点, 并且让进程 executable 字段指向新执行文件的 i 节点. 
