@@ -192,7 +192,7 @@ static int count(char ** argv)
 // 在 do_execve() 函数中, p 初始化为指向参数表(128KB)空间的最后一个长字处, 
 // 参数字符串是以堆栈操作方式逆向往其中复制存放的. 
 // 因此 p 指针会随着复制信息的增加而逐渐减小, 并始终指向参数字符串的头部. 
-// 字符串来源标志 from_kmem 应该是 TYT(创作者) 为了给 execve() 增添执行脚本文件的功能而新加的参数. 
+// 字符串来源标志 from_kmem 应该是 TYT(创作者)为了给 execve() 增添执行脚本文件的功能而新加的参数. 
 // 当没有运行脚本文件的功能时, 所有参数字符串都在用户数据空间中. 
 // 返回: 参数和环境空间中当前的指针. 若出错则返回 0.
 static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
@@ -202,9 +202,9 @@ static unsigned long copy_strings(int argc, char ** argv, unsigned long *page,
 	int len, offset = 0;
 	unsigned long old_fs, new_fs;
 
-	if (!p) 										// p == 0 表示没有参数和环境空间没有内存了.
+	if (!p) 										// p == 0 表示参数和环境空间没有内存了.
 		return 0;									/* bullet-proofing */	/* 偏移指针验证 */
-	// 首先取当前段寄存器 ds(指向内核数据段) 和 fs 值, 分别保存到变量 new_fs 和 old_fs 中. 
+	// 内核数据段作为 new_fs, 用户数据段作为 old_fs. 
 	// 如果字符串和字符串数组(指针)来自内核空间, 则设置 fs 段寄存器指向内核数据段.
 	new_fs = get_ds();
 	old_fs = get_fs();
@@ -380,8 +380,7 @@ restart_interp:
 		goto exec_error2;								// 若不是常规文件则置出错码, 跳转 exec_error2.
 	}
 	// 下面检查当前进程是否有权运行指定的执行文件. 即根据执行文件 i 节点中的属性, 看看本进程是否有权执行它. 
-	// 在把执行文件 i 节点的属性字段值复制到 i 后, 
-	// 我们首先查看属性中是否设置了 set-user-ID(i_mode 位 9 置位) 标志和 set-group-id(i_mode 位 10 置位) 标志. 
+	// 我们首先查看属性中是否设置了 set-user-ID(i_mode 位 9 置位)标志和 set-group-id(i_mode 位 10 置位)标志. 
 	// 这两个标志主要是让一般用户能够执行特权用户(如超级用户 root)的程序, 例如改变密码的程序 passwd 等. 
 	// 如果 set-user-ID 标志置位, 则后面执行进程的有效用户 ID(euid) 就设置成执行文件的用户 ID, 否则设置成当前进程的 euid. 
 	// 如果执行文件 set-group-id 被置位的话, 则执行进程的有效组 ID(egid) 就设置为执行执行文件的组 ID. 
@@ -429,10 +428,7 @@ restart_interp:
 		 * This section does the #! interpretation.
 		 * Sorta complicated, but hopefully it will work.  -TYT
 		 */
-        /*
-         * 这部分处理对 “#!” 的解释, 有些复杂, 但希望能工作.  -TYT
-         */
-
+        /* 这部分处理对 “#!” 的解释, 有些复杂, 但希望能工作.  -TYT */
 		char buf[128], *cp, *interp, *i_name, *i_arg;
 		unsigned long old_fs;
 
@@ -466,13 +462,8 @@ restart_interp:
 			*cp++ = '\0';           						// 解释程序名尾添加 NULL 字符. 
 			i_arg = cp;             						// i_arg 指向解释程序参数. 
 		}
-		/*
-		 * OK, we've parsed out the interpreter name and
-		 * (optional) argument.
-		 */
-        /*
-         * OK, 我们已经解析出解释程序的文件名以及(可选的)参数. 
-         */
+		/* OK, we've parsed out the interpreter name and (optional) argument. */
+        /* OK, 我们已经解析出解释程序的文件名以及(可选的)参数. */
 		// 现在我们要把上面解析出来的解释程序名 i_name 及其参数 i_arg 和脚本文件名作为解释程序的参数放进环境和参数块中. 
 		// 不过首先我们需要把函数提供的原来一些参数和环境字符串先放进去, 然后再放这里解析出来的. 
 		// 例如对于命令行参数来说, 如果原来的参数是 "-arg1 -arg2", 解释程序名是 "bash", 其参数是 "-iarg1 -iarg2", 
@@ -522,12 +513,8 @@ restart_interp:
 			retval = -ENOMEM;
 			goto exec_error1;
 		}
-		/*
-		 * OK, now restart the process with the interpreter's inode.
-		 */
-	    /*
-	     * OK, 现在使用解释程序的 i 节点重启进程. 
-	     */
+		/* OK, now restart the process with the interpreter's inode. */
+	    /* OK, 现在使用解释程序的 i 节点重启进程. */
 		// 最后我们取得解释程序的 i 节点指针, 然后跳转到 204 行去执行解释程序. 
 		// 为了获得解释程序的 i 节点, 我们需要使用 namei() 函数, 
 		// 但是该函数所使用的参数(文件名)是从用户数据空间得到的, 即从段寄存器 fs 所指空间中取得. 
@@ -552,8 +539,8 @@ restart_interp:
 	// 或者(代码段 + 数据段 + 堆)长度超过 50MB, 或者执行文件长度小于(代码段 + 数据段 + 符号表长度 + 执行头部分)长度的总和.
 	brelse(bh);
 	if (N_MAGIC(ex) != ZMAGIC || ex.a_trsize || ex.a_drsize ||
-		ex.a_text + ex.a_data + ex.a_bss > 0x3000000 ||
-		inode->i_size < ex.a_text + ex.a_data + ex.a_syms + N_TXTOFF(ex)) {
+			ex.a_text + ex.a_data + ex.a_bss > 0x3000000 ||
+			inode->i_size < ex.a_text + ex.a_data + ex.a_syms + N_TXTOFF(ex)) {
 		retval = -ENOEXEC;
 		goto exec_error2;
 	}

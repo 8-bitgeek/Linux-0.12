@@ -8,7 +8,7 @@ int main(int argc, char * argv[]) {
     struct exec exec_hdr;
     printf("sizeof struct exec: %ld\n", sizeof(struct exec));
     fread(&exec_hdr, sizeof(exec_hdr), 1, fp);
-    printf("a_magic: 0%08o\n", exec_hdr.a_magic);
+    printf("a_magic: 0%08x\n", exec_hdr.a_magic);
     printf("a_text: 0x%08x\n", exec_hdr.a_text);
     printf("a_data: 0x%08x\n", exec_hdr.a_data);
     printf("a_bss: 0x%08x\n", exec_hdr.a_bss);
