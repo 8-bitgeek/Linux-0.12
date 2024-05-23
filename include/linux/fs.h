@@ -216,7 +216,7 @@ extern void floppy_off(unsigned int dev);                       // 关闭指定�
 extern void truncate(struct m_inode * inode);                   // 将 i 节点指定的文件截为 0.
 extern void sync_inodes(void);                                  // 刷新 i 节点信息.
 extern void wait_on(struct m_inode * inode);                    // 等待指定的 i 节点.
-extern int bmap(struct m_inode * inode, int block);              // 逻辑块(区段, 磁盘块)位图操作. 取数据块 block 在设备上对应的逻辑块号.
+extern int bmap(struct m_inode * inode, int block);             // 逻辑块(区段, 磁盘块)位图操作. 取数据块 block 在设备上对应的逻辑块号.
 extern int create_block(struct m_inode * inode,int block);      // 创建数据块 block 在设备上对应的逻辑块, 并返回在设备上的逻辑块号.
 
 extern struct m_inode * namei(const char * pathname);           // 获取指定路径名的 i 节点.
