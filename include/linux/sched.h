@@ -397,19 +397,19 @@ __asm__(\
 // 参见文件 kernel/sched.c 中有关 math_state_restore() 函数的说明. 
 // 唯一的调用方是 schedule() 方法, 也即系统启动后只有 schedule 会进行任务切换.
 #define switch_to(n) { \
-struct {long a, b;} __tmp; 					/* long 占 4bytes */\
-__asm__(\
-	"cmpl %%ecx, current\n\t"  				/* 任务 n 是当前任务吗?(current == task[n]?) */\
-	"je 1f\n\t"  							/* 是, 则什么都不做退出 */\
-	"movw %%dx, %1\n\t"  					/* 将新任务 TSS 的 16 位选择符存入 __tmp.b 中 */\
-	"xchgl %%ecx, current\n\t"  			/* 寄存器交换操作, 将 current 指向要切换到的任务, 并将 ecx 指向要切出的任务 ==> current = task[n]; ecx = 被切换出的任务地址. */\
-	"ljmp *%0\n\t"  						/* 执行长跳转至 *&__tmp (数值是 task[n] 的 TSS 段选择符), 造成任务切换. 在任务切换回来后才会继续执行下面的语句 */\
-	"cmpl %%ecx, last_task_used_math\n\t"  	/* 原任务上次使用过协处理器吗? */\
-	"jne 1f\n\t"  							/* 没有则跳转, 退出 */\
-	"clts\n"  								/* 原任务上次使用过协处理器, 则清 cr0 中的任务切换标志 TS */\
-	"1:"  									/* 函数返回 */\
-	::"m" (*&__tmp.a), "m" (*&__tmp.b), \
-	"d" (_TSS(n)), "c" ((long) task[n]));  	/* 将任务 n 的 TSS 段选择符值放入 edx 中, 将 task[n] 的地址放入 ecx 中 */ \
+	struct {long a, b;} __tmp; 					/* long 占 4bytes */\
+	__asm__(\
+		"cmpl %%ecx, current\n\t"  				/* 任务 n 是当前任务吗?(current == task[n]?) */\
+		"je 1f\n\t"  							/* 是, 则什么都不做退出 */\
+		"movw %%dx, %1\n\t"  					/* 将新任务 TSS 的 16 位选择符存入 __tmp.b 中 */\
+		"xchgl %%ecx, current\n\t"  			/* 寄存器交换操作, 将 current 指向要切换到的任务, 并将 ecx 指向要切出的任务 ==> current = task[n]; ecx = 被切换出的任务地址. */\
+		"ljmp *%0\n\t"  						/* 执行长跳转至 *&__tmp (数值是 task[n] 的 TSS 段选择符), 造成任务切换. 在任务切换回来后才会继续执行下面的语句 */\
+		"cmpl %%ecx, last_task_used_math\n\t"  	/* 原任务上次使用过协处理器吗? */\
+		"jne 1f\n\t"  							/* 没有则跳转, 退出 */\
+		"clts\n"  								/* 原任务上次使用过协处理器, 则清 cr0 中的任务切换标志 TS */\
+		"1:"  									/* 函数返回 */\
+		::"m" (*&__tmp.a), "m" (*&__tmp.b), \
+		"d" (_TSS(n)), "c" ((long) task[n]));  	/* 将任务 n 的 TSS 段选择符值放入 edx 中, 将 task[n] 的地址放入 ecx 中 */ \
 }
 
 // 页面地址对准(在内核代码中同有任何地方引用!!)
@@ -453,10 +453,10 @@ __asm__(\
 	"andb $0xf0, %%dh\n\t" 				/* 清 dh 的低 4 位(将存放段长的位 19-16) */\
 	"orb %%dh, %%dl\n\t"  				/* 将原高 4 位标志和段长的高 4 位(位 19-16)合成 1 字节, 并放回 [addr+6] 处 */\
 	"movb %%dl, %1" \
-	::"m" (*(addr)), \
-	  "m" (*((addr) + 6)), \
-	  "d" (limit) \
-	:)
+	: : "m" (*(addr)), \
+	    "m" (*((addr) + 6)), \
+	    "d" (limit) \
+	)
 
 // 设置局部描述符表中 ldt 描述符的基地址字段.
 #define set_base(ldt, base) _set_base( ((char *)&(ldt)) , base )
@@ -466,17 +466,18 @@ __asm__(\
 // 从地址 addr 处描述符中取段基地址. 功能与 _set_base() 正好相反.
 // edx - 存放基地址(__base); %1 - 地址 addr 偏移 2; %2 - 地址 addr 偏移 4; %3 - addr 偏移 7.
 #define _get_base(addr) ({\
-unsigned long __base; \
-__asm__(\
-	"movb %3, %%dh\n\t"  				/* 取 [addr+7] 处基地址高 16 位的高 8 位(位 31-24) -> dh */\
-	"movb %2, %%dl\n\t"  				/* 取 [addr+4] 处基址高 16 位的低 8 位(位 23-16) -> dl */\
-	"shll $16, %%edx\n\t"  				/* 基地址高 16 位移到 edx 中高 16 位处. */\
-	"movw %1, %%dx"  					/* 取 [addr+2] 处基址低 16 位(位 16-0) -> dx */\
-	:"=&d" (__base)  					/* 从而 edx 中含有 32 位的段基地址 */\
-	:"m" (*((addr) + 2)), \
-	 "m" (*((addr) + 4)), \
-	 "m" (*((addr) + 7))); \
-__base;})
+	unsigned long __base; \
+	__asm__(\
+		"movb %3, %%dh\n\t"  				/* 取 [addr+7] 处基地址高 16 位的高 8 位(位 31-24) -> dh */\
+		"movb %2, %%dl\n\t"  				/* 取 [addr+4] 处基址高 16 位的低 8 位(位 23-16) -> dl */\
+		"shll $16, %%edx\n\t"  				/* 基地址高 16 位移到 edx 中高 16 位处. */\
+		"movw %1, %%dx"  					/* 取 [addr+2] 处基址低 16 位(位 16-0) -> dx */\
+		: "=&d" (__base)  					/* 从而 edx 中含有 32 位的段基地址 */\
+		: "m" (*((addr) + 2)), \
+		  "m" (*((addr) + 4)), \
+		  "m" (*((addr) + 7))); \
+	__base; \
+})
 
 /*
 static inline unsigned long _get_base(char * addr){
@@ -501,8 +502,9 @@ static inline unsigned long _get_base(char * addr){
 // 所得的段限长是实际字节数减 1, 因此这里还需要加 1 后返回.
 // %0 - 存放段长值(字节数); %1 - 段选择符 segment.
 #define get_limit(segment) ({ \
-unsigned long __limit; \
-__asm__("lsll %1,%0\n\tincl %0":"=r" (__limit):"r" (segment)); \
-__limit;})
+	unsigned long __limit; \
+	__asm__("lsll %1,%0; incl %0" : "=r" (__limit) : "r" (segment)); \
+	__limit; \
+})
 
 #endif
