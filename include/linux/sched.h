@@ -268,9 +268,9 @@ struct task_struct {
 					/* exit_code, start_code, end_code, end_data, brk, start_stack */ \
 	                0, 				0, 			0, 			0, 		0, 		0, \
 					/* pid, pgrp, session, leader */ \
-	                0, 0, 0, 0, \
+	                0, 		0, 		0, 		0, \
 					/* groups[] */ \
-	                {NOGROUP,}, \
+	                {NOGROUP, }, \
 					/* *p_pptr, 	*p_cptr, *p_ysptr, *p_osptr */ \
 	                &init_task.task, 	0,  	0, 		0, \
 					/* uid, euid, suid, gid, egid, sgid */ \
@@ -284,7 +284,7 @@ struct task_struct {
 					/* flags, used_math */ \
 	             	0, 			0, \
 					/* 以下是文件系统信息 */ \
-					/* tty, umask, pwd, root, executable, library, close_on_exec*/ \
+					/* tty, umask, pwd, root, executable, library, close_on_exec */ \
 	              	-1, 	0022, NULL, NULL, 	NULL, 		NULL, 		0, \
 					/* filp[] */ \
 	            	{NULL,}, \

@@ -96,12 +96,12 @@ extern long rd_init(long mem_start, int length);	// 虚拟盘初始化(blk_drv/r
 extern long kernel_mktime(struct tm * tm);			// 计算系统开机启动时间(秒).
 
 // fork 系统调用函数, 该函数作为 static inline 表示内联函数, 主要用来在 TASK-0 里面创建 TASK-1 的时候内联, 
-// TASK-0 使用 int 0x80 指令调用内核代码创建 TASK-1 时会发生特权级的变化, 所以不会使用自己的用户堆栈, 
+// TASK-0 使用 `int $0x80` 指令调用内核代码创建 TASK-1 时会发生特权级的变化, 所以不会使用自己的用户堆栈, 
 // 而是使用 tss 中指定的内核态堆栈(特权级 CPL[3 -> 0] 变化引起堆栈切换).
 // 该内联函数返回值为新进程的 pid(last_pid) 或者 -1(获取不到正确的新进程号时).
 static inline long fork_for_process0() {
 	long __res;
-	__asm__ volatile (
+	__asm__ volatile ( 				// 此时 cs = 0x0F: CPL = 3, 调用 0x80 中断时会发生特权级变化.
 		"int $0x80"  				/* 调用系统中断 0x80: system_call(kernel/sys_call.s) */
 		: "=a" (__res)  			/* 返回值 -> eax(__res) */ // 返回值(新进程的 pid)放入 __res 中.
 		: "0" (2));  				/* 输入为系统中断调用号 __NR_name(2) */ // 输入寄存器为 eax(%0) = 2, 
@@ -261,6 +261,7 @@ int main(void)										/* This really IS void, no error here. */
 	chr_dev_init();									// 字符设备初始化. 目前该函数为空. (chr_drv/tty_io.c)
  	tty_init();										// tty 初始化. (chr_drv/tty_io.c)
 	time_init();									// 设置开机启动时间.
+	// 将 int 0x80 中断陷阱门添加到 IDT 中.
  	sched_init();									// 调度程序初始化(加载任务 0 的 tr, ldtr). (kernel/sched.c)
 	// 高速缓冲区用于缓冲读/写块设备(比如硬盘)中的数据.
 	buffer_init(buffer_memory_end);					// 高速缓冲区管理初始化, 建立内存缓冲区链表等. 一页大小为 1KB. (fs/buffer.c)

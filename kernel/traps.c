@@ -231,12 +231,12 @@ void trap_init(void)
 	set_trap_gate(15, &reserved);
 	set_trap_gate(16, &coprocessor_error);						// 函数未实现
 	set_trap_gate(17, &alignment_check);
-	// 下面把int17-47的陷阱门先均设置为reserved,以后各硬件初始化时会重新设置自己的陷阱门.
+	// 下面把 int 17-47 的陷阱门先均设置为 reserved, 以后各硬件初始化时会重新设置自己的陷阱门.
 	for (i = 18; i < 48; i++)
 		set_trap_gate(i, &reserved);
-	// 设置协处理器中断0x2d(45)陷阱门描述符,并允许其产生中断请求.设置并行口中断描述符.
+	// 设置协处理器中断 0x2d(45)陷阱门描述符, 并允许其产生中断请求. 设置并行口中断描述符.
 	set_trap_gate(45, &irq13);
-	outb_p(inb_p(0x21)&0xfb, 0x21);								// 允许8259A主芯片的IRQ2中断请求(连接从芯片)
-	outb(inb_p(0xA1)&0xdf, 0xA1);								// 允许8259A从芯片的IRQ13中断请求(协处理器中断)
-	set_trap_gate(39, &parallel_interrupt);						// 设置并行口1的中断0x27陷阱门描述符.
+	outb_p(inb_p(0x21)&0xfb, 0x21);								// 允许 8259A 主芯片的 IRQ2 中断请求(连接从芯片)
+	outb(inb_p(0xA1)&0xdf, 0xA1);								// 允许 8259A 从芯片的 IRQ13 中断请求(协处理器中断)
+	set_trap_gate(39, &parallel_interrupt);						// 设置并行口 1 的中断 0x27 陷阱门描述符.
 }
