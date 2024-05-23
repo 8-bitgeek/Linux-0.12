@@ -132,18 +132,16 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	// 首先为新任务数据结构分配内存. 如果内存分配出错, 则返回出错码并退出. 
 	// 然后将新任务结构指针放入任务数组的 nr 项中. 
 	// 其中 nr 为任务号, 由前面 find_empty_process() 返回. 
-	// 接着把当前进程任务结构复制到刚申请到的内存页面 p 开始处(p 指向新申请的空闲物理页面地址).
-	p = (struct task_struct *) get_free_page(); 	// 获取空闲的页面的物理起始地址(mem_map[i] 中标记为未使用的项所对应的页面物理地址).
-	if (!p) 										// 如果申请到的空闲物理页面起始地址为 0x0, 则表示申请失败, 返回出错码.
+	// 接着把当前进程任务结构复制到刚申请到的物理内存页面 p 开始处(p 指向新申请的空闲物理页面地址).
+	p = (struct task_struct *) get_free_page(); 	// 获取空闲的页面的物理起始地址(mem_map[i] 中标记为未使用的项所对应页面的物理地址).
+	if (!p) 										// 如果申请到的空闲页面的物理地址为 0x0, 则表示申请失败, 返回出错码.
 		return -EAGAIN;
-	task[nr] = p; 							// 任务项指向刚申请的进程存放物理内存; task_struct * task[NR_TASKS] 定义在 kernel/sched.c 中.
+	task[nr] = p; 							// 任务项指向刚申请的进程物理内存地址; task_struct * task[NR_TASKS] 定义在 kernel/sched.c 中.
 	*p = *current;	/* NOTE! this doesn't copy the supervisor stack */	/* 注意! 这样不会复制超级用户堆栈(只复制当前进程的属性信息) */
-	// memcpy(p, current, sizeof(struct task_struct));
 	// 随后对复制来的进程结构内容进行一些修改, 作为新进程的任务结构. 
-	// 先将新进程的状态置为不可中断等待状态, 以防止内核调试其执行. 
+	// 先将新进程的状态置为不可中断等待状态, 以防止内核调度其执行. 
 	// 然后设置新进程的进程号为之前申请的 last_pid, 并初始化进程运行时间片值等于其 priorty 值(一般为 16 个嘀嗒).
-	// 接着复位新进程的信号位图, 报警定时值, 会话(session)领导标志 leader, 进程及其子进程在内核和用户态运行时间统计值, 
-	// 还设置进程开始运行的系统时间 start_time.
+	// 接着复位新进程的信号位图, 报警定时值, 会话(session)领导标志 leader, 进程及其子进程在内核和用户态运行时间统计值等. 
 	p->state = TASK_UNINTERRUPTIBLE; 		// 防止时钟中断切换到该进程执行. 参见: (kernel/sched.c#schedule 方法)
 	p->pid = last_pid;						// 新进程号. 也由 find_empty_process() 得到.
 	p->counter = p->priority;				// 运行时间片值(单位: 嘀嗒数)(越大运行时间越长).
@@ -159,10 +157,10 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	// 我们把 GDT 中该任务的 LDT 段选择符保存到该任务的 tss 段中.
 	// 当执行切换任务时, CPU 会自动从 TSS 中把 LDT 段描述符的选择符加载到 ldtr 寄存器中.
 	p->tss.back_link = 0;
-	p->tss.esp0 = PAGE_SIZE + (long)p;		// 任务内核态栈指针(指向该任务所在物理页面的末端处).
-	p->tss.ss0 = 0x10;              		// 内核态栈的段选择符(与内核数据段相同).
-	// **即新任务开始运行时会从父进程调用中断创建新进程的代码的下一条指令开始运行**
-	p->tss.eip = eip;						// 设置新进程的指令代码指针(在父进程调用 int 指令时 cpu 自动压栈并作为参数传入的).
+	p->tss.esp0 = PAGE_SIZE + (long)p;		// 任务内核态栈指针(指向该任务结构体所在物理内存页面的末端处). p -->|task_struct| ------- |<-- ss0:sp0
+	p->tss.ss0 = 0x10;              		// 内核态栈的段选择符(内核数据段).
+	// **即新任务开始运行时会从父进程调用 `int $0x80` 的下一条指令开始运行**
+	p->tss.eip = eip;						// 设置新进程的指令代码指针指向父进程进行系统调用时的下一行代码.
 	p->tss.eflags = eflags;					// 标志寄存器.
 	p->tss.eax = 0;							// **这是当 fork() 返回时新进程会返回 0 的原因所在**
 	p->tss.ecx = ecx; 						// 以下几个寄存器是由参数传入
@@ -248,13 +246,13 @@ int find_empty_process(void)
 	// last_pid 是一个全局变量, 不用作为返回值返回. 如果此时任务数组中 64 个项已经被全部占用, 则返回出错码.
 	repeat:
 		if ((++last_pid) < 0) last_pid = 1;
-		for(i = 0 ; i < NR_TASKS ; i++) {
+		for(i = 0; i < NR_TASKS; i++) {
 			// 如果当前测试的 pid(last_pid) 已经被占用, 则重新生成一个 last_pid.
 			if (task[i] && ((task[i]->pid == last_pid) || (task[i]->pgrp == last_pid))) 
 				goto repeat; 			// 重新生成一个 last_pid.
 		}
 	// 如果找到一个未被占用的进程号, 则查找任务数组中的空闲项. 
-	for(i = 1 ; i < NR_TASKS ; i++) {
+	for(i = 1; i < NR_TASKS; i++) {
 		if (!task[i]) 					// 如果找到一个空闲的任务项.
 			return i; 					// 返回空闲的任务项号.
 	}
