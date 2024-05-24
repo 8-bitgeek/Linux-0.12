@@ -22,5 +22,5 @@ miniCRT/**/test
 miniCRT/**/minicrt.a
 miniCRT/**/temp.txt
 miniCRT/**/minicrt.h.gch
-miniCRT/**/tinyhello/TinyHelloWorld
+miniCRT/**/tinyhello/tinyhello
 **/.fuse_*
