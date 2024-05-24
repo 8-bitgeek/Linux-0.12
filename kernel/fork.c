@@ -75,7 +75,7 @@ int copy_mem(int nr, struct task_struct * p)
 	// get_limit() 和 get_base() 定义在 include/linux/sched.h.
 	code_limit = get_limit(0x0f); 							// 0x0f = 0b-00001-1-11 (LDT 表项 1[从 0 开始] 局部代码段, 特权级 3)
 	data_limit = get_limit(0x17); 							// 父进程(当前进程)的数据段长度: 0x17 = 0b-00010-1-11 (LDT 表项 2, 局部数据段, 特权级 3)
-	old_code_base = get_base(current->ldt[1]); 				// 这里的 ldt 是 task_struct 结构中的 ldt 字段, 即: 该任务的局部描述符表, 而不是 task_struct->tss.ldt(LDT段选择符).
+	old_code_base = get_base(current->ldt[1]); 				// 这里的 ldt 是 task_struct 结构中的 ldt 字段, 即: 该任务的局部描述符表, 而不是 task_struct->tss.ldt(LDT 段选择符).
 	old_data_base = get_base(current->ldt[2]); 				// 获取当前进程(父进程)的代码段和数据段基地址.
 	if (old_data_base != old_code_base)
 		panic("We don't support separate I&D");
@@ -84,7 +84,7 @@ int copy_mem(int nr, struct task_struct * p)
 	// 然后设置创建中的新进程在线性地址空间中的基地址等于(64MB * 其任务号[nr]), 并用该值设置新进程局部描述符表(LDT)中代码段和数据段描述符中的基地址. 
 	// 接着设置新进程的页目录表项和页表项, 即复制当前进程(父进程)的页目录表项和页表项. 此时子进程共享父进程的内存页面.
 	// 正常情况下 copy_page_tables() 返回 0, 否则表示出错, 则释放刚申请的页表项.
-	new_data_base = new_code_base = nr * TASK_SIZE;
+	new_data_base = new_code_base = nr * TASK_SIZE; 		// ** 任务的段基地址 = 任务号 * 64MB **
 	p->start_code = new_code_base; 							// nr = 1 时, start_code = 64 * 1024 * 1024bytes(设置代码段基地址).
 	// 由于此处在 LDT 中设置的段基地址就是线性地址, 所以在线性地址到物理地址转换时, 
 	// 该进程的段基地址就是一个很大的地址, 在查找对应的页目录项时就会定位到该进程对应的页目录项!!!
@@ -151,22 +151,22 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	p->utime = p->stime = 0;				// 用户态总运行时间和核心态总运行时间.
 	p->cutime = p->cstime = 0;				// 子进程用户态和核心态运行时间.
 	p->start_time = jiffies;				// 进程开始运行时间(当前开机时间的滴答数 [每 10ms/滴答]).
-	// 再修改任务状态段 TSS 中的数据. 由于系统给任务结构 p 分配了 1 页新内存, 
-	// 所以让 esp0(内核态堆栈)正好指向该页末端(PAGE_SIZE + (long)p). ss0:esp0 用作程序在内核态执行时的栈(特权级 0). 
-	// 另外, 每个任务在 GDT 表中都有两个段描述符, 一个是任务的 TSS 段描述符, 另一个是任务的 LDT 表段描述符.
-	// 我们把 GDT 中该任务的 LDT 段选择符保存到该任务的 tss 段中.
-	// 当执行切换任务时, CPU 会自动从 TSS 中把 LDT 段描述符的选择符加载到 ldtr 寄存器中.
+	// 再设置任务状态段 TSS 中的数据. 
+	// 系统给任务结构 p 分配了 1 页新内存, 让 ss0:esp0(程序的内核态堆栈)指向该页末端(PAGE_SIZE + (long) p). 
+	// 另外, 每个任务在 GDT 表中都有两个段描述符: 任务的 TSS 段描述符和任务的 LDT 段描述符.
+	// 我们把该任务在 GDT 中 LDT 段选择符(用于选择该任务在 GDT 中的 LDT 段描述符)保存到该任务的 tss 段中.
+	// 当执行切换任务时, CPU 会自动从 TSS 中把该 LDT 段选择符加载到 ldtr 寄存器中.
 	p->tss.back_link = 0;
-	p->tss.esp0 = PAGE_SIZE + (long)p;		// 任务内核态栈指针(指向该任务结构体所在物理内存页面的末端处). p -->|task_struct| ------- |<-- ss0:sp0
+	p->tss.esp0 = PAGE_SIZE + (long) p;		// 任务内核态栈指针(指向该任务结构体所在物理内存页面的末端处). p -->|task_struct| ------- |<-- ss0:esp0
 	p->tss.ss0 = 0x10;              		// 内核态栈的段选择符(内核数据段).
 	// **即新任务开始运行时会从父进程调用 `int $0x80` 的下一条指令开始运行**
 	p->tss.eip = eip;						// 设置新进程的指令代码指针指向父进程进行系统调用时的下一行代码.
 	p->tss.eflags = eflags;					// 标志寄存器.
 	p->tss.eax = 0;							// **这是当 fork() 返回时新进程会返回 0 的原因所在**
-	p->tss.ecx = ecx; 						// 以下几个寄存器是由参数传入
+	p->tss.ecx = ecx; 						// 以下几个寄存器是由参数传入.
 	p->tss.edx = edx;
 	p->tss.ebx = ebx;
-	p->tss.esp = esp; 						// 此时还是用的父进程的堆栈
+	p->tss.esp = esp; 						// 此时还是用的父进程的堆栈.
 	p->tss.ebp = ebp;
 	p->tss.esi = esi;
 	p->tss.edi = edi;
@@ -176,7 +176,7 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	p->tss.ds = ds & 0xffff;
 	p->tss.fs = fs & 0xffff;
 	p->tss.gs = gs & 0xffff;
-	p->tss.ldt = _LDT(nr);					// 任务局部描述符表的选择符(LDT 描述符在 GDT 中).
+	p->tss.ldt = _LDT(nr);					// 任务局部段描述符表的选择符(LDT 描述符在 GDT 中).
 	p->tss.trace_bitmap = 0x80000000;		// (高 16 位有效).
 	// 如果当前任务使用了协处理器, 就保存其上下文. 汇编指令 clts 用于清除控制寄存器 CR0 中的任务已交换(TS)标志. 
 	// 每当发生任务切换, CPU 都会设置该标志. 该标志用于管理数学协处理器: 如果该标志置位, 那么每个 ESC 指令都会被捕获(异常 7). 
@@ -185,10 +185,10 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	// 捕获处理句柄会保存协处理器的内容并复位 TS 标志. 
 	// 指令 fnsave 用于把协处理器的所有状态保存到目的操作数指定的内存区域中(tss.i387).
 	if (last_task_used_math == current)
-		__asm__("clts ; fnsave %0 ; frstor %0"::"m" (p->tss.i387));
+		__asm__("clts; fnsave %0; frstor %0" : : "m" (p->tss.i387));
 
-	/* 接下来复制进程页表. 即在线性地址空间设置新任务代码段和数据段描述符中的基址和限长, 并复制页表. 
-	   如果出错(返回值不是 0), 则复位任务数组中相应项并释放为该新任务分配的用于任务结构的内存页. */
+	// 接下来复制进程页表. 即在线性地址空间设置新任务代码段和数据段描述符中的基址和限长, 并复制页表. 
+	// 如果出错(返回值不是 0), 则复位任务数组中相应项并释放为该新任务分配的用于任务结构的内存页.
 	if (copy_mem(nr, p)) {					// 返回不为 0 表示出错.
 		task[nr] = NULL;
 		free_page((long) p);
