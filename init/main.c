@@ -108,14 +108,14 @@ static inline long fork_for_process0() {
 		: "0" (2));  				/* 输入为系统中断调用号 __NR_name(2) */ // 输入寄存器为 eax(%0) = 2, 
 									/* 即调用 sys_call_table[2](include/linux/sys.h) 中的 sys_fork (kernel/sys_call.s) */
 	// 从 fork_for_process0() 返回时, cs = 0xf = 0b-0000-1-1-11 ==> LDT 中第一项(代码段), CPL = 3.
-	if (__res >= 0)  				/* 如果返回值(新进程的 pid, 存放在 eax 中) >= 0(创建成功), 则直接返回该值. */
-		return __res;
+	if (__res >= -1)  				/* 如果返回值(存放在 eax 中) >= -1(创建成功), 则直接返回该值. */
+		return __res; 				// 新创建的子进程返回 0, 父进程返回新进程的 pid.
 	errno = -__res;  				/* 否则置出错号, 并返回 -1 */
 	return -1;
 }
 
 // 内核专用 sprintf() 函数. 该函数用于产生格式化信息并输出到指定缓冲区 str 中. 参数 '*fmt' 指定输出将采用格式.
-static int sprintf(char * str, const char *fmt, ...)
+static int sprintf(char * str, const char * fmt, ...)
 {
 	va_list args;
 	int i;
@@ -283,7 +283,7 @@ int main(void)										/* This really IS void, no error here. */
 		init();										// 在新建的子进程(TASK-1 即 init 进程)中执行.
 	}
 	/*
-	 *   NOTE!!   For any other task 'pause()' would mean we have to get a
+	 * NOTE!! For any other task 'pause()' would mean we have to get a
 	 * signal to awaken, but task0 is the sole exception (see 'schedule()')
 	 * as task 0 gets activated at every idle moment (when no other tasks
 	 * can run). For task0 'pause()' just means we go check if some other
@@ -297,7 +297,7 @@ int main(void)										/* This really IS void, no error here. */
 	// pause() 系统调用(kernel/sched.c)会把任务 0 转换成可中断等待状态, 再执行调度函数. 
 	// 但是调度函数只要发现系统中没有其他任务可以运行时就会切换到任务 0, 是不信赖于任务 0 的状态.
 	for(;;)
-		__asm__("int $0x80"::"a" (__NR_pause):);					// 即执行系统调用 pause() ==> include/linux/sys.h#sys_call_table[29].
+		__asm__("int $0x80" : : "a" (__NR_pause) :);	// 即执行系统调用 pause() ==> include/linux/sys.h #sys_call_table[29].
 	// pause() 函数会调用 schedule() 函数来执行调度程序.
 }
 
