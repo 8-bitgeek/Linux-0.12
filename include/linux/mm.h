@@ -52,10 +52,10 @@ extern unsigned long HIGH_MEMORY;		         // 存放实际物理内存最高端
 extern unsigned char mem_map [ PAGING_PAGES ];
 
 // 下面定义的符号常量对应页目录表项和页表(二级页表)项中的一些标志位.
-#define PAGE_DIRTY	         0x40	            // 位 6, 页面脏(已修改)
-#define PAGE_ACCESSED	     0x20	            // 位 5, 页面被访问过.
-#define PAGE_USER	         0x04	            // 位 2, 页面属于: 1 - 用户; 0 - 超级用户.
-#define PAGE_RW		         0x02	            // 位 1, 读写权: 1 - 写; 0 - 读.
-#define PAGE_PRESENT	     0x01	            // 位 0, 页面存在: 1 - 存在; 0 - 不存在.
+#define PAGE_DIRTY	         0x40	            // 位 6 置位, 页面脏(已修改)
+#define PAGE_ACCESSED	     0x20	            // 位 5 置位, 页面被访问过.
+#define PAGE_USER	         0x04	            // 位 2 置位, 页面属于: 1 - 用户; 0 - 超级用户.
+#define PAGE_RW		         0x02	            // 位 1 置位, 读写权: 1 - 写; 0 - 读.
+#define PAGE_PRESENT	     0x01	            // 位 0 置位, 页面存在: 1 - 存在; 0 - 不存在.
 
 #endif

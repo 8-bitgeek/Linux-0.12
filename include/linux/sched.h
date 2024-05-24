@@ -447,21 +447,21 @@ __asm__ __volatile__ (\
 // %0 - 地址 addr; %1 - 地址 addr 偏移 6 处; edx - 段长值 limit.
 #define _set_limit(addr, limit) \
 __asm__(\
-	"movw %%dx, %0\n\t"   				/* 段长 limit 低 16 位(位 15-0) -> [addr] */\
-	"rorl $16, %%edx\n\t"  				/* edx 中的段长高 4 位(位 19-16) -> dl */\
-	"movb %1, %%dh\n\t"  				/* 取原 [addr+6] 字节 -> dh, 其中高 4 位是些标志 */\
-	"andb $0xf0, %%dh\n\t" 				/* 清 dh 的低 4 位(将存放段长的位 19-16) */\
-	"orb %%dh, %%dl\n\t"  				/* 将原高 4 位标志和段长的高 4 位(位 19-16)合成 1 字节, 并放回 [addr+6] 处 */\
+	"movw %%dx, %0;"   				/* 段长 limit 低 16 位(位 15-0) -> [addr] */\
+	"rorl $16, %%edx;"  			/* edx 中的段长高 4 位(位 19-16) -> dl */\
+	"movb %1, %%dh;"  				/* 取原 [addr+6] 字节 -> dh, 其中高 4 位是些标志 */\
+	"andb $0xf0, %%dh;" 			/* 清 dh 的低 4 位(将存放段长的位 19-16) */\
+	"orb %%dh, %%dl;"  				/* 将原高 4 位标志和段长的高 4 位(位 19-16)合成 1 字节, 并放回 [addr+6] 处 */\
 	"movb %%dl, %1" \
 	: : "m" (*(addr)), \
 	    "m" (*((addr) + 6)), \
 	    "d" (limit) \
 	)
 
-// 设置局部描述符表中 ldt 描述符的基地址字段.
-#define set_base(ldt, base) _set_base( ((char *)&(ldt)) , base )
-// 设置局部描述符表中 ldt 描述符的段长字段.
-#define set_limit(ldt, limit) _set_limit( ((char *)&(ldt)) , (limit - 1) >> 12 )
+// 设置局部描述符表 LDT 中段描述符的段基地址.
+#define set_base(ldt, base) _set_base(((char *) &(ldt)), base)
+// 设置局部描述符表 LDT 中段描述符的段限长字段.
+#define set_limit(ldt, limit) _set_limit(((char *) &(ldt)), (limit - 1) >> 12)
 
 // 从地址 addr 处描述符中取段基地址. 功能与 _set_base() 正好相反.
 // edx - 存放基地址(__base); %1 - 地址 addr 偏移 2; %2 - 地址 addr 偏移 4; %3 - addr 偏移 7.

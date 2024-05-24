@@ -85,14 +85,14 @@ int copy_mem(int nr, struct task_struct * p)
 	// 接着设置新进程的页目录表项和页表项, 即复制当前进程(父进程)的页目录表项和页表项. 此时子进程共享父进程的内存页面.
 	// 正常情况下 copy_page_tables() 返回 0, 否则表示出错, 则释放刚申请的页表项.
 	new_data_base = new_code_base = nr * TASK_SIZE; 		// ** 任务的段基地址 = 任务号 * 64MB **
-	p->start_code = new_code_base; 							// nr = 1 时, start_code = 64 * 1024 * 1024bytes(设置代码段基地址).
+	p->start_code = new_code_base; 							// nr = 1 时, start_code = 64 * 1024 * 1024Byte(设置代码段基地址).
 	// 由于此处在 LDT 中设置的段基地址就是线性地址, 所以在线性地址到物理地址转换时, 
 	// 该进程的段基地址就是一个很大的地址, 在查找对应的页目录项时就会定位到该进程对应的页目录项!!!
 	// 以 TASK-1 举例, new_code_base == 67108864 = 64MB, 所以在定位页目录项时, 
 	// 起始页目录项就是 0x4(64MB >> 22 = 16[目录项所在地址] / 4[每个目录项占 4 字节] = 4[项号]), 即页目录表中第五项.
 	// !!!TODO!!!: 我觉得对于不同的进程可以使用不同的 cr3 值来实现不共用同一张页目录表, 
-	// 比如 TASK-0 的 cr3 = 0x0, TASK-1 的 cr3 = 0x4, 这样可以变相使用不同的页目录表, 从而实现相同不同进程使用相同的线性地址
-	set_base(p->ldt[1], new_code_base); 					// 因为 Linux-0.12 中所有进程共用同一个页目录表, 所以, 共用同一个线性地址.
+	// 比如 TASK-0 的 cr3 = 0x0, TASK-1 的 cr3 = 0x4, 这样可以变相使用不同的页目录表, 从而实现相同不同进程使用相同的线性基地址.
+	set_base(p->ldt[1], new_code_base); 					// 因为 Linux-0.12 中所有进程共用同一个页目录表, 所以, 共用同一个大的线性地址.
 	set_base(p->ldt[2], new_data_base);
 	if (copy_page_tables(old_data_base, new_data_base, data_limit)) {
 		free_page_tables(new_data_base, data_limit);
