@@ -255,6 +255,7 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 		nr = (from == 0) ? 0xA0 : 1024; 								// from == 0 说明是第一次 fork 内核空间, 只需要复制页表的前 160 项.
 		// 此时对于当前页表, 开始循环复制指定的 nr 个页表项. 
 		// 先取出源页表项内容, 如果当前源页面没有使用(项内容为 0), 则不用复制该页表项, 继续处理下一项.
+		/*** !!!由这段代码可以知道, 所有进程对于内核段(640KB 空间)的地址映射都是相同的, 因为都是复制的内核的页表内容!!! ***/
 		for ( ; nr-- > 0; from_page_table++, to_page_table++) { 		// 开始拷贝各个页表项.
 			this_page = *from_page_table; 								// 取出源(父进程)页表项的值.
 			// 如果源页表项为空, 则直接拷贝下一页表项.

@@ -344,7 +344,8 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	int index = 0;
 	while (1) {
 		// 此处的 filename 在内核的数据段中, 但是是用的当前进程的 fs(指向 ldt), 
-		// 不过由于在进程创建(fork)过程中复制页表信息时, 0-640KB 这部分映射关系是复制的内核页表的, 所以也是指向内核数据段.
+		// 不过由于在进程创建(fork)过程中复制页表信息时, 0-640KB 这部分映射关系是复制的内核页表的(看下 TASK(0->1) 的 fork 过程便知), 
+		// 所以进程的 fs 在 0-640KB 的逻辑空间也是指向内核数据段(物理地址的 0-640KB).
 		// 参照: sys_call.s # sys_fork -> copy_process() -> copy_mem() -> copy_page_table() (kernel/fork.c)
 		s = get_fs_byte(filename + index); 						
 		if (s) {
