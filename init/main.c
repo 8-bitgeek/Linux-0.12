@@ -296,7 +296,7 @@ int main(void)										/* This really IS void, no error here. */
 	 */
 	// pause() 系统调用(kernel/sched.c)会把任务 0 转换成可中断等待状态, 再执行调度函数. 
 	// 但是调度函数只要发现系统中没有其他任务可以运行时就会切换到任务 0, 是不信赖于任务 0 的状态.
-	for(;;)
+	for( ; ; )
 		__asm__("int $0x80" : : "a" (__NR_pause) :);	// 即执行系统调用 pause() ==> include/linux/sys.h #sys_call_table[29].
 	// pause() 函数会调用 schedule() 函数来执行调度程序.
 }
@@ -338,14 +338,13 @@ void init(void)
 	// TASK-2 关闭了文件句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 
 	// 并使用 execve() 函数将进程自身替换成 /bin/sh 程序(即 shell 程序), 然后执行 /bin/sh 程序. 
 	// 所携带的参数和环境变量分别由 argv_rc 和 envp_rc 数组给出. 
-	// 关闭句柄 0 并立刻打开 /etc/rc 文件的作用是把标准输入 stdin 重定向到 /etc/rc/ 文件. 
+	// 关闭句柄 0 并立刻打开 /etc/rc 文件的作用是把标准输入 stdin 重定向到 /etc/rc 文件. 
 	// 这样 shell 程序 /bin/sh 就可以运行 rc 文件中设置的命令. 
 	// 由于这里 sh 的运行方式是非交互式的, 因此在执行完 rc 文件中的命令后就会立刻退出, 进程 2 也随之结束. 
-	// 并于 execve() 函数说明请参见 fs/exec.c 程序.
 	// 函数 _exit() 退出时的出错码 1 - 操作未许可; 2 -- 文件或目录不存在.
 	if (!(pid = fork())) { 								// (kernel/sys_call.s)
 		// 以下代码是在 Task-2 中执行.
-		close(0); 										// int 0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
+		close(0); 										// int $0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
 		if (open("/etc/rc", O_RDONLY, 0))
 			_exit(1);									// 若打开文件失败, 则退出(lib/_exit.c).
 		// 调用 int 0x80 中断, __NR_execve. (lib/execve.c) (kernel/sys_call.s sys_execve)
@@ -358,8 +357,8 @@ void init(void)
   	if (pid > 0)
 		while (pid != wait(&i));
 	// 如果执行到这里, 说明刚创建的子进程的执行已停止或终止了. 
-	// 下面循环中首先再创建一个子进程, 如果出错, 则显示 "初始化程序创建子进程失败" 信息并继续执行. 
-	// 对于所创建的子进程将关闭所有以前还遗留的句柄(stdin, stdout, stderr), 新创建一个会话并设置进程组号,
+	// 下面循环中再创建一个子进程, 如果出错, 则显示 "初始化程序创建子进程失败" 信息并继续执行. 
+	// 对于所创建的子进程将关闭所有以前遗留的文件句柄(stdin, stdout, stderr), 新创建一个会话并设置进程组号,
 	// 然后重新打开 /dev/tty0 作为 stdin, 并复制成 stdout 和 stderr. 再次执行系统解释程序 /bin/sh. 
 	// 但这次执行所选用的参数和环境数组另选了一套. 然后父进程再次运行 wait() 等等. 
 	// 如果子进程又停止了执行, 则在标准输出上显示出错信息 "子进程 pid 停止了运行, 返回码是 i",
