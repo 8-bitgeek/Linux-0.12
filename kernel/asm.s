@@ -198,7 +198,7 @@ alignment_check:
 	pushl $do_alignment_check
 	jmp error_code
 
-# int7 -- 设备不存在(device_not_available)在 kernel/sys_call.s
+# int $0x7 -- 设备不存在(device_not_available)在 kernel/sys_call.s
 # int14 -- 页错误(page_fault)在 mm/page.s
 # int16 -- 协处理器错误(coprocessor_error)在 kernel/sys_call.s
 # 时钟中断 int 0x20(timer_interrupt)在 kernel/sys_call.s

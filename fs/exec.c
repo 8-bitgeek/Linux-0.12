@@ -343,16 +343,19 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	char s, filename1[128];
 	int index = 0;
 	while (1) {
-		s = get_fs_byte(filename + index);
+		// 此处的 filename 在内核的数据段中, 但是是用的当前进程的 fs(指向 ldt), 
+		// 不过由于在进程创建(fork)过程中复制页表信息时, 0-640KB 这部分映射关系是复制的内核页表的, 所以也是指向内核数据段.
+		// 参照: sys_call.s # sys_fork -> copy_process() -> copy_mem() -> copy_page_table() (kernel/fork.c)
+		s = get_fs_byte(filename + index); 						
 		if (s) {
-			*(filename1 + index) = s; 							// 拷贝 filename 到 filename1 中.
+			*(filename1 + index) = s; 							// 拷贝内核数据段中的 filename 到用户进程的栈中的 filename1(当前进程的内核态栈中).
 			index++;
 		} else {
 			break;
 		}
 	}
 	*(filename1 + index + 1) = '\0';
-	Log(LOG_INFO_TYPE, "<<<<< process pid = %d do_execve : %s >>>>>\n", current->pid, filename1);
+	Log(LOG_INFO_TYPE, "<<<<< process pid = %d, do_execve: %s >>>>>\n", current->pid, filename1);
 
 	// 在正式设置执行文件的运行环境之前, 让我们先干些杂事. 
 	// 内核准备了 128KB(32 个页面) 空间来存放要执行文件的命令行参数和环境字符串.

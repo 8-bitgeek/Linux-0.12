@@ -7,17 +7,17 @@
 #define _POSIX_VERSION 198808L
 
 // chown() 和 fchown() 的使用受限于进程的权限.  /* 只有超级用户可以执行 chown(我想..) */
-#define _POSIX_CHOWN_RESTRICTED	/* only root can do a chown (I think..) */
+#define _POSIX_CHOWN_RESTRICTED		/* only root can do a chown (I think..) */
 // 长于(NAME_MAX)的路径名将产生错误, 而不会自动截断.  /* 路径名不截断(但是请看内核代码)*/
-#define _POSIX_NO_TRUNC		/* no pathname truncation (but see in kernel) */
+#define _POSIX_NO_TRUNC				/* no pathname truncation (but see in kernel) */
 // 下面这个符号将定义成字符值, 该值禁止终端对其的处理. /* 禁止像 ^C 这样的字符 */
 // _POSIX_VDISABLE 用于控制终端某些特殊字符的功能. 
 // 当一个终端 termios 结构中 c_cc[] 数组某项字符代码值等于 _POSIX_VDISABLE 的值时, 表示禁止使用相应的特殊字符.
-#define _POSIX_VDISABLE '\0'	/* character to disable things like ^C */
+#define _POSIX_VDISABLE '\0'		/* character to disable things like ^C */
 // 系统实现支持作业控制. 
 #define _POSIX_JOB_CONTROL
 // 每个进程都有一保存的 set-user-ID 和一保存的 set-group-ID.  /* 已经实现.  */
-#define _POSIX_SAVED_IDS	/* Implemented, for whatever good it is */
+#define _POSIX_SAVED_IDS			/* Implemented, for whatever good it is */
 
 #define STDIN_FILENO	0       // 标准输入文件句柄(描述符)号. 
 #define STDOUT_FILENO	1       // 标准输出文件句柄号. 
@@ -172,14 +172,14 @@
 #define _syscall0(type, name) \
 type name(void) \
 { \
-long __res; \
-__asm__ volatile ("int $0x80"  												/* 调用系统中断 0x80 */\
-	: "=a" (__res)  														/* 返回值 -> eax(__res) */\
-	: "0" (__NR_##name));  													/* 输入为系统中断调用号 __NR_name */\
-if (__res >= 0)  															/* 如果返回值 >= 0, 则直接返回该值 */\
-	return (type) __res; \
-errno = -__res;  															/* 否则置出错号, 并返回 -1 */\
-return -1; \
+	long __res; \
+	__asm__ volatile ("int $0x80"  								/* 调用系统中断 0x80 */\
+					  : "=a" (__res)  							/* 返回值 -> eax(__res) */\
+					  : "0" (__NR_##name));  					/* 输入为系统中断调用号 __NR_name */\
+	if (__res >= 0)  											/* 如果返回值 >= 0, 则直接返回该值 */\
+		return (type) __res; \
+	errno = -__res;  											/* 否则置出错号, 并返回 -1 */\
+	return -1; \
 }
 
 // 有 1 个参数的系统调用函数. type_name(atype a)
@@ -187,14 +187,14 @@ return -1; \
 #define _syscall1(type, name, atype, a) \
 type name(atype a) \
 { \
-long __res; \
-__asm__ volatile ("int $0x80" 								/* 调用系统中断 0x80 */\
-	: "=a" (__res) 											/* 返回值 -> eax(__res) */\
-	: "0" (__NR_##name), "b" ((long)(a))); 					/* 输入为系统中断调用号 __NR_{name}, (a) 表示将参数 a 存放在 ebx 中 */\
-if (__res >= 0) \
-	return (type) __res; 									/* 否则置出错号, 并返回 -1 */\
-errno = -__res; \
-return -1; \
+	long __res; \
+	__asm__ volatile ("int $0x80" 								/* 调用系统中断 0x80 */\
+					  : "=a" (__res) 							/* 返回值 -> eax(__res) */\
+					  : "0" (__NR_##name), "b" ((long)(a))); 	/* 输入为系统中断调用号 __NR_{name}, (a) 表示将参数 a 存放在 ebx 中 */\
+	if (__res >= 0) \
+		return (type) __res; 									/* 否则置出错号, 并返回 -1 */\
+	errno = -__res; \
+	return -1; \
 }
 
 // 有 2 个参数的系统调用函数. type_name(atype a, btype b)
