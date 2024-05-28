@@ -98,11 +98,11 @@ int sys_uselib(const char * library)
  * 并将它们的地址放到 "栈" 上, 然后返回新栈的指针值.
  */
 // 在新任务中创建参数和环境变量指针表.
-// 参数: p - 数据段中参数和环境信息偏移指针; argc - 参数个数; envc - 环境变量个数.
+// 参数: p - 数据段中参数和环境空间偏移指针; argc - 参数个数; envc - 环境变量个数.
 // 返回: 栈指针值.
 static unsigned long * create_tables(char * p, int argc, int envc)
 {
-	unsigned long *argv, *envp;
+	unsigned long * argv, * envp;
 	unsigned long * sp;
 
 	// 栈指针是以 4 字节为边界进行寻址的, 因此这里需让 sp 为 4 的整数倍值. 此时 sp 位于参数环境表的末端. 
@@ -116,9 +116,11 @@ static unsigned long * create_tables(char * p, int argc, int envc)
 	envp = sp;
 	sp -= argc + 1;
 	argv = sp;
+	// 经过上面的操作后的参数和环境空间: | -- 参数和环境空间剩余部分 -- (sp ->)| 存放命令行参数指针 | NULL | 存放环境变量指针 | NULL | arg | env | <- 参数和环境空间末端
 	put_fs_long((unsigned long)envp, --sp);
 	put_fs_long((unsigned long)argv, --sp);
 	put_fs_long((unsigned long)argc, --sp);
+	// 经过上面的操作后的参数和环境空间: | -- 参数和环境空间剩余部分 -- (sp ->) | argc | 命令行参数指针的指针 | 环境变量指针的指针 | 存放命令行参数指针(s) | NULL | 存放环境变量指针(s) | NULL | arg | env | <- 参数和环境空间末端
 	// 再将命令行各参数指针和环境变量各指针分别放入前面空出来的相应地方, 最后分别放置一个 NULL 指针.
 	while (argc-- > 0) {
 		put_fs_long((unsigned long) p, argv++);
@@ -288,7 +290,7 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 	/* make sure fs points to the NEW data segment */
 	/* 要确保 fs 段寄存器已指向新的数据段 */
 	// fs 段寄存器中放入局部表数据段描述符的选择符(0x17). 即默认情况下 fs 都指向任务数据段.
-	__asm__("pushl $0x17\n\tpop %%fs" : :);
+	__asm__("pushl $0x17; pop %%fs" : :);
 	// 然后将参数和环境空间已存放数据的页面(最多有 MAX_ARG_PAGES 页, 128KB)放到数据段末端. 
 	// 方法是从进程空间库代码位置开始处往前一页一页地放. 库文件代码占用进程空间最后 4MB. 
 	// 函数 put_dirty_page() 用于把物理页面映射到进程逻辑(线性)空间中. 在 mm/memory.c 中.
@@ -296,7 +298,7 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 	for (i = MAX_ARG_PAGES - 1; i >= 0; i--) {
 		data_base -= PAGE_SIZE; 						// 将参数和环境空间放到库文件代码前面(低地址处).
 		if (page[i])									// 若该页面存在, 就放置该页面.
-			put_dirty_page(page[i], data_base); 		// 把物理页面 page[i] 映射到当前进程的线性空间 data_base 中.
+			put_dirty_page(page[i], data_base); 		// 把物理页面地址 page[i] 映射到当前进程的线性空间 data_base 中.
 	}
 	return data_limit;									// 最后返回数据段限长(64MB).
 }
@@ -614,17 +616,20 @@ restart_interp:
 		last_task_used_math = NULL;
 	current->used_math = 0;
 	// 然后我们根据要执行文件的头结构中的代码长度字段 a_text 的值修改局部表中描述符基址和段限长, 
-	// 并将 128KB 的参数和环境空间页面放置在数据段末端.
+	// 并将 128KB 的参数和环境空间页面放置在数据段 64MB - 4MB - 128KB 处.
 	// 执行下面语句之后, p 此时更改成以数据段起始处为原点的偏移值, 但仍指向参数和环境空间数据开始处, 
 	// 即已转换成栈指针值. 然后调用内部函数 create_tables() 在栈空间中创建环境和参数变量指针表, 
 	// 供程序的 main() 函数作为参数使用, 并返回该栈指针.
-	p += change_ldt(ex.a_text, page); 				// ex.a_text 表示文件的代码长度. 此时 p = 64MB + 参数环境空间的偏移值(比如 31KB).
-	p -= LIBRARY_SIZE + MAX_ARG_PAGES * PAGE_SIZE; 	// 此时 p 指向进程空间的 64MB + 31KB - 4MB - 32KB = 60MB - 1KB).
-	p = (unsigned long) create_tables((char *)p, argc, envc);
+	p += change_ldt(ex.a_text, page); 					// ex.a_text 表示文件的代码长度. 此时 p = 64MB + 参数环境空间的偏移值(比如 31KB).
+	// | ----------- 约 60MB ---------- | - 128K(参数和环境空间) - | --------- 4MB 动态加载库空间 ---------- |
+	p -= LIBRARY_SIZE + (MAX_ARG_PAGES * PAGE_SIZE); 	// 此时 p 指向进程空间的 64MB - 4MB - 128KB + p, 即 p 指向 64MB 进程空间中的参数和环境空间.
+	// 经过以下操作后 | -- 参数和环境空间剩余部分 -- (p->) | argc | 命令行参数指针的指针 | 环境变量指针的指针 | 存放命令行参数指针(s) | NULL | 存放环境变量指针(s) | NULL | arg | env | <- 参数和环境空间末端
+	p = (unsigned long) create_tables((char *)p, argc, envc); 	// 此时 p 指向栈顶.
 	// 接着再修改进程各字段值为新执行文件的信息. 
 	// 即令进程任务结构代码尾字段 end_code 等于执行文件的代码段长度 a_text; 
 	// 数据尾字段 end_data 等于执行文件的代码段长度加数据段长度(a_data + a_text); 
-	// 并令进程堆结尾字段 brk = a_text + a_data + a_bss. 
+	// 并令进程堆起始指针字段 brk = a_text + a_data + a_bss. 
+	// 进程地址空间分布: | text - data - bss | <- brk ------------------- sp -> | --- (参数和环境空间已占用的空间) --- | --------- 4MB --------- |
 	// (**堆由低地址向高地址增长[由 brk 开始增长], 栈由高地址向低地址增长[由 sp 开始增长]**).
 	// brk 用于指明进程当前数据段(包括未初始化数据部分)末端位置, 供内核为进程分配内存时指定分配开始位置. 
 	// 然后设置进程栈开始字段为栈指针所在页面, 并重新设置进程的有效用户 id 和有效组 id.
