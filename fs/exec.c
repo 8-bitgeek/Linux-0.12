@@ -336,7 +336,7 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	struct exec ex;
 	unsigned long page[MAX_ARG_PAGES];							// 参数和环境变量所在页面的地址指针数组.
 	int i, argc, envc;
-	int e_uid, e_gid;											// 有效用户 ID 和有效组 ID.
+	int e_uid, e_gid;											// 有效(effective)用户 ID 和有效组 ID.
 	int retval;
 	int sh_bang = 0;											// 控制是否需要执行脚本程序. 置位表示禁止再次执行脚本处理代码.
 	unsigned long p = PAGE_SIZE * MAX_ARG_PAGES - 4;			// p 指向参数和环境空间的最后一个长字(4k * 32 - 4).
@@ -637,7 +637,7 @@ restart_interp:
 	current->start_stack = p & 0xfffff000; 			// 4KB 边界.
 	current->suid = current->euid = e_uid;
 	current->sgid = current->egid = e_gid;
-	// 最后将原调用系统中断的程序在堆栈上的代码指针替换为指向新执行程序的入口点, 
+	// 最后将原调用系统中断的程序在堆栈上的代码指针 eip[0](保存的是中断返回时的下一行代码)替换为指向新执行程序的入口点, 
 	// 并将栈指针替换为新执行文件的栈指针. 此后返回指令将弹出这些栈数据并使得 CPU 去执行新执行文件, 
 	// 因此不会返回到原调用系统中断的程序中去了.
 	eip[0] = ex.a_entry;							/* eip, magic happens :-) */	/* eip, 魔法起作用了 */
