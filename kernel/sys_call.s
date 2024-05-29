@@ -319,7 +319,7 @@ timer_interrupt:
 # do_execve() 在 (fs/exec.c).
 .align 4
 sys_execve:
-	# eax 指向堆栈中保存的用户程序 eip 指针处(存放的用户调用 `int $0x80` 的下一行代码地址).
+	# eax 中保存的是栈中指向用户调用 `int 0x80` 代码下一行地址的栈指针地址. 即 eax 中是指向栈中的一个地址.
 	lea EIP(%esp), %eax				# (%esp + 0x20) 即栈顶 -> 栈底方向的第 0x20 的偏移处.
 	pushl %eax
 	call do_execve

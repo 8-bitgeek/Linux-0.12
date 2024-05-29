@@ -187,7 +187,7 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	if (last_task_used_math == current)
 		__asm__("clts; fnsave %0; frstor %0" : : "m" (p->tss.i387));
 
-	// 设置新任务 LDT 代码段和数据段描述符中的基地址(未设置段限长, 段限长在 do_execve 时设置), 并复制页表. 
+	// 设置新任务 LDT 代码段和数据段描述符中的段基地址(未设置段限长, 段限长在 do_execve 时设置), 并复制页表. 
 	// 如果出错(返回值不是 0), 则复位任务数组中相应项并释放为该新任务分配的用于任务结构的内存页.
 	if (copy_mem(nr, p)) {					// 返回不为 0 表示出错.
 		task[nr] = NULL;

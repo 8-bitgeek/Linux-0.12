@@ -65,7 +65,8 @@ unsigned long HIGH_MEMORY = 0;					// 全局变量, 存放实际物理内存最�
 
 // 从 from 处复制一页内存到 to 处(4KB)
 #define copy_page(from, to) \
-__asm__("pushl %%edi; pushl %%esi; cld ; rep ; movsl; popl %%esi; popl %%edi"::"S" (from), "D" (to), "c" (1024):)
+__asm__("pushl %%edi; pushl %%esi; cld; rep; movsl; popl %%esi; popl %%edi" \
+		: : "S" (from), "D" (to), "c" (1024) :)
 //#define copy_page(from, to) \
 		__asm__("cld ; rep ; movsl"::"S" (from),"D" (to),"c" (1024):)
 
@@ -235,7 +236,7 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 			panic("copy_page_tables: already exist");
 		if (!(1 & *from_dir)) 											// 如果源页目录项中没有内容(P = 0), 则继续操作下一个页目录项.
 			continue;
-		// 在验证了当前源目录项和目的项正常之后, 取源目录项中页表地址 from_page_table. 
+		// 在验证了当前源页目录项和目的项正常之后, 取源页目录项中页表地址 from_page_table. 
 		// 为了保存目的目录项对应的页表, 需要在主内存区中申请 1 页空闲内存页. 
 		// 如果取空闲页面函数 get_free_page() 返回 0, 
 		// 则说明没有申请到空闲内存页面, 可能是内存不够. 于是返回 -1 并退出.
