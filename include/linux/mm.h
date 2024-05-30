@@ -15,11 +15,11 @@ extern int SWAP_DEV;		                   // 内存页面交换设备号. 定义�
 #define write_swap_page(nr, buffer)  ll_rw_page(WRITE, SWAP_DEV, (nr), (buffer));
 
 extern unsigned long get_free_page(void);                                           // 在主内存区中取空闲物理页面. 如果已经没有可有内存了, 则返回 0
-extern unsigned long put_dirty_page(unsigned long page,unsigned long address);      // 把一内容已修改过的物理内存页面映射到线性地址空间处. 与 put_page() 几乎完全一样。
+extern unsigned long put_dirty_page(unsigned long page, unsigned long address);      // 把一内容已修改过的物理内存页面映射到线性地址空间处. 与 put_page() 几乎完全一样。
 extern void free_page(unsigned long addr);                                          // 释放物理地址 addr 开始的 1 页面内存。
 extern void init_swapping(void);                                                    // 内存交换初始化
 void swap_free(int page_nr);                                                        // 释放编号 page_nr 的 1 页面交换页面
-void swap_in(unsigned long *table_ptr);                                             // 把页表项是 table_ptr 的一页物理内存换出到交换空间
+void swap_in(unsigned long * table_ptr);                                            // 把页表项是 table_ptr 的一页物理内存换出到交换空间
 
 // 下面函数名前关键字 volatile 用于告诉编译器 gcc 该函数不会返回. 这样可让 gcc 产生更好的代码, 
 // 更重要的是使用这个关键字可以避免产生某些(未初始化变量的)假警告信息.
@@ -35,7 +35,7 @@ static inline void oom(void)
 // 在修改过页表信息之后, 就需要刷新该缓冲区. 
 // 这里使用重新加载页目录基址寄存器 cr3 的方法来进行刷新. 下面 eax = 0 是页目录的基址.
 #define invalidate() \
-__asm__("movl %%eax, %%cr3"::"a" (0))
+__asm__("movl %%eax, %%cr3" : : "a" (0))
 
 /* these are not to be changed without changing head.s etc */
 /* 下面定义若需要改动, 则需要与 head.s 等文件的相关信息一起改变. */

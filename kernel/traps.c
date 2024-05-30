@@ -10,45 +10,48 @@
  * to mainly kill the offending process (probably by giving it a signal,
  * but possibly by killing it outright if necessary).
  */
-/* 在程序asm.s中保存了一些状态后,本程序用来处理硬件陷阱和故障.目前主要用于调试目的,以后将扩展用来杀死遭损坏的进程(主是通过发送一个信号,
- * 但如果必要也会直接杀死.
+/* 在程序 asm.s 中保存了一些状态后, 本程序用来处理硬件陷阱和故障. 
+ * 目前主要用于调试目的, 以后将扩展用来杀死遭损坏的进程(主是通过发送一个信号, 但如果必要也会直接杀死).
  */
 // #include <string.h>
 
 #include <linux/head.h>
-#include <linux/sched.h>				// 调度程序头文件,定义了任务结构task_struct,初始任务0的数据.
+#include <linux/sched.h>				// 调度程序头文件, 定义了任务结构 task_struct, 初始任务 0 的数据.
 #include <linux/kernel.h>
-#include <asm/system.h>					// 系统头文件.定义了设置或修改描述符/中断门等的嵌入式汇编宏.
+#include <asm/system.h>					// 系统头文件. 定义了设置或修改描述符/中断门等的嵌入式汇编宏.
 #include <asm/segment.h>
-#include <asm/io.h>						// 输入/输出头文件.定义硬件端口输入/输出宏汇编语句.
+#include <asm/io.h>						// 输入/输出头文件. 定义硬件端口输入/输出宏汇编语句.
 
-// 取seg中地址addr处的一个字节.
-// 参数: seg - 段选择符;addr - 段内指定地址.
-// 输出: %0 - eax(__res);输入: %1 - eax(seg); %2 - 内存地址(*(addr))
+// 取 seg 中地址 addr 处的一个字节.
+// 参数: seg - 段选择符; addr - 段内指定地址.
+// 输出: %0 - eax(__res); 输入: %1 - eax(seg); %2 - 内存地址(*(addr))
 #define get_seg_byte(seg, addr) ({ \
-register char __res; \
-__asm__("push %%fs;mov %%ax,%%fs;movb %%fs:%2,%%al;pop %%fs" \
-	:"=a" (__res):"0" (seg),"m" (*(addr))); \
-__res;})
+	register char __res; \
+	__asm__("push %%fs; mov %%ax, %%fs; movb %%fs:%2, %%al; pop %%fs" \
+			: "=a" (__res) : "0" (seg), "m" (*(addr))); \
+	__res; \
+})
 
-// 取seg中地址addr处的一个长字(4字节).
-// 参数: seg - 段选择符;addr - 段内指定地址.
-// 输出: %0 - eax(__res);输入: %1 - eax(seg); %2 - 内存地址(*(addr))
+// 取 seg 中地址 addr 处的一个长字(4 字节).
+// 参数: seg - 段选择符; addr - 段内指定地址.
+// 输出: %0 - eax(__res); 输入: %1 - eax(seg); %2 - 内存地址(*(addr))
 #define get_seg_long(seg, addr) ({ \
-register unsigned long __res; \
-__asm__("push %%fs;mov %%ax,%%fs;movl %%fs:%2,%%eax;pop %%fs" \
-	:"=a" (__res):"0" (seg),"m" (*(addr))); \
-__res;})
+	register unsigned long __res; \
+	__asm__("push %%fs; mov %%ax, %%fs; movl %%fs:%2, %%eax; pop %%fs" \
+			: "=a" (__res) : "0" (seg), "m" (*(addr))); \
+	__res; \
+})
 
 // 取fs段寄存器的值(选择符).
 // 输出:%0 - eax(__res)
 #define _fs() ({ \
-register unsigned short __res; \
-__asm__("mov %%fs,%%ax":"=a" (__res):); \
-__res;})
+	register unsigned short __res; \
+	__asm__("mov %%fs, %%ax" : "=a" (__res) :); \
+	__res; \
+})
 
 // 以下定义了一些函数原型.
-void page_exception(void);					// 页异常.实际是page_fault(mm/page.s)
+void page_exception(void);					// 页异常. 实际是 page_fault(mm/page.s)
 
 void divide_error(void);					// int0(kernel/asm.s)
 void debug(void);							// int1(kernel/asm.s)
@@ -68,41 +71,41 @@ void page_fault(void);						// int14(mm/page.s)
 void coprocessor_error(void);				// int16(kernel/sys_call.s)
 void reserved(void);						// int15(kernel/asm.s)
 void parallel_interrupt(void);				// int39(kernel/sys_call.s)
-void irq13(void);							// int45协处理器中断处理(kernel/asm.s)
+void irq13(void);							// int45 协处理器中断处理(kernel/asm.s)
 void alignment_check(void);					// int46(kernel/asm.s)
 
-// 该子程序用来打印出错中断的名称,出错号,调用程序的EIP,EFLAGS,ESP,fs段寄存器值,段的基址,段的长度,进程号pid,任务号,10字节指令码.如果
-// 堆栈在用户数据段,则还打印16字节堆栈内容.这些信息可用于程序调试.
+// 该子程序用来打印出错中断的名称, 出错号, 调用程序的 EIP, EFLAGS, ESP, 
+// fs 段寄存器值, 段的基址, 段的长度, 进程号 pid, 任务号, 10 字节指令码. 
+// 如果堆栈在用户数据段, 则还打印 16 字节堆栈内容. 这些信息可用于程序调试.
 static void die(char * str, long esp_ptr, long nr)
 {
 	long * esp = (long *) esp_ptr;
 	int i;
 
-	printk("%s: %04x\n\r",str, nr & 0xffff);
-	// 下行打印语句显示当前调用进程的CS:EIP,EFLAGS和SS:ESP的值.
-	// (1) EIP:\t%04x:%p\n	-- esp[1]是段选择符(cs),esp[0]是eip
-	// (2) EFLAGS:\t%p	-- esp[2]是eflags
-	// (2) ESP:\t%04x:%p\n	-- esp[4]是原ss,esp[3]是原esp
+	printk("%s: %04x\n\r", str, nr & 0xffff);
+	// 下行打印语句显示当前调用进程的 CS:EIP, EFLAGS 和 SS:ESP 的值.
+	// (1) EIP:\t%04x:%p\n	-- esp[1] 是段选择符(cs), esp[0] 是 eip
+	// (2) EFLAGS:\t%p	-- esp[2] 是 eflags
+	// (2) ESP:\t%04x:%p\n	-- esp[4] 是原 ss, esp[3] 是原 esp
 	printk("EIP:\t%04x:%p\nEFLAGS:\t%p\nESP:\t%04x:%p\n",
-		esp[1], esp[0], esp[2], esp[4], esp[3]);
+			esp[1], esp[0], esp[2], esp[4], esp[3]);
 	printk("fs: %04x\n", _fs());
 	printk("base: %p, limit: %p\n", get_base(current->ldt[1]), get_limit(0x17));
-	if (esp[4] == 0x17) {						// 或原ss值为0x17(用户栈),则还打印出用户栈的4个长字值(16字节).
+	if (esp[4] == 0x17) {				// 或原 ss 值为 0x17(用户栈), 则还打印出用户栈的 4 个长字值(16 字节).
 		printk("Stack: ");
 		for (i = 0; i < 4; i++)
 			printk("%p ", get_seg_long(0x17, i + (long *)esp[3]));
 		printk("\n");
 	}
-	str(i);										// 取当前运行任务的任务号(include/linux/sched.h).
-	printk("Pid: %d, process nr: %d\n\r", current->pid, 0xffff & i);
-                        						// 进程号,任务号.
+	str(i);								// 取当前运行任务的任务号(include/linux/sched.h).
+	printk("pid: %d, process nr: %d\n\r", current->pid, 0xffff & i); 	// 进程号, 任务号.
 	for(i = 0; i < 10; i++)
-		printk("%02x ", 0xff & get_seg_byte(esp[1], (i+(char *)esp[0])));
+		printk("%02x ", 0xff & get_seg_byte(esp[1], (i + (char *)esp[0])));
 	printk("\n\r");
 	do_exit(11);								/* play segment exception */
 }
 
-// 以下这些以do_开头的函数是asm.s中对应中断处理程序调用的C函数.
+// 以下这些以 do_ 开头的函数是 asm.s 中对应中断处理程序调用的 C 函数.
 void do_double_fault(long esp, long error_code)
 {
 	die("double fault", esp, error_code);
@@ -123,7 +126,7 @@ void do_divide_error(long esp, long error_code)
 	die("divide error", esp, error_code);
 }
 
-// 参数是进入中断后被顺序压入堆栈的寄存器值.参见asm.s程序.
+// 参数是进入中断后被顺序压入堆栈的寄存器值. 参见 asm.s 程序.
 void do_int3(long * esp, long error_code,
 		long fs, long es, long ds,
 		long ebp, long esi, long edi,
@@ -131,13 +134,13 @@ void do_int3(long * esp, long error_code,
 {
 	int tr;
 
-	__asm__("str %%ax":"=a" (tr):"0" (0));		// 取任务寄存器值->tr
+	__asm__("str %%ax" : "=a" (tr) : "0" (0));		// 取任务寄存器值 -> tr
 	printk("eax\t\tebx\t\tecx\t\tedx\n\r%8x\t%8x\t%8x\t%8x\n\r",
-		eax, ebx, ecx, edx);
+			eax, ebx, ecx, edx);
 	printk("esi\t\tedi\t\tebp\t\tesp\n\r%8x\t%8x\t%8x\t%8x\n\r",
-		esi, edi, ebp, (long) esp);
+			esi, edi, ebp, (long) esp);
 	printk("\n\rds\tes\tfs\ttr\n\r%4x\t%4x\t%4x\t%4x\n\r",
-		ds, es, fs, tr);
+			ds, es, fs, tr);
 	printk("EIP: %8x   CS: %4x  EFLAGS: %8x\n\r", esp[0], esp[1], esp[2]);
 }
 
