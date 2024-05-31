@@ -321,10 +321,12 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 // 在处理缺页异常的 C 函数 do_no_page() 中会调用此函数. 对于缺页引起的异常, 由于任何缺页缘故而对页表作修改时, 
 // 并不需要刷新 CPU 的页变换缓冲(或称 Translation Lookaside Buffer, TLB), 即使页表项中标志 P 被从 0 修改成 1. 
 // 因为无效页项不会被缓冲, 因此当修改了一个无效的页表项时不需要刷新. 在此就表现为不用调用 Invalidate() 函数.
-// 参数 page 是分配的主内存区中某一页面(页帧, 页框)的指针; address 是线性地址.
+// 参数: 
+// 		page: 分配的主内存区(物理地址)中某一页面(页帧, 页框)的指针; 
+// 		address: 线性地址.
 static unsigned long put_page(unsigned long page, unsigned long address)
 {
-	unsigned long tmp, *page_table;
+	unsigned long tmp, * page_table;
 
 	/* NOTE !!! This uses the fact that _pg_dir=0 */
 	/* 注意!!! 这里使用了页目录表基地址 pg_dir = 0 的条件 */
@@ -339,12 +341,13 @@ static unsigned long put_page(unsigned long page, unsigned long address)
 	if (mem_map[(page - LOW_MEM) >> 12] != 1)
 		printk("mem_map disagrees with %p at %p\n", page, address);
 	// 然后根据参数指定的线性地址 address 计算其在页目录表中对应的目录项指针, 并从中取得一级页表地址. 
-	//如果该目录项有效(P = 1), 即指定的页表在内存中, 则从中取得指定页表地址放到 page_table 变量中.
-	// 否则申请一空闲页面给页表使用, 并在对应目录项中置相应标志(7 - User, U/S, R/W). 然后将该页表地址放到 page_table 变量中.
+	// 如果该目录项有效(P = 1), 即指定的页表在内存中, 则从中取得指定页表地址放到 page_table 变量中.
+	// 否则申请一空闲页面给页表使用, 并在对应目录项中置相应标志(7 - User, U/S, R/W). 
+	// 然后将该页表地址放到 page_table 变量中.
 	page_table = (unsigned long *) ((address >> 20) & 0xffc);
-	if ((*page_table) & 1)
+	if ((*page_table) & 1) {
 		page_table = (unsigned long *) (0xfffff000 & *page_table);
-	else {
+	} else {
 		if (!(tmp = get_free_page()))
 			return 0;
 		*page_table = tmp | 7;
