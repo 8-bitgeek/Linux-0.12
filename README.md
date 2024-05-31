@@ -1,8 +1,10 @@
 # Linux-0.12
-Linux-0.12内核代码中文注释 + 在高版本GCC 5.4.0
+Linux-0.12 Kernel code with comments & Compile with GCC 4.8.5
 
-初始代码引用自: https://github.com/sky-big/Linux-0.12
+ref: https://github.com/sky-big/Linux-0.12
 
-运行环境下载地址:
-http://oldlinux.org/Linux.old/bochs/linux-0.12-080324.zip
+## prerequirement
 
+1. GCC v4.8.5
+2. qemu 6.2.0 or higher
+3. make
