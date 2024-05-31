@@ -346,12 +346,13 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	int index = 0;
 	while (1) {
 		// 此处的 filename 在内核的数据段中, 但是是用的当前进程的 fs(指向 ldt), 
-		// 不过由于在进程创建(fork)过程中复制页表信息时, 0-640KB 这部分映射关系是复制的内核页表的(看下 TASK(0->1) 的 fork 过程便知), 
-		// 所以进程的 fs 在 0-640KB 的逻辑空间也是指向内核数据段(物理地址的 0-640KB).
+		// 不过目前当前进程 0-640KB 这部分映射关系是复制的内核页表的(看下 TASK(0->1) 的 fork 过程便知), 
+		// 所以现在当前进程的 fs 在 0-640KB 的逻辑空间也是指向内核数据段(物理地址的 0-640KB), 
+		// 后面的 free_page_table 会替换掉 0-640KB 这个映射关系.
 		// 参照: sys_call.s # sys_fork -> copy_process() -> copy_mem() -> copy_page_table() (kernel/fork.c)
 		s = get_fs_byte(filename + index); 						
 		if (s) {
-			*(filename1 + index) = s; 							// 拷贝内核数据段中的 filename 到用户进程的栈中的 filename1(当前进程的内核态栈中).
+			*(filename1 + index) = s; 			// 拷贝内核数据段中的 filename 到用户进程内核栈 filename1 (当前进程的内核态栈)中.
 			index++;
 		} else {
 			break;
@@ -585,7 +586,7 @@ restart_interp:
 	// 这样本系统调用退出返回后就会去运行新执行文件的代码了. 
 	// 注意, 虽然此时新执行文件代码和数据还没有从文件中加载到内存中, 
 	// 但其参数和环境已经在 copy_strings() 中使用 get_free_page() 分配了物理内存页来保存数据, 
-	// 并在 chang_ldt() 函数中使用 put_page() 到了进程逻辑空间的末端处. 
+	// 并在 chang_ldt() 函数中使用 put_page() 放到了进程逻辑空间的末端处. 
 	// 另外, 在 create_tables() 中也会由于在用户栈上存放参数和环境指针表而引起缺页异常, 
 	// 从而内存管理程序也会就此为用户栈空间映射物理内存页.
 	//
@@ -606,14 +607,14 @@ restart_interp:
 		if ((current->close_on_exec >> i) & 1)
 			sys_close(i);
 	current->close_on_exec = 0;
-	// 然后根据当前进程指定的基地址和限长, 释放原来程序的代码段和数据段所对应的内存页表指定的物理内存页面及页表本身. 
+	// 然后根据当前进程指定的基地址和限长, 释放原程序的代码段和数据段所对应的内存页表指定的物理内存页面及页表本身. 
 	// 此时新执行文件并没有占用主内存区任何页面, 因此在处理器真正运行新执行文件代码时就会引起缺页异常中断, 
 	// 此时内存管理程序即会执行缺页处理页为新执行文件申请内存页面和设置相关页表项, 并且把相关执行文件页面读入内存中. 
-	// 如果 "上次任务使用了协处理器" 指向的是当前进程, 则将其置空, 并复位使用了协处理器的标志.
-	free_page_tables(get_base(current->ldt[1]), get_limit(0x0f));
-	free_page_tables(get_base(current->ldt[2]), get_limit(0x17));
+	free_page_tables(get_base(current->ldt[1]), get_limit(0x0f)); 		// 只释放原程序代码/数据段大小的页面. 
+	free_page_tables(get_base(current->ldt[2]), get_limit(0x17));		// (初次 execve 时一般是 640KB, 即复制的内核代码/数据段)
 	if (last_task_used_math == current)
 		last_task_used_math = NULL;
+	// 如果 "上次任务使用了协处理器" 指向的是当前进程, 则将其置空, 并复位使用了协处理器的标志.
 	current->used_math = 0;
 	// 然后我们根据要执行文件的头结构中的代码长度字段 a_text 的值修改局部表中描述符基址和段限长, 
 	// 并将 128KB 的参数和环境空间页面放置在数据段 64MB - 4MB - 128KB 处.
