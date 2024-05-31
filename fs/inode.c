@@ -95,7 +95,7 @@ void sync_inodes(void)
 }
 
 // 文件数据块映射到盘块的处理操作. (block 位图处理函数, bmap - block map)
-// 参数: inode - 文件的 i 节点指针 ;block - 文件中的数据块号; create - 创建块标志. 
+// 参数: inode - 文件的 i 节点指针; block - 文件中的数据块号; create - 创建块标志. 
 // 该函数把指定的文件数据块 block 对应到设备上逻辑块上, 并返回逻辑块号.
 // 如果创建标志置位, 则在设备上对应逻辑块不存在时就申请新磁盘块, 返回文件数据块 block 对应在设备上的逻辑块号(盘块号).
 static int _bmap(struct m_inode * inode, int block, int create)
@@ -106,9 +106,9 @@ static int _bmap(struct m_inode * inode, int block, int create)
 	// 首先判断参数文件数据块号 block 的有效性. 如果块号小于 0, 则停机. 
 	// 如果块号大于直接块数 + 间接块数 + 二次间接块数, 超出文件系统表示范围, 则停机.
 	if (block < 0)
-		panic("_bmap: block<0");
+		panic("_bmap: block < 0");
 	if (block >= 7 + 512 + 512 * 512)
-		panic("_bmap: block>big");
+		panic("_bmap: block > big");
 	// 然后根据文件块号的大小值和是否设置了创建标志分别进行处理. 如果该块号小于 7, 则使用直接块表示. 
 	// 如果创建标志置位, 并且 i 节点中对应该块的逻辑块(区段)字段为 0, 则向相应设备申请一磁盘块(逻辑块),
 	// 并且将盘上逻辑块号(盘块号)填入逻辑块字段中. 然后设置 i 节点改变时间, 置 i 节点已修改标志. 

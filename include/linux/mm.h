@@ -21,12 +21,10 @@ extern void init_swapping(void);                                                
 void swap_free(int page_nr);                                                        // 释放编号 page_nr 的 1 页面交换页面
 void swap_in(unsigned long * table_ptr);                                            // 把页表项是 table_ptr 的一页物理内存换出到交换空间
 
-// 下面函数名前关键字 volatile 用于告诉编译器 gcc 该函数不会返回. 这样可让 gcc 产生更好的代码, 
-// 更重要的是使用这个关键字可以避免产生某些(未初始化变量的)假警告信息.
 static inline void oom(void)
 {
-	printk("out of memory\n\r");
-    //　do_exit() 应该使用退出代码, 这里用了信息值 SIGSEGV(11). 相同值的出错码含义是 "资源暂不可用", 正好同义.
+	printk("Out of memory!!!\n\r");
+    // do_exit() 应该使用退出代码, 这里用了信息值 SIGSEGV(11). 相同值的出错码含义是 "资源暂不可用", 正好同义.
 	do_exit(SIGSEGV);
 }
 

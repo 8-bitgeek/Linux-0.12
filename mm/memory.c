@@ -153,7 +153,7 @@ int free_page_tables(unsigned long from, unsigned long size)
 		for (nr = 0; nr < 1024; nr++) { 						// 循环处理页表中的各个项.
 			if (*pg_table) {									// 若所指页表项内容不为 0, 则若该项有效, 则释放对应页面.
 				if (1 & *pg_table) 								// 存在位 P = 1, 则释放内存中对应的页面.
-					free_page(0xfffff000 & *pg_table);
+					free_page(0xfffff000 & *pg_table); 			// 对于小于 LOW_MEM(1MB) 的页面不处理.
 				else											// 内存中不存在则释放交换设备中对应页面.
 					swap_free(*pg_table >> 1);
 				*pg_table = 0;									// 该页表项内容清零.
@@ -161,7 +161,7 @@ int free_page_tables(unsigned long from, unsigned long size)
 			pg_table++;											// 指向页表中下一项.
 		}
 		free_page(0xfffff000 & *dir);							// 释放该页表所占的内存页面.
-		*dir = 0;												// 对应页表的目录项清零.
+		*dir = 0;												// 页表对应的目录项清零.
 	}
 	invalidate();												// 刷新 CPU 页变换高速缓冲.
 	return 0;
@@ -534,7 +534,7 @@ void get_empty_page(unsigned long address)
 	unsigned long tmp;
 
 	// 若不能取得一空闲页面, 或者不能将所取页面放置到指定地址处, 则显示内存不够的信息. 
-	// 292 行上英文注释的含义是: free_page() 函数的参数 tmp 是 0 也没有关系, 该函数会忽略它并能正常返回.
+	// free_page() 函数的参数 tmp 是 0 也没有关系, 该函数会忽略它并能正常返回.
 	if (!(tmp = get_free_page()) || !put_page(tmp, address)) {
 		free_page(tmp);		/* 0 is ok - ignored */
 		oom();
@@ -665,7 +665,7 @@ static int try_to_share(unsigned long address, struct task_struct * p)
 // 来最后确定多个进程运行着相同执行文件的情况.
 // 参数 inode 是欲进行共享页面进程执行文件的内存 i 节点. 
 // address 是进程中的逻辑地址, 即当前进程欲与 p 进程共享页面的逻辑页面地址. 
-// 返回 1 - 共享操作成功, 0 - 失败.
+// 返回: 1 - 共享操作成功, 0 - 失败.
 static int share_page(struct m_inode * inode, unsigned long address)
 {
 	struct task_struct ** p;
@@ -733,10 +733,10 @@ void do_no_page(unsigned long error_code, unsigned long address)
 	// 方法是首先取指定线性地址 address 对应的目录项内容. 
 	// 如果对应的二级页表存在, 则取出该目录项中二级页表的地址, 
 	// 加上页表项偏移值即得到线性地址 address 处页面对应的页表项指针, 从而获得页表项内容. 
-	// 若页表内容不为 0 并且页表项存在位 P = 0, 则说明该页表项指定的物理页面应该在交换设备中. 
+	// 若页表项内容不为 0 并且页表存在位 P = 0, 则说明该页表项指定的物理页面应该在交换设备中. 
 	// 于是从交换设备中调入指定页面后退出函数.
-	page = *(unsigned long *) ((address >> 20) & 0xffc);				// 取目录项内容.
-	if (page & 1) {
+	page = *(unsigned long *) ((address >> 20) & 0xffc);				// 取页目录项内容(页表地址及属性).
+	if (page & 1) { 													// 对应页目录表存在于物理内存中.
 		page &= 0xfffff000;												// 二级页表地址.
 		page += (address >> 10) & 0xffc;								// 页表项指针.
 		tmp = *(unsigned long *) page;									// 页表项内容.
@@ -745,17 +745,17 @@ void do_no_page(unsigned long error_code, unsigned long address)
 			return;
 		}
 	}
-	// 否则取线性空间中指定地址 address 处页面地址, 
+	// 如果页表不存在, 则取线性地址 address 对应的页面地址, 
 	// 并算出指定线性地址在进程空间中相对于进程基址的偏移长度值 tmp, 即对应的逻辑地址. 
 	// 从而可以算出缺页页面在执行文件映像中或在库文件中的具体起始数据块号.
-	address &= 0xfffff000;												// address 处缺页页面地址.
+	address &= 0xfffff000;												// address 处缺页页面地址(页目录(10 位)+页表(10 位)).
 	tmp = address - current->start_code;								// 缺页页面对应逻辑地址.
 	// 如果缺页对应的逻辑地址 tmp 大于库映像文件在进程逻辑空间中的起始位置, 说明缺少的页面在库映像文件中. 
 	// 于是从当前进程任务数据结构中可以取得库映像文件的 i 节点 library, 并计算出该缺页在库文件中的起始数据块号 block.
 	// 因为设置上存放的执行文件映像第 1 块数据是程序头结构, 因此在读取该文件时需要跳过第 1 块数据. 
 	// 所以需要首先计算缺页所在数据块号. 因为每块数据长度为 BLOCK_SIZE = 1KB, 因此一页内存可存放 4 个数据块. 
 	// 进程逻辑地址 tmp 除以数据块大小再加 1 即可得出缺少的页面在执行映像文件中的起始块号 block.
-	if (tmp >= LIBRARY_OFFSET ) {
+	if (tmp >= LIBRARY_OFFSET) {
 		inode = current->library;										// 库文件 i 节点和缺页起始块号.
 		block = 1 + (tmp - LIBRARY_OFFSET) / BLOCK_SIZE;
 	// 如果缺页对应的逻辑地址 tmp 小于进程的执行映像文件在逻辑地址空间的末端位置, 则说明缺少的页面在进程执行文件映像中, 
@@ -774,7 +774,7 @@ void do_no_page(unsigned long error_code, unsigned long address)
 		get_empty_page(address);
 		return;
 	}
-	// 否则说明所缺页面进程执行文件或库文件范围内, 于是就尝试共享页面操作, 若成功则退出.
+	// 否则说明所缺页面进程执行文件或库文件范围内, 于是就尝试查找能否与其它进程共享页面, 若成功则退出.
 	if (share_page(inode, tmp))											// 尝试逻辑地址 tmp 处页面的共享.
 		return;
 	// 如果共享不成功就只能申请一页物理内存页面 page, 然后从设备上读取执行文件中的相应页面并放置(映射)到进程页面逻辑地址 tmp 处.

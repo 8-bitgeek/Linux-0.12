@@ -337,8 +337,8 @@ repeat:
 		if (tmp->b_count) 							// 有引用的一定是不可用的.
 			continue;
 		// 如果缓冲头指针 bh 为空, 或者 tmp 所指缓冲头的标志(修改, 锁定)权重小于 bh 头标志的权重, 
-		// 则让 bh 指向 tmp 缓冲块头. 
-		// 如果该 tmp 缓冲块头表明缓冲块既没有修改也没有锁定, 则说明已为指定设备上的块取得对应的高速缓冲块, 则退出循环.
+		// 则让 bh 指向 tmp 缓冲块头. 如果该 tmp 缓冲块头表明缓冲块既没有修改也没有锁定, 
+		// 则说明已为指定设备上的块取得对应的高速缓冲块, 则退出循环.
 		// 否则我们就继续执行本循环, 看看能否找到一个 BADNESS() 最小的缓冲块.
 		if (!bh || BADNESS(tmp) < BADNESS(bh)) {
 			bh = tmp; 								// 得到 (dirt * 2 + block) 更小的 buffer_head
@@ -435,25 +435,17 @@ struct buffer_head * bread(int dev, int block)
 }
 
 // 复制内存块.
-// 从 from 地址复制一块(1024 字节)数据到 to 位置(重写的是先将 edi, esi 寄存器入栈保存起来, 
-// 拷贝完毕后再还原, 避免 edi, esi 寄存器的污染)
+// 从 from 地址复制一块(1024 字节)数据到 to 位置.
+// (重写的是先将 edi, esi 寄存器入栈保存起来, 拷贝完毕后再还原, 避免 edi, esi 寄存器的污染)
 #define COPYBLK(from, to) \
-__asm__("cld\n\t" \
-		"pushl %%edi\n\t" \
-		"pushl %%esi\n\t" \
-		"rep\n\t" \
-		"movsl\n\t" \
-		"popl %%esi\n\t" \
-		"popl %%edi\n\t" \
-	::"c" (BLOCK_SIZE/4),"S" (from),"D" (to) \
-	:)
-
-//#define COPYBLK(from,to) \
-	__asm__("cld\n\t" \
-			"rep\n\t" \
-			"movsl\n\t" \
-			::"c" (BLOCK_SIZE/4),"S" (from),"D" (to) \
-			:)
+__asm__("cld;" \
+		"pushl %%edi;" \
+		"pushl %%esi;" \
+		"rep;" \
+		"movsl;" \
+		"popl %%esi;" \
+		"popl %%edi;" \
+		: : "c" (BLOCK_SIZE / 4), "S" (from), "D" (to) :)
 
 /*
  * bread_page reads four buffers into memory at the desired address. It's
@@ -465,8 +457,10 @@ __asm__("cld\n\t" \
  * bread_page 一次读四个缓冲块数据读到内存指定的地址处. 它是一个完整的函数, 
  * 因为同时读取四块可以获得速度上的好处, 不用等着读一块, 再读一块了.
  */
-// 读设备上一个页面(4 个缓冲块)的内容到指定内存地址处.
-// 参数 address 是保存页面数据的地址; dev 是指定的设备号; b[4] 是含有 4 个设备数据块号的数组.
+// 读取设备上一个页面(4 个缓冲块)的内容到指定内存地址处.
+// 参数: 
+// 		address: 保存页面数据的地址; dev: 指定的设备号; 
+// 		b[4]: 含有 4 个设备数据块号的数组.
 // 该函数仅用于 mm/memory.c 文件的 do_no_page() 函数中.
 void bread_page(unsigned long address, int dev, int b[4])
 {
@@ -477,18 +471,20 @@ void bread_page(unsigned long address, int dev, int b[4])
 	// 对于参数 b[i] 给出的有效块号, 函数首先从高速缓冲中取指定设备和块号的的缓冲块. 
 	// 如果缓冲块中数据无效(未更新)则产生读设备请求从设备上读取相应数据块. 
 	// 对于 b[i] 无效的块号则不用处理它了. 因此本函数其实可以根据指定的 b[] 中的块号随意读取 1-4 个数据块.
-	for (i = 0 ; i < 4 ; i++)
+	for (i = 0; i < 4; i++) {
 		if (b[i]) {
-			// 先给该逻辑块号申请一个缓存块
+			// 先给该逻辑块号申请一个缓存块.
 			if (bh[i] = getblk(dev, b[i]))
-				// 如果该缓冲块没有更新, 则从块设备中读取出来
+				// 如果该缓冲块没有更新, 则从块设备中读取出来.
 				if (!bh[i]->b_uptodate)
 					ll_rw_block(READ, bh[i]);
-		} else
+		} else {
 			bh[i] = NULL;
+		}
+	}
 	// 随后将 4 个缓冲块上的内容顺序复制到指定地址处. 在进行复制(使用)缓冲块之前我们先要睡眠等待缓冲块解锁(若被上锁的话). 
 	// 另外, 因为可能睡眠过了, 所以我们还需要在复制之前再检查一下缓冲块中的数据是否是有效的. 复制完后我们还需要释放缓冲块.
-	for (i = 0 ; i < 4 ; i++, address += BLOCK_SIZE)
+	for (i = 0; i < 4; i++, address += BLOCK_SIZE)
 		if (bh[i]) {
 			wait_on_buffer(bh[i]);						// 等待缓冲块解锁(若被上锁的话).
 			if (bh[i]->b_uptodate)						// 若缓冲块中数据有效的话则复制.
