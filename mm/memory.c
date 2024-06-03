@@ -818,7 +818,7 @@ void do_no_page(unsigned long error_code, unsigned long address)
 // 而范围 0~1MB 内存空间用于内核系统(其实内核只使用 0~640KB, 剩下的部分被部分高速缓冲和设备内存占用).
 // 参数 start_mem 是可用作页面分配的主内存区起始地址(已去除 RAMDISK 所占内存空间). 
 // end_mem 是实际物理内存最大地址. 而地址范围 start_mem 到 end_mem 是主内存区.
-void mem_init(long start_mem, long end_mem) 				// start_mem = 4MB, end_mem = 大约 16MB
+void mem_init(long start_mem, long end_mem) 				// start_mem = 4MB, end_mem = 大约 16MB.
 {
 	int i;
 

@@ -206,9 +206,9 @@ int main(void)										/* This really IS void, no error here. */
 {													/* The startup routine assumes (well, ...) this */
 #ifdef EM
 	// 开启仿真协处理器
-	__asm__("movl %cr0,%eax \n\t" \
-	        "xorl $6,%eax \n\t" \
-	        "movl %eax,%cr0");
+	__asm__("movl %cr0, %eax;" \
+	        "xorl $6, %eax;" \
+	        "movl %eax, %cr0");
 #endif
 	/*
 	 * Interrupts are still disabled. Do necessary setups, then enable them
@@ -255,7 +255,7 @@ int main(void)										/* This really IS void, no error here. */
 #ifdef RAMDISK
 	main_memory_start += rd_init(main_memory_start, RAMDISK * 1024);
 #endif
-	// 以下是内核进行所有方面的初始化工作.
+	// 进行内核的所有初始化操作.
 	mem_init(main_memory_start, memory_end);		// 主内存区初始化. (mm/memory.c) 初始化 mem_map[], 主内存区为 4MB - mem_end. 一页大小为 4KB.
 	trap_init();                              		// 陷阱门(硬件中断向量)初始化. (kernel/traps.c)
 	blk_dev_init();									// 块设备初始化. (blk_drv/ll_rw_blk.c) 
