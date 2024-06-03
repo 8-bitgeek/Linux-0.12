@@ -15,7 +15,7 @@ kernel/chr_drv/keyboard.s
 kernel/math/math.a
 lib/lib.a
 system.S
-images/**
+Linux-0.12-Images/**
 .vscode
 gshell/**
 miniCRT/**/test
