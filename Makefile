@@ -129,13 +129,13 @@ clean:
 	$(Q)for i in mm fs kernel lib boot miniCRT/i386 miniCRT/0.12; do make clean -C $$i; done
 
 debug: Image
-	$(Q)dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
-	$(Q)qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd \
+	$(Q)dd if=Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
+	$(Q)qemu-system-i386 -m 32M -boot a -fda Images/boota.img -fdb Images/rootimage-0.12-fd -hda Images/rootimage-0.12-hd \
 						 -serial pty -S -gdb tcp::1234
 
 start: Image
-	$(Q)dd if=Kernel_Image of=images/boota.img bs=512 conv=notrunc,sync
-	$(Q)qemu-system-i386 -m 32M -boot a -fda images/boota.img -fdb images/rootimage-0.12-fd -hda images/rootimage-0.12-hd
+	$(Q)dd if=Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
+	$(Q)qemu-system-i386 -m 32M -boot a -fda Images/boota.img -fdb Images/rootimage-0.12-fd -hda Images/rootimage-0.12-hd
 
 dep:
 	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
