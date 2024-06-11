@@ -8,8 +8,12 @@
 int write_aout(struct exec * fileheader, void * textbuf, unsigned text_size);
 void * read_text(FILE * fp, unsigned offset, unsigned a_text_size);
 
-int main() {
-    const char * filename = "test";
+int main(int argc, const char * argv[]) {
+    if (argc <= 1) {
+        printf("Usage: %s <elf_need_to_convert>\n", argv[0]);
+        exit(1);
+    }
+    const char * filename = argv[1];
     FILE * fp = fopen(filename, "r");
     Elf32_Ehdr ehdr;
     if (fp != NULL) {
@@ -45,8 +49,8 @@ int main() {
 
     struct exec exec_hdr = {ZMAGIC, a_text_size, a_data_size, a_bss_size, 0, .a_entry = 0, 0, 0};
     int s = 0;
-    if ((s = (a_text_size + a_data_size + a_bss_size)) < CODELIMIT) {
-        printf("[WARN] code size [0x%x] bigger than Linux-0.12 demand[0x%x]!\n", s, CODELIMIT);
+    if ((s = (a_text_size + a_data_size + a_bss_size)) > CODE_LIMIT) {
+        printf("[WARN] code size [0x%x] bigger than Linux-0.12 demand[0x%x]!\n", s, CODE_LIMIT);
     }
     printf("Size of .text: 0x%08x, off: 0x%08x;\n\
            .data: 0x%08x, off: 0x%08x;\n\
@@ -55,12 +59,13 @@ int main() {
            a_data_size, a_data_off, 
            a_bss_size, a_bss_off);
 
+    // read text section from source object file.
     void * text = read_text(fp, a_text_off, a_text_size);
 
+    // werite into target object file.
     int writed = write_aout(&exec_hdr, text, a_text_size);
-    if (writed) {
-        printf("Write a.out: %s!\n", writed ? "Succeed" : "Failed");
-    }
+
+    printf("Write a.out: %s!\n", writed ? "Succeed" : "Failed");
 
     fclose(fp);
     return 0;
@@ -69,12 +74,15 @@ int main() {
 int write_aout(struct exec * fileheader, void * textbuf, unsigned text_size) {
     FILE * aout = fopen("a.out", "w");
     int writed = fwrite(fileheader, sizeof(struct exec), 1, aout);
-    fseek(aout, 0x1000, 0);
+    fseek(aout, TEXT_OFFSET, 0);
     writed = fwrite(textbuf, text_size, 1, aout);
     fclose(aout);
     return writed;
 }
 
+/*
+ * Read text section from source file into memory, and return data pointer. 
+ */
 void * read_text(FILE * fp, unsigned offset, unsigned a_text_size) {
     void * text = malloc(a_text_size);
     fseek(fp, offset, 0);

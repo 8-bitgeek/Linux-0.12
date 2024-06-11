@@ -11,4 +11,5 @@ struct exec {
 };
 
 #define ZMAGIC 0413
-#define CODELIMIT 0x3000000
+#define CODE_LIMIT 0x3000000
+#define TEXT_OFFSET 0x400

@@ -833,9 +833,9 @@ void mem_init(long start_mem, long end_mem) 				// start_mem = 4MB, end_mem = �
 	// 对于具有 16MB 物理内存的系统, mem_map[] 中对应 4MB~16MB 主内存区的项被清零.
 	i = MAP_NR(start_mem);									// 主内存区(4-16MB)起始位置处页面号(i = 768).
 	end_mem -= start_mem; 									// 主内存区的大小.
-	// 得到主内存区的页面的数量
+	// 得到主内存区的页面的数量.
 	end_mem >>= 12;											// 主内存区中的总页面数(3072).
-	// 将主内存区所有页面使用用数置零
+	// 将主内存区所有页面使用数置零.
 	while (end_mem-- > 0)
 		mem_map[i++] = 0;									// 主内存区(4-16MB)页面对应字节值清零(清除已使用标志).
 }
