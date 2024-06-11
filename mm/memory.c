@@ -762,7 +762,7 @@ void do_no_page(unsigned long error_code, unsigned long address)
 		inode = current->library;										// 库文件 i 节点和缺页起始块号.
 		block = 1 + (tmp - LIBRARY_OFFSET) / BLOCK_SIZE;
 	// 如果缺页对应的逻辑地址 tmp 小于进程的执行映像文件在逻辑地址空间的末端位置, 则说明缺少的页面在进程执行文件映像中, 
-	// 于是可以从当前进程任务数据机构中取得执行文件的 i 节点号 executable, 并计算出该缺页在执行文件映像中的起始数据块号 block.
+	// 于是可以从当前进程任务数据结构中取得执行文件的 i 节点号 executable, 并计算出该缺页在执行文件映像中的起始数据块号 block.
 	// 若逻辑地址 tmp 既不在执行文件映像的地址范围内,
 	} else if (tmp < current->end_data) {
 		inode = current->executable;									// 执行文件 i 节点和缺页起始块号.
@@ -873,7 +873,7 @@ void show_mem(void)
 	// 方法是循环处理所有页目录项(除前 4 个项), 若对应的二级页表存在, 
 	// 那么先统计二级页表本身占用的内存页面, 然后对该页表中所有页表项对应页面情况进行统计.
 	k = 0;													// 一个进程占用页面统计值.
-	for(i = 4; i < 1024;) {
+	for(i = 4; i < 1024; ) {
 		if (1 & pg_dir[i]) {
 			// 如果页目录项对应二级页表地址大于机器最高物理内存地址 HIGH_MEMORY, 
 			// 说明该目录项有问题. 于是显示该目录项信息并继续处理下一个目录项.
