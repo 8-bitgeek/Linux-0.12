@@ -18,9 +18,9 @@ system.S
 Images/**
 .vscode
 gshell/**
-miniCRT/**/test
-miniCRT/**/minicrt.a
-miniCRT/**/temp.txt
-miniCRT/**/minicrt.h.gch
-miniCRT/**/tinyhello/tinyhello
+demos/**/test
+demos/**/minicrt.a
+demos/**/temp.txt
+demos/**/minicrt.h.gch
+demos/**/tinyhello/tinyhello
 **/.fuse_*
