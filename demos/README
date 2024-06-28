@@ -1,15 +1,16 @@
-## 编译 miniCRT
+# Some demos to  make you learning System source code well
 
-```shell
-make 
-```
+> There are two version of demo, which you can compile and run it on Linux-0.12 or modern 32-bit system.
 
-## miniCRT 使用
+## 1. miniCRT
 
-`-e` 指定入口函数.
+A minimal C runtime library. you can compile you simple program with it. it's implemented by invoking Systemcall routine.
 
-```shell
-gcc -c -ggdb -fno-builtin -nostdlib -fno-stack-protector test.c     # 编译
-ld -static -e mini_crt_entry entry.o test.o minicrt.a -o test       # 链接 
-./test                                                              # 运行
-```
+
+## 2. elf
+
+By using this program you can migrate you 32-bit program to Linux-0.12 platfrom, but not finish yet ^_^...
+
+## tinyhello
+
+Smallest prog which have no dependencies but can print hello at console.
