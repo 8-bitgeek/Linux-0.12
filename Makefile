@@ -125,7 +125,7 @@ tools/build: tools/build.c
 	$(Q)$(CC) $(CFLAGS) -o tools/build tools/build.c
 
 clean:
-	$(Q)rm -f ./release/* System_s.map tmp_make core boot/bootsect boot/setup
+	$(Q)rm -rf release System_s.map tmp_make core boot/bootsect boot/setup
 	$(Q)rm -f init/*.o tools/system boot/*.o typescript* info bochsout.txt
 	$(Q)for i in mm fs kernel lib boot; do make clean -C $$i; done
 
