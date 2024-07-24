@@ -24,3 +24,4 @@ demos/**/temp.txt
 demos/**/minicrt.h.gch
 demos/**/tinyhello/tinyhello
 **/.fuse_*
+release/**
