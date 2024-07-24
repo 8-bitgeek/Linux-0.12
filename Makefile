@@ -79,7 +79,7 @@ boot/setup: boot/setup.S
 # LIBS		=	lib/lib.a
 # LDFLAGS 	= 	-m elf_i386 -Ttext 0 -e startup_32 
 tools/system: boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
-	mkdir -p release
+	$(Q)mkdir -p release
 	$(Q)$(LD) $(LDFLAGS) boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS) -o tools/system
 	$(Q)nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > release/System.map
 	$(Q)objdump -S tools/system > release/system.S
