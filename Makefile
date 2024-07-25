@@ -58,7 +58,7 @@ Image: clean boot/bootsect boot/setup tools/system
 	$(Q)strip system.tmp
 	$(Q)objcopy -O binary -R .note -R .comment system.tmp tools/kernel
 # There is no Kernal_Image at begain, we create it by build.sh
-	$(Q)tools/build.sh boot/bootsect boot/setup tools/kernel release/Kernel_Image $(ROOT_DEV) $(SWAP_DEV)
+	$(Q)tools/build.sh boot/bootsect boot/setup tools/kernel Release/Kernel_Image $(ROOT_DEV) $(SWAP_DEV)
 	$(Q)rm system.tmp
 	$(Q)rm -f tools/kernel
 	$(Q)sync
@@ -79,10 +79,10 @@ boot/setup: boot/setup.S
 # LIBS		=	lib/lib.a
 # LDFLAGS 	= 	-m elf_i386 -Ttext 0 -e startup_32 
 tools/system: boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
-	$(Q)mkdir -p release
+	$(Q)mkdir -p Release
 	$(Q)$(LD) $(LDFLAGS) boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS) -o tools/system
-	$(Q)nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > release/System.map
-	$(Q)objdump -S tools/system > release/system.S
+	$(Q)nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > Release/System.map
+	$(Q)objdump -S tools/system > Release/system.S
 
 # make -C {dir}: 
 # 	Change to directory {dir} before reading the makefiles or doing anything else.
@@ -125,17 +125,17 @@ tools/build: tools/build.c
 	$(Q)$(CC) $(CFLAGS) -o tools/build tools/build.c
 
 clean:
-	$(Q)rm -rf release System_s.map tmp_make core boot/bootsect boot/setup
+	$(Q)rm -rf Release System_s.map tmp_make core boot/bootsect boot/setup
 	$(Q)rm -f init/*.o tools/system boot/*.o typescript* info bochsout.txt
 	$(Q)for i in mm fs kernel lib boot; do make clean -C $$i; done
 
 debug: Image
-	$(Q)dd if=release/Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
+	$(Q)dd if=Release/Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
 	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/boota.img -fdb Images/rootimage-0.12-fd -hda Images/rootimage-0.12-hd \
 						 -serial pty -S -gdb tcp::1234
 
 start: Image
-	$(Q)dd if=release/Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
+	$(Q)dd if=Release/Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
 	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/boota.img -fdb Images/rootimage-0.12-fd -hda Images/rootimage-0.12-hd
 
 dep:
