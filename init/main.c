@@ -193,7 +193,7 @@ static char * argv_rc[] = { "/bin/sh", NULL };		// 调用执行程序时参数�
 static char * envp_rc[] = { "HOME=/", NULL, NULL };	// 调用执行程序时的环境字符串数组.
 
 // 运行登录 shell 时所使用的命令行参数和环境参数.
-static char * argv[] = { "-/bin/sh",NULL };			// 字符 "-" 是传递给 shell 程序 sh 的一个标志. 通过识别该标志, 
+static char * argv[] = { "-/bin/sh", NULL };		// 字符 "-" 是传递给 shell 程序 sh 的一个标志. 通过识别该标志, 
 													// sh 程序会作为登录 shell 执行. 其执行过程与 shell 提示符下执行 sh 不一样.
 static char * envp[] = { "HOME=/usr/root", NULL, NULL };
 
