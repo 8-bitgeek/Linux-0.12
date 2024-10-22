@@ -213,9 +213,7 @@ int main(void)										/* This really IS void, no error here. */
 #endif
 	/*
 	 * Interrupts are still disabled. Do necessary setups, then enable them
-	 */
-	/*
-	 * 此时中断仍被禁止着, 做完必要的设置后再将其开启.
+	 * 此时中断仍被禁止, 做完必要的设置后再将其开启.
 	 */
 	// 首先保存根文件系统设备和交换文件设备号, 并根据 setup.s 程序中获取的信息设置控制台终端屏幕行, 列数环境变量 TERM, 
 	// 并用其设置初始 init 进程中执行 etc/rc 文件和 shell 程序使用的环境变量, 以及复制内存 0x90080 处的硬盘表.
