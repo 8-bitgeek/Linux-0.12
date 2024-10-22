@@ -21,4 +21,4 @@ Demos/**/temp.txt
 Demos/**/minicrt.h.gch
 Demos/**/tinyhello/tinyhello
 **/.fuse_*
-Release/**
+release/**
