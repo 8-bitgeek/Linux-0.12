@@ -5,12 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "GDB",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/tools/system",
-            // "miDebuggerServerAddress": "192.168.192.4:1234",
-            // "miDebuggerServerAddress": "192.168.192.222:1234",
             // "miDebuggerServerAddress": "192.168.192.192:1234",
             "miDebuggerServerAddress": "localhost:1234",
             "args": [],
