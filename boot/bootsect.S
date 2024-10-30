@@ -58,6 +58,7 @@ begbss:
 SETUPLEN = 4				! nr of setup-sectors
 							! setup 程序占用的扇区数
 BOOTSEG  = 0x07c0			! original address of boot-sector
+							! hard-disk first sector will load into memory 0x7c00(31KB) by BIOS
 							! bootsect 代码所在内存原始段地址
 INITSEG  = DEF_INITSEG		! we move boot here - out of the way
 							! 将 bootsect 移到位置 0x90000 避开系统模块占用处
