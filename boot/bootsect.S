@@ -266,7 +266,8 @@ ok_load_setup:
 	mov	ax, root_dev				! 取 508, 509 字节处的根设备号并判断是否已被定义.
 	or	ax, ax
 	jne	root_defined 				! 如果 root_dev 不是 0, 则表示已经指定了
-	! 取之前保存的每磁道扇区数 sectors. 如果 sectors = 15 则说明是 1.2MB 的驱动器; 如果 sectors = 18, 则说明是 1.44MB 软驱. 因为是可引导的驱动器, 所以肯定是 A 驱. 
+	! 取之前保存的每磁道扇区数 sectors. 如果 sectors = 15 则说明是 1.2MB 的驱动器, 
+	! 如果 sectors = 18, 则说明是 1.44MB 软驱. 因为是可引导的驱动器, 所以肯定是 A 驱. 
 	seg cs
 	mov	bx, sectors
 	mov	ax, #0x0208					! /dev/ps0 - 1.2Mb
