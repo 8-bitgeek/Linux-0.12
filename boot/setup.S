@@ -682,7 +682,7 @@ gdt:
 
 	! 在 GDT 表中这里的偏移量是 0x10, 它是内核数据段选择符的值.
 	.word	0x07FF							! 8Mb - limit=2047 (2048*4096=8Mb)	! (2048*4096B=8MB)
-	.word	0x0000							! base address=0
+	.word	0x0000							! base address=0 				! 段基地址为 0x0
 	.word	0x9200							! data read/write			 	! 数据段为可读可写.
 	.word	0x00C0							! granularity=4096, 386			! 颗粒度为 4096, 32 位模式.
 

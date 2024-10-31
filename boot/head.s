@@ -17,11 +17,11 @@
  */
 .text
 .globl idt, gdt, pg_dir, tmp_floppy_area
-pg_dir: 		# 页目录将会存放在这里.
+pg_dir: 		# 页目录表将会存放在这里(内存 0x0 处).
 # 再次注意!!! 这里已经处于 32 位运行模式, 因此这里的 $0x10 并不是把地址 0x10 装入各个段寄存器, 它现在其实是全局段描述符表中的偏移值, 
-# 或者更准确地说是一个全局描述符表项的选择符. 这里 $0x10 的含义是请求特权级 0(位 0-1 = 0), 
-# 选择全局描述符表(位 2 = 0), 选择表中第 2 项(位 3-15 = 2), 指向表中的数据段描述符项.
-# 下面的代码含义是: 设置 ds, es, fs, gs 为 setup.s 中构造的数据段(全局段描述符表第 2 项)的选择符 = 0x10, 
+# 或者更准确地说是一个全局描述符表项的选择符. 这里 $0x10 的含义是请求特权级 RPL=0(位 0-1 = 0), 
+# 选择全局描述符表(位 2 = 0), 选择表中第 2 项(位 3-15 = 0x10 = 2), 指向表中的数据段描述符项.
+# 下面的代码含义是: 设置 ds, es, fs, gs 为 setup.s 中构造的内核数据段(全局段描述符表第 2 项)的选择符 = 0x10, 
 # 并将堆栈放置在 stack_start 指向的 user_stack 数据区, 然后使用本程序后面定义的新中断描述符表和全局段描述符表. 
 # 新全局段描述表中初始内容与 setup.s 中的基本一样, 仅段限长从 8MB 修改成了 16MB.
 # stack_start 定义在 kernel/sched.c 中. 它是指向 user_stack 数组末端的一个长指针. 
@@ -33,8 +33,8 @@ startup_32:
 	mov %ax, %es
 	mov %ax, %fs
 	mov %ax, %gs
-	# stack_start 定义在 kernel/sched.c 中. ss = 0x10.
-	lss stack_start, %esp				# 表示将 stack_start 地址中的内容加载到 ss:esp, 设置系统堆栈. 
+	# stack_start 定义在 kernel/sched.c 中. 其值为 user_stack 的末端地址. ss = 0x10.
+	lss stack_start, %esp				# 表示将 stack_start 地址中的内容(即 user_stack 的末端地址)加载到 ss:esp, 设置系统堆栈. 
 	call setup_idt						# 调用设置中断描述符表子程序.
 	call setup_gdt						# 调用设置全局描述符表子程序.
 	movl $0x10, %eax					# reload all the segment registers
