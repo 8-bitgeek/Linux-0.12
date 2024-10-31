@@ -38,7 +38,7 @@ startup_32:
 	call setup_idt						# 调用设置中断描述符表子程序.
 	call setup_gdt						# 调用设置全局描述符表子程序.
 	movl $0x10, %eax					# reload all the segment registers
-	mov %ax, %ds						# after changing gdtgdbgdb 调试 32 位 调试 32 位. CS was already
+	mov %ax, %ds						# after changing gdt. CS was already
 	mov %ax, %es						# reloaded in 'setup_gdt'
 	mov %ax, %fs						# 因为修改了 gdt, 所以需要重新装载所有的段寄存器. 
 	mov %ax, %gs 						# CS 代码段寄存器已经在 setup_gdt 中重新加载过了.

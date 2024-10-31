@@ -25,7 +25,7 @@
 
 INITSEG  = DEF_INITSEG			! we move boot here - out of the way	! 原来 bootsect 所处的段.
 SYSSEG   = DEF_SYSSEG			! system loaded at 0x10000 (65536).		! system 在 0x10000 处.
-SETUPSEG = DEF_SETUPSEG			! this is the current segment			! 本程序所在的段地址.
+SETUPSEG = DEF_SETUPSEG			! this is the current segment			! 本程序所在的段地址(0x9020).
 
 .globl begtext, begdata, begbss, endtext, enddata, endbss
 .text
@@ -43,12 +43,11 @@ start:
 ! ok, 整个磁盘过程都正常, 现在将光标位置保存以备今后使用.
 
 ! 下句将 ds 置成 INITSEG(0x9000). 这已经在 bootsect 程序中设置过, 但是现在是 setup 程序, Linus 觉得需要重新设置一下.
-
 	mov	ax, #INITSEG							! this is done in bootsect already, but...
 	mov	ds, ax
 
 	! Get memory size (extended mem, kB)
-	! 取扩展内存的大小值(KB).
+	! 取扩展内存的大小(KB).
 	! 利用 BIOS 中断 0x15 功能号 ah = 0x88 取系统所扩展内存大小并保存在内存 0x90002 处.
 	! 返回: ax = 从 0x100000(1M) 处开始的扩展内存大小(KB). 若出错则 CF 置位, ax = 出错码.
 	mov	ah, #0x88
@@ -56,12 +55,11 @@ start:
 	mov	[2], ax									! 将扩展内存数值存在 0x90002 处(1 个字).
 
 	! check for EGA/VGA and some config parameters
-	! 检查显示方式(EGA/VGA)并取参数.
+	! 检查显示方式(EGA/VGA)并获取配置参数.
 	! 调用 BIOS 中断 0x10, 附加功能选择方式信息. 功能号: ah = 0x12, bl = 0x10
-	! 返回: bh = 显示状态. 0x00 - 彩色模式, I/O 端口 = 0x3dx; 0x01 - 单色模式, I/O 端口 = 0x3bX.
+	! 返回: bh = 显示状态. 0x00 - 彩色模式(此时显示硬件 I/O 端口基地址为 0x3dX); 0x01 - 单色模式( 此时显示硬件 I/O 端口地址为 0x3bX)[注: 地址中的 X 值域为 0-f].
 	! bl = 安装的显示内存. 0x00 - 64KB; 0x01 - 128KB; 0x02 - 192KB; 0x03 = 256KB.
 	! cx = 显示卡特性参数
-
 	mov	ah, #0x12
 	mov	bl, #0x10
 	int	0x10
@@ -72,7 +70,7 @@ start:
 	mov	ax, #0x5019								! 在 ax 中预置屏幕默认行列值(ah = 80 列; al = 25 行).
 	cmp	bl, #0x10								! 若中断返回 bl 值为 0x10, 则表示不是 VGA 显示卡, 跳转
 	je novga
-	call chsvga								! 检测显示卡厂家和类型, 修改显示行列值
+	call chsvga									! 检测显示卡厂家和类型, 修改显示行列值
 novga:
 	mov	[14], ax								! 保存屏幕当前行列值(0x9000E, 0x9000F).
 
@@ -91,19 +89,17 @@ novga:
 	! 调用 BIOS 中断 0x10, 功能号 ah = 0x0f
 	! 返回: ah = 字符列数; al = 显示模式; bh = 当前显示页.
 	! 0x90004(1 字)存放当前页; 0x90006 存放显示模式; 0x90007 存放字符列数.
-
 	mov	ah, #0x0f
 	int	0x10
 	mov	[4], bx									! bh = display page
 	mov	[6], ax									! al = video mode, ah = window width
 
 	! Get hd0 data
-	! 取第一个硬盘的信息(复制硬盘参数表).
+	! 获取第一个硬盘的信息(复制硬盘参数表).
 	! 第 1 个硬盘参数表的首地址竟然是中断向量 0x41 的向量值! 而第 2 个硬盘参数表紧接在第 1 个表的后面, 
 	! 中断向量 0x46 的向量值也指向第 2 个硬盘的参数表首址. 表的长度是 16 个字节.
 	! 下面两段程序分别复制 ROM BIOS 中有关两个硬盘的参数表, 0x90080 处存放第 1 个硬盘的表, 
 	! 0x90090 处存放第 2 个硬盘的表.
-
 	! lds si,[4*0x41] 从内存指定位置处读取一个长指针值并放入 ds 和 si 寄存器中. ds 中放段地址, si 是段内偏移地址. 
 	! 这里是把内存地址 4 * 0x41 (= 0x104) 处保存的 4 个字节读出. 这 4 字节即是硬盘参数表所处位置的段和偏移值.
 	mov	ax, #0x0000
@@ -111,31 +107,29 @@ novga:
 	lds	si, [4 * 0x41]							! 取中断向量 0x41 的值, 即 hd0 参数表的地址 -- ds:si
 	mov	ax, #INITSEG
 	mov	es, ax
-	mov	di, #0x0080								! 传输目的地址: 0x9000:0x0080 -- es:di
-	mov	cx, #0x10								! 共传输 16 字节.
+	mov	di, #0x0080								! 复制目的地址: 0x9000:0x0080 -- es:di
+	mov	cx, #0x10								! 共复制 16 字节.
 	rep
 	movsb
 
 	! Get hd1 data
-
 	mov	ax, #0x0000
 	mov	ds, ax
 	lds	si, [4 * 0x46]							! 取中断向量 0x46 的值, 即 hd1 参数表的地址 -- ds:si
 	mov	ax, #INITSEG
 	mov	es, ax
-	mov	di, #0x0090								! 传输目的地址: 0x9000:0x0090 -- es:di
+	mov	di, #0x0090								! 复制目的地址: 0x9000:0x0090 -- es:di
 	mov	cx, #0x10
 	rep
 	movsb
 
 	! Check that there IS a hd1 :-)
-	! 检测系统是否有第 2 个硬盘. 如果没有则把第 2 个表清零.
+	! 检测系统是否有第 2 个硬盘. 如果没有则把第 2 个硬盘参数表清零.
 	! 利用 BIOS 中断调用 0x13 的取盘类型功能, 功能号 ah = 0x15;
 	! 输入: dl = 驱动器号(0x8X 是硬盘; 0x80 指第 1 个硬盘, 0x81 第 2 个硬盘)
-	! 输出: ah = 类型码; 00 没有这个盘, CF 置位; 01 是软驱, 没有 change - line 支持;
+	! 返回: ah = 类型码; 00 没有这个盘, CF 置位; 01 是软驱, 没有 change - line 支持;
 	! 02 是软驱(或其它可移动设备), 有 change-line 支持; 03 是硬盘.
-
-	mov	ax, #0x01500
+	mov	ax, #0x1500
 	mov	dl, #0x81
 	int	0x13
 	jc	no_disk1
@@ -149,15 +143,15 @@ no_disk1:
 	mov	ax, #0x00
 	rep
 	stosb
-is_disk1:
+is_disk1: 										! 该指令在内存地址 0x9028a 处
 	! now we want to move to protected mode ...
 	! 现在我们要进入保护模式中了...
-	cli											! no interrupts allowed!	! 从此开始不允许中断.
+	cli											! no interrupts allowed!  ! 从此开始不允许中断.
 	! first we move the system to it's rightful place
 	! 首先我们将 system 模块移到正确的位置.
 	! bootsect 引导程序会把 system 模块读入到内存 0x10000(64KB) 开始的位置. 由于当时假设 system 模块最大长度不会超过 0x80000(512KB), 
 	! 即其末端不会超过内存地址 0x90000, 所以 bootsect 会把自己移动到 0x90000 开始的地方, 并把 setup 加载到它的后面. 
-	! 下面这段程序的用途是把整个 system 模块移动到 0x00000 位置, 即把从 0x10000 到 0x8ffff 的内存数据块(512KB)整块地向内存低端移动了 0x10000(64KB) 的位置.
+	! 下面这段程序的用途是把整个 system 模块移动到 0x0 位置, 即把从 0x10000 到 0x8ffff 的内存数据块(512KB)整块地向内存低端移动了 0x10000(64KB) 的位置.
 	mov	ax, #0x0000
 	cld											! 'direction' = 0, movs moves forward
 do_move:
@@ -184,8 +178,8 @@ do_move:
 	! 其中包括段的最大长限制(16 位), 段的线性地址基址(32 位)/段的特权级,段是否在内存,读写许可权以及其他一些保护模式运行的标志.
 end_move:
 	mov	ax, #SETUPSEG							! right, forgot this at first. didn't work :-)
-	mov	ds, ax									! ds 指向本程序(setup)段.
-	lidt	idt_48								! load idt with 0,0						! 加载 IDT 寄存器.
+	mov	ds, ax									! ds 指向本程序(setup)段(0x9020).
+	lidt	idt_48								! load idt with 0,0 ! 加载 IDT 寄存器.
 	lgdt	gdt_48								! load gdt with whatever appropriate	! 加载 GDT 寄存器.
 
 	! that was painless, now we enable A20
@@ -262,16 +256,16 @@ end_move:
 	! 并且运行在特权级 0 中, 即当前特权级 CPL = 0. 此时段寄存器仍然指向与实地址模式中相同的线性地址处(在实地址模式下线性地址与物理内存地址相同). 
 	! 在设置该位后, 随后一条指令必须是一条段间跳转指令以用于刷新 CPU 当前指令队列. 因为 CPU 是在执行一条指令之前就已从内存读取该指令并对其进行解码. 
 	! 然而在进入保护模式以后那些属于实模式的承先取得的指令信息就变得不再有效. 而一条段间跳转指令就会刷新 CPU 的当前指令队列, 即丢弃这些无效信息. 
-	! 另外, 在 Intel 公司的手册上建议 80386 或以上 CPU 应该使用指令 "mov cr0, ax" 切换到保护模式. lmsw 指令仅用于兼容以前的 286CPU.
-
-	mov	ax, #0x0001								! protected mode (PE) bit			! 保护模式位(PE).
-	lmsw	ax									! This is it!						! 就这样加载机器状态字!
-	jmpi	0, 8								! jmp offset 0 of segment 8 (cs)	! 跳转至 cs 段偏移 0 处.
-	! 我们已经将 system 模块移动到 0x00000 开始的地方, 所以上句中的偏移地址是 0. 而段值 8 已经是保护模式下的段选择符了, 
-	! 用于选择描述符表和描述符表项以及所要求的特权级. 段选择符长度为 16 位(2 字节); 
+	! 另外, 在 Intel 公司的手册上建议 80386 或以上 CPU 应该使用指令 "mov cr0, ax" 切换到保护模式. lmsw 指令仅用于兼容以前的 286CPU.   以下代码起始于 0x9030c
+	mov	ax, #0x0001								! protected mode (PE) bit  ! 保护模式位(PE).
+	lmsw	ax									! This is it!  ! 就这样加载机器状态字!
+	jmpi	0, 8								! jmp offset 0 of segment 8 (cs)  ! 跳转至 cs 段偏移 0 处. 该指令在 0x90312
+	! 我们已经将 system 模块移动到 0x0 开始的地方, 所以上句中的偏移地址是 0. 
+	! 而段值 8 已经是保护模式下的段选择符了, 用于选择描述符表和描述符表项以及所要求的特权级. 
+	! 段选择符长度为 16 位(2 字节); 
 	! 位 0-1 表示请求的特权级 0--3, 但 Linux 操作系统只用到两级; 0 级(内核级)和 3 级(用户级); 
 	! 位 2 用于选择全局描述符表(0)还是局部描述符表(1); 位 3-15 是描述符表项的索引, 指出选择第几项描述符. 
-	! 所以段选择符 8(0b0000, 0000, 0000, 1000) 表示请求特权级 0, 使用全局描述符表 GD 中第 2 个段描述符项, 
+	! 所以段选择符 8(0b0000, 0000, 0000, 1000) 表示请求特权级 0, 使用全局描述符表 GDT 中第 2 个段描述符项, 
 	! 该项指出代码的基地址是 0, 因此这里的跳转指令就会去执行 system 中的代码.
 
 ! This routine checks that the keyboard command queue is empty
@@ -283,21 +277,20 @@ end_move:
 ! 只有当输入缓冲器为空时(键盘控制器状态寄存器位 1 = 0)才可以对其执行写命令.
 empty_8042:
 	.word	0x00eb, 0x00eb
-	in	al, #0x64								! 8042 status port			! 读 AT 键盘控制器状态寄存器
-	test	al, #2								! is input buffer full?		! 测试位 1, 输入缓冲器满?
+	in	al, #0x64								! 8042 status port	! 读 AT 键盘控制器状态寄存器
+	test	al, #2								! is input buffer full?	 ! 测试位 1, 输入缓冲器满?
 	jnz	empty_8042								! yes - loop
 	ret
 
 ! Routine trying to recognize type of SVGA-board present (if any)
 ! and if it recognize one gives the choices of resolution it offers.
 ! If one is found the resolution chosen is given by al,ah (rows,cols).
-
 chsvga:
 	cld
 	push	ds
 	push	cs
-	pop	ds
-	mov 	ax, #0xc000
+	pop	 	ds
+	mov ax, #0xc000
 	mov	es, ax
 	lea	si, msg1
 	call	prtstr
@@ -615,7 +608,6 @@ spcing:
 	ret
 
 ! Routine to print asciiz-string at DS:SI
-
 prtstr:
 	lodsb
 	and	al, al
@@ -627,7 +619,6 @@ fin:
 
 ! Routine to print a decimal value on screen, the value to be
 ! printed is put in al (i.e 0-255).
-
 dprnt:
 	push	ax
 	push	cx
@@ -703,7 +694,7 @@ idt_48:
 	.word	0, 0							! idt base=0L
 
 ! 这是加载全局描述符表寄存器 gdtr 的指令 lgdt 要求的 6 字节操作数. 前 2 字节是 gdt 的限长, 后 4 字节是 gdt 表的线性基地址. 
-! 这里全局表长度设置为 2KB(0x7ff 即可), 因为每 8 字节组成一个段描述符项, 所以表中共可有 256 面. 
+! 这里全局表长度设置为 2KB(0x7ff 即可), 因为每 8 字节组成一个段描述符项, 所以表中共可有 256 个描述符. 
 ! 4 字节的线性基地址为 0x0009 << 16 + 0x0200 + gdt, 即 0x90200 + gdt. (符号 gdt 是全局表在本段中的偏移地址)
 gdt_48:
 	.word	0x800							! gdt limit=2048, 256 GDT entries
