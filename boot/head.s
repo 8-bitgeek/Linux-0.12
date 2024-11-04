@@ -87,7 +87,7 @@ startup_32:
 	orl $2, %eax						# set MP
 	movl %eax, %cr0
 	call check_x87
-	jmp after_page_tables
+	jmp after_page_tables 				# 内存地址大约是 0x0055
 
 /*
  * We depend on ET to be correct. This checks for 287/387.
@@ -217,17 +217,17 @@ pg3:
 tmp_floppy_area:
 	.fill 1024,1,0				# 共保留 1024 项, 每项 1B, 填充数值 0.
 
- # 下面这几个入栈操作用于为跳转到 init/main.c 中的 main() 函数作准备工作. 
+ # 下面这几个入栈操作是为跳转到 init/main.c 中的 main() 函数作准备工作. 
  # pushl $L6 指令在栈中压入返回地址, 而 pushl $main 则压入了 main() 函数代码的地址. 
  # 当 head.s 最后执行 ret 指令时就会从栈中弹出 main() 函数的地址, 并把控制权转移到 init/main.c 程序中.
- # 前面 3 个入栈 0 值应该分别表示 envp, argv 指针和 argc 的值, 但 main() 没有用到.
-after_page_tables:
+ # 前面 3 个入栈 0 值应该分别表示 envp 指针, argv 指针和 argc 的值, 但 main() 没有用到.
+after_page_tables: 					# 当前代码内存地址大约是 (0x5400)
 	pushl $0						# These are the parameters to main :-)
 	pushl $0						# 这些是调用 main 程序的参数(指 init/main.c).
 	pushl $0						# 其中的 '$' 符号表示这是一个立即操作数.
 	pushl $L6						# return address for main, if it decides to.
-	pushl $main						# 'main' 是编译程序对 main 的内部表示方法.
-	jmp setup_paging				# 跳转至 setup_paging
+	pushl $main						# 'main' 函数的地址入栈. (当前指令内存地址大约是 0x540b)
+	jmp setup_paging				# 跳转至 setup_paging(内存地址大约是 0x544e).
 L6:
 	jmp L6							# main should never return here, but
 									# just in case, we know what happens.
@@ -304,19 +304,18 @@ ignore_int:
  # 若要使用主内存区的页面, 就需要使用 get_free_page() 等函数获取. 
  # 因为主内存区中内存页面是共享资源, 必须有进行统一管理以避免资源争用和竞争.
  #
- # 在内存物理地址 0x0 处开始存放 1 页页目录表和 4 页页表. 
- # 页目录表是系统所有进程共用的, 而这里的 4 页页表则属于内核专用, 它们一一映射线性地址起始 16MB 空间范围到物理内存上. 
+ # 在内存物理地址 0x0 处开始存放 1 个页目录表和 4 个页表. 
+ # 页目录表是系统所有进程共用的, 而这里的 4 个页表则属于内核专用, 它们一一映射线性地址起始 16MB 空间范围到物理内存上. 
  # 对于新的进程, 系统会在主内存区为其申请页面存放页表. 另外, 1 页内存长度是 4096 字节.
-
 .align 2								# 按 4 字节方式对齐内存地址边界.
-setup_paging:							# 首先对 5 页内存(1 页目录 + 4 页页表)清零.
+setup_paging:							# 首先对 5 页内存(1 页目录表 + 4 页表)清零. (该代码大约在 0x544e 处)
 	movl $1024 * 5, %ecx				/* 5 pages: 1 pg_dir + 4 page tables */
 	xorl %eax, %eax
 	xorl %edi, %edi						/* pg_dir is at 0x000 */	# 页目录从 0x0000 地址开始
 	cld;rep;stosl						# eax 内容存到 es:edi 所指内存位置处, 且 edi 增 4.
 
 	# 下面 4 句设置页目录表中的前 4 项, 因为我们(内核)共有 4 个页表所以只需设置 4 项.
-	# 页目录项的结构与页表项的结构一样, 4 个字节为 1 项, 低 12 位为页面属性, 高 20 位(左移 12 位)页帧地址.
+	# 页目录项的结构与页表项的结构一样, 4 个字节为 1 项, 低 12 位为页面属性, 高 20 位(左移 12 位)为页帧地址.
 	# 例如 "$pg0 + 7" 表示: 0x00001007, 是页目录表中的第 1 项.
 	# 则第 1 个页表所在的地址 = 0x00001007 & 0xfffff000 = 0x1000(页帧地址);
 	# 第 1 个页表的属性标志 = 0x00001007 & 0x00000fff = 0x007(页面属性), 表示该页存在, 用户可读写.
@@ -333,6 +332,7 @@ setup_paging:							# 首先对 5 页内存(1 页目录 + 4 页页表)清零.
 	movl $pg3 + 4092, %edi				# ds:edi 指向第 4 个页表的最后一项.
 	# 最后一项对应物理内存页的地址是 0xfff000, 加上属性标志 7, 即为 0xfff007.
 	movl $0xfff007, %eax				/* 16Mb - 4096 + 7 (r/w user, p) */
+	# 由于对于内核来说, 线性地址与物理地址是一一映射的, 所以线性地址就是物理地址, 当访问线性地址 0xfff000 时的分页转换如下, 
 	# 0xfff000 -> 0b-11-1111111111-000000000000 ==> 11 是页目录索引值, 其后是页表项索引值, 再其后是属性值.
 	std									# 方向位置位, edi 值递减(4 字节).
 1:	stosl								/* fill pages backwards - more efficient :-) */
@@ -346,11 +346,11 @@ setup_paging:							# 首先对 5 页内存(1 页目录 + 4 页页表)清零.
 	movl %cr0, %eax 					
 	orl $0x80000000, %eax				# 添上 PG 标志.
 	movl %eax, %cr0						/* set paging (PG) bit */ 		# 开启分页机制. 
-	ret									/* this also flushes prefetch-queue */
+	ret									/* this also flushes prefetch-queue (当前指令内存地址大约是 0x54a6) */ 
+	# 在改变分页处理标志后要求使用转移指令刷新预取指令队列, 这里用的是返回指令 ret.
+	# 该返回指令的另一个作用是将 pushl $main 压入堆栈中的 main 程序的地址弹出, 
+	# 并跳转到 /init/main.c 程序去运行. 本程序到此就真正结束了.
 
-# 在改变分页处理标志后要求使用转移指令刷新预取指令队列, 这里用的是返回指令 ret.
-# 该返回指令的另一个作用是将 pushl $main 压入堆栈中的 main 程序的地址弹出, 
-# 并跳转到 /init/main.c 程序去运行. 本程序到此就真正结束了.
 
 .align 2								# 按 4 字节方式对齐内存地址边界.
 .word 0									# 这里先空出 2 字节, 这样. long _idt 的长字是 4 字节对齐的.
