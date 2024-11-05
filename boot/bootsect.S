@@ -262,10 +262,10 @@ ok_load_setup:
 ! 这个值需要根据你自己根文件系统所在硬盘和分区进行修改. 
 ! 例如, 如果你的根文件系统在第 1 硬盘的第 1 个分区上, 那么该值应该为 0x0301, 即(0x01, 0x03).
 ! 如果根文件系统是在第 2 个 Bochs 软盘上, 那么该值应该为 0x021D, 即(0x1D, 0x02).
-	seg cs
-	mov	ax, root_dev				! 取 508, 509 字节处的根设备号并判断是否已被定义.
-	or	ax, ax
-	jne	root_defined 				! 如果 root_dev 不是 0, 则表示已经指定了
+	seg cs 							
+	mov	ax, root_dev				! 取 508, 509 字节处的根设备号并判断是否已被定义. 该指令地址为 0x900a7
+	or	ax, ax 						! root_dev 的内存地址大约是 0x901fc.
+	jne	root_defined 				! 如果 root_dev 不是 0, 则表示已经指定了.
 	! 取之前保存的每磁道扇区数 sectors. 如果 sectors = 15 则说明是 1.2MB 的驱动器, 
 	! 如果 sectors = 18, 则说明是 1.44MB 软驱. 因为是可引导的驱动器, 所以肯定是 A 驱. 
 	seg cs
@@ -420,19 +420,14 @@ bad_rt:
  *	print_all is for debugging purposes.
  *	It will print out all of the registers.  The assumption is that this is
  *	called from a routine, with a stack frame like
+ *  子程序 print_all 用于调试目的. 它会显示所有寄存器的内容. 前提条件是需要从一个子程序中调用, 
+ *  并且栈帧结构如下所示: 
  *	dx
  *	cx
  *	bx
  *	ax
  *	error
  *	ret <- sp
- *
-*/
-
-/*
- *
- *	子程序 print_all 用于调试目的. 它会显示所有寄存器的内容. 前提条件是需要从一个子程序中调用, 并且栈帧结构如下所示
- *
  */
 ! 若标志寄存器的 CF = 0, 则不显示寄存器名称.
 print_all:

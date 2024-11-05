@@ -200,7 +200,7 @@ static char * envp[] = { "HOME=/usr/root", NULL, NULL };
 
 struct drive_info { char dummy[32]; } drive_info;	// 用于存放硬盘参数表信息.
 
-// 分页机制已经在 head.s 的 setup_paging 中开启. 
+// 分页机制已经在 head.s 的 setup_paging 中开启.  (main 函数的起始地址大约是 0x67ff)
 // 内核初始化主程序. 初始化结束后将以任务 0(idle 任务即空闲任务)的身份运行.
 // 英文注释含义是 "这里确实是 void, 没错. 在 startup 程序(head.s)中就是这样假设的". 参见 head.h 程序代码.
 int main(void)										/* This really IS void, no error here. */
