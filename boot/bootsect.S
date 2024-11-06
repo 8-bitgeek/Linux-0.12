@@ -264,7 +264,7 @@ ok_load_setup:
 ! 如果根文件系统是在第 2 个 Bochs 软盘上, 那么该值应该为 0x021D, 即(0x1D, 0x02).
 	seg cs 							
 	mov	ax, root_dev				! 取 508, 509 字节处的根设备号并判断是否已被定义. 该指令地址为 0x900a7
-	or	ax, ax 						! root_dev 的内存地址大约是 0x901fc.
+	or	ax, ax 						! root_dev 的内存地址: 0x901fc.
 	jne	root_defined 				! 如果 root_dev 不是 0, 则表示已经指定了.
 	! 取之前保存的每磁道扇区数 sectors. 如果 sectors = 15 则说明是 1.2MB 的驱动器, 
 	! 如果 sectors = 18, 则说明是 1.44MB 软驱. 因为是可引导的驱动器, 所以肯定是 A 驱. 
