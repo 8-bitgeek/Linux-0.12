@@ -70,10 +70,10 @@ __asm__("pushl %%edi; pushl %%esi; cld; rep; movsl; popl %%esi; popl %%edi" \
 //#define copy_page(from, to) \
 		__asm__("cld ; rep ; movsl"::"S" (from),"D" (to),"c" (1024):)
 
-// 内存映射字节图(1 字节代表 1 页内存). 每个页面对应的字节用于标志页面当前被引用(占用)次数. 
-// 它最大可以映射 15MB 的内存空间. 
+// 内存映射字节图(1 字节对应 1 页物理内存). 每项的值表示对应的页面被引用(占用)次数. 
+// 当值为 100 时表示已被完全占用, 不能再被分配.
 // 在初始化函数 mem_init() 中, 对于不能用作主内存区页面的位置均被设置成 USED(100).
-unsigned char mem_map[PAGING_PAGES] = {0, };
+unsigned char mem_map[PAGING_PAGES] = {0, }; 		// 只包含 1MB 以上的内存映射: 即 [0] 映射的内存地址是 1MB--1MB+4096Byte.
 
 /*
  * Free a page of memory at physical address 'addr'. 
@@ -823,17 +823,16 @@ void mem_init(long start_mem, long end_mem) 				// start_mem = 4MB, end_mem = �
 	int i;
 
 	// 首先将 1MB 到 16MB 范围内所有内存页面对应的内存映射字节数组项置为已占用状态, 即各项字节值全部设置成 USED(100). 
-	// PAGING_PAGES 被定义为(PAGING_MEMORY >> 12), 即 1MB 以上所有物理内存分页后的内存页面数(15MB/4KB = 3840).
+	// PAGING_PAGES 被定义为(PAGING_MEMORY >> 12), 即 1MB 以上所有物理内存(PAGING_MEMORY)分页后的内存页面数(15MB/4KB = 3840).
 	HIGH_MEMORY = end_mem;									// 设置内存最高端(16MB).
 	for (i = 0; i < PAGING_PAGES; i++)
 		mem_map[i] = USED;
-	// 然后计算主内存区起始内存 start_mem 处页面对应内存映射字节数组中项号 i 和主内存区页面数. 
-	// 此时 mem_map[] 数组的第 i 项正对应主内存区中第 i 个页面.
-	// 最后将主内存区中页面对应的数组项清零(表示空闲). 
+	// 然后计算主内存区起始内存 start_mem 处页面对应 mem_map 数组中的项号 i 和主内存区占用的页面数. 
+	// 最后将主内存区的页面对应的数组项清零(表示空闲). 
 	// 对于具有 16MB 物理内存的系统, mem_map[] 中对应 4MB~16MB 主内存区的项被清零.
 	i = MAP_NR(start_mem);									// 主内存区(4-16MB)起始位置处页面号(i = 768).
 	end_mem -= start_mem; 									// 主内存区的大小.
-	// 得到主内存区的页面的数量.
+	// 得到主内存区的页面数量.
 	end_mem >>= 12;											// 主内存区中的总页面数(3072).
 	// 将主内存区所有页面使用数置零.
 	while (end_mem-- > 0)
