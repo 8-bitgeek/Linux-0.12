@@ -79,7 +79,7 @@ extern int system_call(void);				// 系统调用中断处理程序(kernel/sys_ca
 // 所以从堆栈段寄存器 ss 可以获得其数据段选择符.
 union task_union {
 	struct task_struct task;
-	char stack[PAGE_SIZE]; 					// 任务内核态堆栈.
+	char stack[PAGE_SIZE]; 					// 任务内核态堆栈, 占用一页内存 4KB.
 };
 
 // 设置初始任务的数据. 初始数据在 ../include/linux/sched.h 中.
@@ -109,7 +109,7 @@ int jiffies_offset = 0;								/* # clock ticks to add to get "true
 struct task_struct *current = &(init_task.task);	// 当前任务指针(初始化时指向任务 0).
 struct task_struct *last_task_used_math = NULL;		// 使用过协处理器任务的指针.
 
-// 定义任务指针数组. 第 1 项被初始化指向初始任务(任务 0)的任务数据结构.
+// 定义任务指针数组. 第 0 项为指向任务 0 的任务数据结构.
 struct task_struct * task[NR_TASKS] = {&(init_task.task), };
 
 // 定义用户堆栈, 共 1K 项, 容量为 4K 字节. 
@@ -633,14 +633,14 @@ void sched_init(void)
 	// 这里加入下面这个判断语句并无必要, 纯粹是为了提醒自己以及其他修改内核代码的人.
 	if (sizeof(struct sigaction) != 16)							// sigaction 是存放有关信号状态的结构.
 		panic("Struct sigaction MUST be 16 bytes");
-	// 在全局描述符表中设置初始任务(任务 0)的任务状态段描述符(TSS)和局部数据表描述符(LDT).
+	// 在全局描述符表中设置任务 0 的任务状态段描述符(TSS)和局部数据表描述符(LDT).
 	// FIRST_TSS_ENTRY 和 FIRST_LDT_ENTRY 的值分别是 4 和 5, 定义在 include/linux/sched.h 中. 
 	// gdt 是一个描述符表数组(include/linux/head.h), 实际上对应程序 head.s 中的全局描述符表基址(gdt). 
 	// 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址.
 	// 参见 include/asm/system.h
-	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 在 GDT 中设置任务 0 的任务状态段(TSS)地址.
+	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 在 GDT 中设置任务 0 的任务状态段(TSS)描述符.
 	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 在 GDT 中设置任务 0 的局部描述符表(LDT)地址.
-	// 清任务数组和描述符表项(注意 i = 1 开始, 所以初始任务的描述符还在). 描述符项结构定义在文件 include/linux/head.h 中.
+	// 清空任务数组和描述符表项(注意 i = 1 开始, 所以任务 0 的描述符还在). 描述符项结构定义在文件 include/linux/head.h 中.
 	// 此处 p 指向 GDT 中的描述符 6(即 task1 的 tss, 从 0 开始).
 	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt+6 -> 指向任务 1 的描述符: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 
 									// 3 - 系统段 syscall, 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
@@ -655,9 +655,9 @@ void sched_init(void)
 	/* Clear NT, so that we won't have troubles with that later on */
 	/* 清除标志寄存器中的位 NT, 这样以后就不会有麻烦. */
 	// EFLAGS 中的 NT 标志位用于控制任务的嵌套调用. 
-	// ** NOTE: 当 NT 位置位时, 那么当前中断任务执行 IRET 指令时就会引起任务切换. **
+	// ** NOTE: 当 NT 置位时, 那么当前中断任务执行 IRET 指令时就会引起任务切换. **
 	// NT 指出 TSS 中的 back_link 字段是否有效. NT = 0 时无效.
-	__asm__("pushfl ; andl $0xffffbfff,(%esp) ; popfl");
+	__asm__("pushfl; andl $0xffffbfff, (%esp); popfl");
 	// 将任务 0 的 TSS 段选择符加载到任务寄存器 tr. 
 	// 将局部描述符表段选择符加载到局部描述符表寄存器 ldtr 中. 
 	// 注意!! 是将 GDT 中相应 LDT 描述符的选择符加载到 ldtr. 
@@ -678,5 +678,5 @@ void sched_init(void)
     // 用户代码调用中断时(int 0x80)时, 会通过这个选择符来定位到中断/异常处理程序(用户态的代码可以使用这个门来实现对系统代码的调用, 即实现系统调用).
 	// 同时, 由于该门描述符中的段选择符的 RPL = 3, 所以用户态调用 system_call 中断时, 会发生特权级变化, 导致堆栈切换.
     // 重点看 Chapter 4.5.33; system_call 在 kernel/sys_call.s 中.
-	set_system_gate(0x80, &system_call); 		// (系统陷阱门 DPL = 3, 即用户态的代码可以调用陷阱门来实现对系统代码的调用) 
+	set_system_gate(0x80, &system_call); 		// (系统调用(陷阱)门 DPL = 3, 即用户态的代码可以调用陷阱门来实现对系统代码的调用) 
 }

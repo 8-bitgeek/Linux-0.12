@@ -86,9 +86,9 @@ struct i387_struct {
 	long	st_space[20];		/* 8*10 bytes for each FP-reg = 80 bytes */
 };                              /* 8 个 10 字节的协处理器累加器。 */
 
-// 任务状态段数据结构.
-// 分为静态字段和动态字段, 静态字段的值是在任务被创建时设置的, 通过不会改变它们. 
-// 动态字段在当任务切换而被挂起时，处理器会动态更新动态字段的内容.
+// 任务状态段(TSS)数据结构.
+// 分为静态字段和动态字段, 静态字段的值是在任务被创建时设置的, 通常不会被改变. 
+// 动态字段在任务切换而被挂起时，由处理器会动态更新动态字段的内容.
 struct tss_struct {
 	// 在任务切换时更新. 该字段允许任务使用 iret 指令切换到前一个任务. 
 	long	back_link;			/* 16 high bits zero */ // 前一任务链接(TSS 选择符). 				   [动态字段]
@@ -299,9 +299,9 @@ struct task_struct {
 					{        0,                   PAGE_SIZE + (long) &init_task, \
 					/*  ss0,  esp1, ss1,  esp2,  ss2,    cr3(页目录基地址寄存器, pdbr) TASK-0 使用内核的页目录表 */ \
 						0x10,  0,    0,     0,     0,       (long) &pg_dir, \
-					/* eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi */ \
+					/*  eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi */ \
 		 				0,     0,    0,   0,   0,   0,   0,   0,   0,   0, \
-					/*   ex,   cs,   ss,   ds,   fs,   gs */ \
+					/*  ex,   cs,   ss,   ds,   fs,   gs  0x17 ---> 0b 00010(2 - data) 1(LDT) 11(RPL=3) */ \
 		 				0x17, 0x17, 0x17, 0x17, 0x17, 0x17, \
 					/* LDT 段选择符,    IO 位图地址 */ \
 		 				_LDT(0),      0x80000000, \
