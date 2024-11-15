@@ -546,7 +546,7 @@ struct buffer_head * breada(int dev, int first, ...)
 void buffer_init(long buffer_end) 					// buffer_end = 4MB.
 {
 	// 高速缓冲区开始位置, 即系统内核代码结束地址, 这个地址由编译器生成(&end).
-	struct buffer_head * h = start_buffer;
+	struct buffer_head * h = start_buffer;			// 可以理解为缓冲块头的数组地址.
 	void * b; 										// 指向高速缓冲区末端.
 	int i;
 
@@ -557,13 +557,13 @@ void buffer_init(long buffer_end) 					// buffer_end = 4MB.
 		b = (void *) (640 * 1024);
 	else
 		b = (void *) buffer_end;
-	// 这段代码用于初始化缓冲区, 建立空闲缓冲块循环链表, 并获取系统中缓冲块数目. 
+	// 这段代码用于初始化缓冲区, 建立缓冲块头数组及空闲缓冲块循环链表, 并获取系统中缓冲块数目. 
 	// 操作的过程是从缓冲区末端开始划分 1KB 大小的缓冲块, 
-	// 与此同时在缓冲区起始端建立描述该缓冲块的结构 buffer_head, 并将这些 buffer_head 组成双向链表.
+	// 与此同时在缓冲区起始端建立描述该缓冲块的结构(数组) buffer_head, 并将这些 buffer_head 组成双向链表(空闲块).
 	// h 是指向缓冲头结构的指针, 而 h+1 是指向内存地址连续的下一个缓冲头地址, 也可以说是指向 h 缓冲头的末端 + 1byte. 
 	// 为了保证有足够长度的内存来存储一个缓冲头结构, 需要 b 所指向的内存块地址 >= h 缓冲头的末端, 即要求 >= h+1.
 	// 注意: 缓冲头的第一项指向缓冲区的末端. 参见 P635 图 12-16. 缓冲块头与数据块一一对应, 对应关系不会改变.
-	while ((b -= BLOCK_SIZE) >= ((void *) (h + 1))) { 	// BLOCK_SIZE = 1024B
+	while ((b -= BLOCK_SIZE) >= ((void *) (h + 1))) { 	// BLOCK_SIZE = 1024Byte
 		h->b_dev = 0;								// 使用该缓冲块的设备号.
 		h->b_dirt = 0;								// 脏标志, 即缓冲块修改标志.
 		h->b_count = 0;								// 缓冲块引用计数.
@@ -573,18 +573,19 @@ void buffer_init(long buffer_end) 					// buffer_end = 4MB.
 		h->b_next = NULL;							// 指向具有相同 hash 值的下一个缓冲头.
 		h->b_prev = NULL;							// 指向具有相同 hash 值的前一个缓冲头.
 		h->b_data = (char *) b;						// 指向对应缓冲数据块(1024 字节).
-		h->b_prev_free = h - 1;						// 指向链表中前一项.
-		h->b_next_free = h + 1;						// 指向链表中下一项.
+		h->b_prev_free = h - 1;						// 指向空闲链表中前一项.
+		h->b_next_free = h + 1;						// 指向空闲链表中下一项.
 		h++;										// h 指向下一个缓冲头位置.
 		NR_BUFFERS++;								// 缓冲区块数累加.
 		if (b == (void *) 0x100000)					// 若 b 递减到等于 1MB, 则跳过 0xA0000 - 0x100000 这块内存区域(共 384KB)
 			b = (void *) 0xA0000;					// 让 b 指向地址 0xA0000(640KB) 处.
 	}
 	h--;											// 让 h 指向最后一个有效缓冲块头.
+	// 建立空闲缓冲块链表, 用于快速获取空闲缓冲块. 由于刚开始都是空闲的, 所以两个链表实际是相同的.
 	free_list = start_buffer;						// 让空闲缓冲块链表头指针指向第一个缓冲块.
 	free_list->b_prev_free = h;     				// 链表头的 b_prev_free 指向前一项(即最后一项).
 	h->b_next_free = free_list;     				// 缓冲块头的最后一项的下一项指针指向第一项, 形成一个闭环链表.
 	// 最后初始化 hash 表, 表中所有指针置为 NULL.
-	for (i = 0; i < NR_HASH; i++)
+	for (i = 0; i < NR_HASH; i++) 					// NR_HASH = 307.
 		hash_table[i] = NULL;
 }
