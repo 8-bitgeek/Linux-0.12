@@ -266,7 +266,7 @@ int main(void)										/* This really IS void, no error here. */
 	// 高速缓冲区用于缓冲读/写块设备(比如硬盘)中的数据.
 	buffer_init(buffer_memory_end);					// 高速缓冲区管理初始化, 建立内存缓冲区链表等. 一页大小为 1KB. (fs/buffer.c)
 	hd_init();										// 硬盘初始化. (blk_drv/hd.c)
-	floppy_init();									// 软驱初始化. (blk_drv/floppy.c)
+	floppy_init();									// 软盘初始化. (blk_drv/floppy.c)
 	sti();											// 所有初始化工作都完了, 于是开启中断(注意, 只能屏蔽硬件中断而不能屏蔽软件中断).
 	// 打印内核初始化完毕
 	// Log(LOG_INFO_TYPE, "<<<<< Linux0.12 Kernel Init Finished, Ready Start Process0 >>>>>\n");
