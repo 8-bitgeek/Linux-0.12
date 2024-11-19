@@ -4,7 +4,7 @@
 
 ## 1. miniCRT
 
-A minimal C runtime library. you can compile you simple program with it. it's implemented by invoking Systemcall routine.
+A minimal C runtime library. you can compile you simple program with it. it's implemented by invoking Systemcall routine directly.
 
 
 ## 2. elf
