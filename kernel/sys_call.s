@@ -118,7 +118,7 @@ reschedule:
 # 中断调用服务列表在 sys_call_table 中(include/linux/sys.h).
 # system_call 陷阱门在 GDT 中的特权级(DPL)是 3, 即所有特权级的代码都可以调用.
 .align 4
-system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
+system_call: 						# 此时的堆栈为当前任务 TSS 指定的内核态堆栈(ss0 = 0x10)
 	push %ds						# 保存原(调用方)段寄存器值.
 	push %es
 	push %fs
@@ -131,7 +131,7 @@ system_call: 						# 此时的堆栈为内核堆栈(ss = 0x10)
 	pushl %edx
 	pushl %ecx						# push %ebx, %ecx, %edx as parameters
 	pushl %ebx						# to the system call
-	# 在保存过段寄存器之后, 让 ds, es 指向内核数据段, 而 fs 指向当前局部数据段, 
+	# 在保存过段寄存器之后, 让 ds, es 指向内核数据段, 而 fs 指向当前任务的局部数据段, 
 	# 即指向执行本次系统调用的用户程序的数据段. 
 	# 注意, 在 Linux0.12 中内核给任务分配的代码和数据内存段是重叠的, 它们的段基址和段限长相同.
 	movl $0x10, %edx				# set up ds, es to kernel space.  	// 当前的 CPL = 0, 选择符 0x10 的 RPL = 0.
