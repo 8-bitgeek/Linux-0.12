@@ -103,7 +103,7 @@ static inline long fork_for_process0() {
 	long __res;
 	__asm__ volatile ( 				// 此时 cs = 0x0F: CPL = 3, system_call 的门描述符的 DPL = 3, 可以调用, 
 									// 但是 system_call 门描述符中的段选择符的 RPL = 0, 因此调用 0x80 中断时会发生特权级变化(3 -> 0).
-		"int $0x80"  				/* 调用系统中断 0x80: system_call(kernel/sys_call.s) */
+		"int $0x80"  				/* 调用系统中断 0x80: system_call(kernel/sys_call.s), 该指令地址 0x6584 */
 		: "=a" (__res)  			/* 返回值 -> eax(__res) */ // 返回值(新进程的 pid)放入 __res 中.
 		: "0" (2));  				/* 输入为系统中断调用号 __NR_name(2) */ // 输入寄存器为 eax(%0) = 2, 
 									/* 即调用 sys_call_table[2](include/linux/sys.h) 中的 sys_fork (kernel/sys_call.s) */

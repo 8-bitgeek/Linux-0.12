@@ -118,7 +118,8 @@ reschedule:
 # 中断调用服务列表在 sys_call_table 中(include/linux/sys.h).
 # system_call 陷阱门在 GDT 中的特权级(DPL)是 3, 即所有特权级的代码都可以调用.
 .align 4
-system_call: 						# 此时的堆栈为当前任务 TSS 指定的内核态堆栈(ss0 = 0x10)
+# 因为用户态代码在调用 int 0x80 时会发生堆栈切换, 所以此时的堆栈为当前任务 TSS 指定的内核态堆栈(ss0 = 0x10)
+system_call:
 	push %ds						# 保存原(调用方)段寄存器值.
 	push %es
 	push %fs

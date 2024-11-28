@@ -297,7 +297,7 @@ struct task_struct {
 	/*tss*/ \
 					/* 前一任务链接的 tss 段选择符,             esp0, */ \
 					{        0,                   PAGE_SIZE + (long) &init_task, \
-					/*  ss0,  esp1, ss1,  esp2,  ss2,    cr3(页目录基地址寄存器, pdbr) TASK-0 使用内核的页目录表 */ \
+					/*  ss0,  esp1, ss1,  esp2,  ss2,    cr3(页目录基地址寄存器, pdbr) TASK-0 使用内核的页目录表, 内存地址为 0x0 */ \
 						0x10,  0,    0,     0,     0,       (long) &pg_dir, \
 					/*  eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi */ \
 		 				0,     0,    0,   0,   0,   0,   0,   0,   0,   0, \
