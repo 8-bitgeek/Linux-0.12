@@ -139,7 +139,7 @@ system_call:
 	mov %dx, %ds 					# ds/es 指向内核数据段.
 	mov %dx, %es
 	movl $0x17, %edx				# fs points to local data space.
-	mov %dx, %fs 					# fs 指向局部数据段.
+	mov %dx, %fs 					# fs 指向任务局部数据段.
 	cmpl NR_syscalls, %eax 			# 如果 eax 中的值大于 NR_syscalls 则表示超出调用号范围(>= 87).
 	jae bad_sys_call 				# 调用号如果超出范围(>= 87)的话就跳转.
 
@@ -159,7 +159,7 @@ sys_call:
 	# call *sys_call_table(, %eax, 4)	# 间接调用指定功能 C 函数.
 	pushl %eax							# 把系统调用返回值入栈.
 
-# 下面查看当前任务的运行状态. 如果不在就绪状态(state 不等于 0)就去执行调试程序. 
+# 下面查看当前任务的运行状态. 如果不在就绪状态(state 不等于 0)就去执行调度程序. 
 # 如果该任务在就绪状态, 但是其时间片已经用完(counter = 0), 则也去执行调度程序.
 # 例如当后台进程组中的进程执行控制终端读写操作时, 那么默认条件下该后台进程组有进程会收到 SIGTTIN 或 SIGTTOU 信号,
 # 导致进程组中所有进程处于停止状态. 而当前进程则会立刻返回.
@@ -170,12 +170,12 @@ sys_call:
 	cmpl $0, counter(%eax)			# counter, 如果当前进程剩余的执行时间为 0 则重新进行调度进程执行.
 	je reschedule
 
-# 以下这段代码执行从系统调用 C 函数返回后, 对信号进行识别处理. 
+# 以下这段代码执行从系统调用功能函数返回后, 对信号进行识别处理. 
 # 其它中断服务程序退出时也将跳转到这里进行处理后才退出中断过程, 例如后面的处理器出错中断 int 16.
-# 首先判断当前任务是不是初始任务 TASK-0, 如果是则不必对其进行信号量方面的处理, 直接返回.
+# 首先判断当前任务是不是初始任务 TASK-0, 如果是则不必对其进行信号方面的处理, 直接返回.
 # task 对应 C 程序中的 task[] 数组, 直接引用 task 相当于引用 task[0].
 ret_from_sys_call:
-	movl current, %eax
+	movl current, %eax 				# current 定义在 (kernel/sched.c)
 	cmpl task, %eax					# task[0] cannot have signals
 	je 3f							# 向前(forward)跳转到标号 3 处退出中断处理.
 	# 通过对原调用程序代码段选择符的检查来判断调用程序是不是用户任务. 如果不是则直接退出中断.
@@ -188,7 +188,7 @@ ret_from_sys_call:
 	cmpw $0x17, OLDSS(%esp)			# was stack segment = 0x17?
 	jne 3f 							# 如果原堆栈不是用户态堆栈段, 则直接准备返回.
 
-	# 如果当前任务进程是用户进程(且不是 TASK-0), 则用下面这段代码处理当前任务中的信号. 
+	# 如果当前进程是用户进程(且不是 TASK-0), 则用下面这段代码处理当前任务中的信号. 
 	# 首先取当前任务结构中的信号位图(32 位, 每位代表 1 种信号), 然后用任务结构中的信号阻塞(屏蔽)码, 
 	# 阻塞不允许的信号位, 取得数值最小的信号值, 再把原信号位图中该信号对应的位复位(置 0), 最后将该信号值作为参数之一调用 do_signal().
 	# do_signal()在(kernel/signal.c)中, 其参数包括 13 个入栈信息. 在 do_signal() 或信号处理函数返回之后, 
@@ -207,7 +207,7 @@ ret_from_sys_call:
 	popl %ecx						# 弹出入栈的信号值.
 	testl %eax, %eax				# 测试返回值, 若不为 0 则跳转到前面标号 2 处.
 	jne 2b							# see if we need to switch tasks, or do more signals.
-3:	popl %eax						# eax 中含有第 159 行(`pushl %eax`)入栈的系统调用返回值.
+3:	popl %eax						# eax 中含有 sys_call(`pushl %eax`)入栈的系统调用返回值.
 	popl %ebx 						# 这三个寄存器是进行系统调用时的参数. (第一个参数)
 	popl %ecx						# 第二个.
 	popl %edx 						# 第三个.

@@ -319,7 +319,7 @@ struct task_struct {
 extern struct task_struct *task[NR_TASKS];								// 任务指针数组.
 extern struct task_struct *last_task_used_math;							// 上一个使用过协处理器的进程
 extern struct task_struct *current;										// 当前运行进程结构指针变量.
-//extern struct task_struct *test_task;
+// extern struct task_struct *test_task;
 extern unsigned long volatile jiffies;									// 从开机开始算起的滴答数(10ms/滴答).
 extern unsigned long startup_time;										// 开机时间. 从 1970:0:0:0:0 开始计时的秒数.
 extern int jiffies_offset;												// 用于累计需要调整的时间滴答数.
