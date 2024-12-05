@@ -333,12 +333,12 @@ sys_execve:
 .align 4
 sys_fork:
 	call find_empty_process			# 为新进程取得进程号 last_pid(kernel/fork.c)
-	testl %eax, %eax				# 在 eax 中返回进程号(last_pid). 若返回负数则退出.
+	testl %eax, %eax				# 在 eax 中返回任务项号(非 pid). 若返回负数(task[] 中没有空闲任务项)则退出.
 	js 1f 							# 如果为负数, 则直接返回.
-	push %gs
-	pushl %esi
-	pushl %edi
-	pushl %ebp
+	push %gs 						# 第五个参数
+	pushl %esi						# 第四个参数
+	pushl %edi						# 第三个参数
+	pushl %ebp 						# 第二个参数
 	pushl %eax 						# eax 中是调用 copy_process 时的第一个参数 nr.
 	call copy_process				# 调用 C 函数 copy_process()(kernel/fork.c)
 	addl $20, %esp					# 丢弃这里所有压栈内容.
