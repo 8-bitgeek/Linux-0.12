@@ -75,7 +75,7 @@ int copy_mem(int nr, struct task_struct * p)
 	// get_limit() 和 get_base() 定义在 include/linux/sched.h.
 	code_limit = get_limit(0x0f); 							// 0x0f = 0b-00001-1-11 (LDT 表项 1[从 0 开始] 局部代码段, 特权级 3)
 	data_limit = get_limit(0x17); 							// 父进程(当前进程)的数据段长度: 0x17 = 0b-00010-1-11 (LDT 表项 2, 局部数据段, 特权级 3)
-	old_code_base = get_base(current->ldt[1]); 				// 这里的 ldt 是 task_struct 结构中的 ldt 字段, 即: 该任务的局部描述符表, 而不是 task_struct->tss.ldt(LDT 段选择符).
+	old_code_base = get_base(current->ldt[1]); 				// 这里的 ldt 是 task_struct 结构中的 ldt 字段, 即当前任务的局部描述符表
 	old_data_base = get_base(current->ldt[2]); 				// 获取当前进程(父进程)的代码段和数据段基地址.
 	if (old_data_base != old_code_base)
 		panic("We don't support separate I&D");
@@ -149,14 +149,11 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	p->signal = 0;							// 信号位图.
 	p->alarm = 0;							// 报警定时值(嘀嗒数).
 	p->leader = 0;							/* process leadership doesn't inherit */	/* 进程的领导权是不能继承的 */
-	p->utime = p->stime = 0;				// 用户态总运行时间和核心态总运行时间.
-	p->cutime = p->cstime = 0;				// 子进程用户态和核心态运行时间.
+	p->utime = p->stime = 0;				// 用户态总运行时间和内核态总运行时间.
+	p->cutime = p->cstime = 0;				// 子进程用户态和内核态运行时间.
 	p->start_time = jiffies;				// 进程开始运行时的时间(当前开机时间的滴答数 [每 10ms/滴答]).
 	// 再设置任务状态段 TSS 中的数据. 
 	// 系统给任务结构 p 分配了 1 页新内存, 让 ss0:esp0(程序的内核态堆栈)指向该页末端(PAGE_SIZE + (long) p). 
-	// 另外, 每个任务在 GDT 表中都有两个段描述符: 任务的 TSS 段描述符和任务的 LDT 段描述符.
-	// 我们把该任务在 GDT 中 LDT 段选择符(用于选择该任务在 GDT 中的 LDT 段描述符)保存到该任务的 tss 段中.
-	// 当执行切换任务时, CPU 会自动从 TSS 中把该 LDT 段选择符加载到 ldtr 寄存器中.
 	p->tss.back_link = 0;
 	p->tss.esp0 = (long) p + PAGE_SIZE;		// 任务内核态栈指针(指向该任务结构体所在物理内存页面的末端处). p -->|task_struct| ------- |<-- ss0:esp0
 	p->tss.ss0 = 0x10;              		// 内核态栈的段选择符(内核数据段).
@@ -177,7 +174,10 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	p->tss.ds = ds & 0xffff;
 	p->tss.fs = fs & 0xffff;
 	p->tss.gs = gs & 0xffff;
-	p->tss.ldt = _LDT(nr);					// 任务局部段描述符表的选择符(LDT 描述符在 GDT 中).
+	// 每个任务在 GDT 表中都有两个段描述符: 任务的 TSS 段描述符和任务的 LDT 段描述符.
+	// 更新该任务 TSS 段中的 LDT 选择符(用于选择该任务在 GDT 中的 LDT 段描述符).
+	// 当执行切换任务时, CPU 会自动从 TSS 段中把任务的 LDT 段选择符加载到 ldtr 寄存器中.
+	p->tss.ldt = _LDT(nr);					// 任务局部段描述符表的段选择符(LDT 描述符在 GDT 中).
 	p->tss.trace_bitmap = 0x80000000;		// (高 16 位有效).
 	// 如果当前任务使用了协处理器, 就保存其上下文. 汇编指令 clts 用于清除控制寄存器 CR0 中的任务已交换(TS)标志. 
 	// 每当发生任务切换, CPU 都会设置该标志. 该标志用于管理数学协处理器: 如果该标志置位, 那么每个 ESC 指令都会被捕获(异常 7). 
