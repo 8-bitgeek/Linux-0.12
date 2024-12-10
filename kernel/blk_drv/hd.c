@@ -68,9 +68,9 @@ static int reset = 0;
 struct hd_i_struct {
 	int head;						// 磁头数
 	int sect;						// 每磁道扇区数
-	int cyl;						// 柱面数
-	int wpcom;						// 写前预补偿柱面号
-	int lzone;						// 磁头着陆区柱面号
+	int cyl;						// 磁道(柱面)数
+	int wpcom;						// 写前预补偿磁道(柱面)号
+	int lzone;						// 磁头着陆区磁道(柱面)号
 	int ctl;						// 控制字节
 };
 
@@ -120,17 +120,15 @@ int sys_setup(void * BIOS)
 	struct partition *p;
 	struct buffer_head * bh;
 
-	// 首先设置 callable 标志, 使得本函数只能被调用 1 次. 然后设置硬盘信息数据组 hd_info[]. 
-	// 如果在 include/linux/config.h 文件已定义了符号常数 HD_TYPE, 
-	// 那么 hd_info[] 数组已经在前面第 80 行上设置好了. 
-	// 否则就需要读取 boot/setup.s 程序存放在内存 0x90080 处开始的硬盘参数表.
-	// boot/setup.s 程序在此处(0x90080)连续存放着一到两个硬盘参数表.
+	// 首先设置 callable 标志, 使得本函数只能被调用 1 次. 然后设置硬盘信息数组 hd_info[]. 
+	// 如果在 include/linux/config.h 文件已定义了符号常数 HD_TYPE, 则 hd_info[] 已经设置好了.
+	// 否则就需要读取硬盘参数表(drive_info), 这个数据由 boot/setup.s 读取到 0x90080 处, 并由 main() 方法复制到 drive_info 里.
 	if (!callable)
 		return -1;
 	callable = 0;
 #ifndef HD_TYPE															// 如果没有定义 HD_TYPE, 则读取.
 	for (drive = 0; drive < 2; drive++) {
-		hd_info[drive].cyl = *(unsigned short *) BIOS;					// 柱面数.
+		hd_info[drive].cyl = *(unsigned short *) BIOS;					// 磁道(柱面)数.
 		hd_info[drive].head = *(unsigned char *) (2 + BIOS);			// 磁头数.
 		hd_info[drive].wpcom = *(unsigned short *) (5 + BIOS);			// 写前预补偿柱面号.
 		hd_info[drive].ctl = *(unsigned char *) (8 + BIOS);				// 控制字节.
@@ -145,12 +143,12 @@ int sys_setup(void * BIOS)
 	else
 		NR_HD = 1;
 #endif
-	// 到这里, 硬盘信息数组 hd_info[] 已经设置好, 并且确定了系统含有的硬盘数 NR_HD. 现在开始设置硬盘结构数组 hd[]. 
+	// 到这里, 硬盘信息数组 hd_info[] 已经设置好, 并且确定了系统含有的硬盘数 NR_HD. 现在开始设置硬盘分区结构数组 hd[]. 
 	// 该数组的项 0 和项 5 分别表示两个硬盘的整体参数, 而项 1-4 和 6-9 分别表示两个硬盘的 4 个分区参数. 
 	// 因此这里仅设置硬盘整体信息的两项(项 0 和 5).
-	for (i = 0 ; i < NR_HD ; i++) {
+	for (i = 0; i < NR_HD; i++) {
 		hd[i * 5].start_sect = 0;													// 硬盘起始扇区号.
-		hd[i * 5].nr_sects = hd_info[i].head * hd_info[i].sect * hd_info[i].cyl;	// 硬盘总扇区数.
+		hd[i * 5].nr_sects = hd_info[i].head * hd_info[i].sect * hd_info[i].cyl;	// 硬盘总扇区数 = 磁头数 * 磁道扇区数 * 磁道(柱面)数.
 	}
 
 	/*
@@ -176,16 +174,12 @@ int sys_setup(void * BIOS)
 		我们对 CMOS 有关硬盘的信息有些怀疑: 可能会出现这样的情况, 我们有一块 SCSI/ESDI/ 等的控制器, 
 		它是以 ST-506 方式与 BIOS 兼容的, 因而会出现在我们的 BIOS 参数表中, 但又不是寄存器兼容的, 
 		因此这些参数在 CMOS 中又不存在.
-
 		另外, 我们假设 ST-506 驱动器(如果有的话)是系统中的基本驱动器, 标号为驱动器 1 或 2.
-
 		第 1 个驱动参数存放在 CMOS 字节 0x12 的高半字节, 第 2 个存放在低半字节中. 
 		该 4 位字节信息可以是驱动器类型, 也可能仅是 0xf.
 		0xf 表示使用 CMOS 中 0x19 字节作为驱动器 1 的 8 位类型字节, 使用 CMOS 中 0x1A 字节作为驱动器 2 的类型字节.
-
 		总之, 一个非零值意味着硬盘是一个 AT 控制器兼容硬盘.
 	*/
-
 	// 根据上述原理, 下面代码用来检测硬盘到底是不是 AT 控制器兼容的. 
 	// 这里从 CMOS 偏移地址 0x12 处读出硬盘类型字节. 
 	// 如果低半字节值(存放着第 2 个硬盘类型值)不为 0, 则表示系统有两硬盘, 否则表示系统只有 1 个硬盘. 
@@ -211,7 +205,7 @@ int sys_setup(void * BIOS)
 	// 否则我们根据硬盘第 1(0) 个扇区最后两个字节应该是 0xAA55 来判断扇区中数据的有效性, 
 	// 从而可以知道扇区中位于偏移 0x1BE 开始处的分区表是否有效. 
 	// 若有效则将硬盘分区表信息放入硬盘分区结构数组 hd[] 中. 最后释放 bh 缓冲区.
-	for (drive = 0 ; drive < NR_HD ; drive++) {
+	for (drive = 0; drive < NR_HD; drive++) {
 		// 0x300 表示整个第 1 个硬盘, 对应的设备文件是 /dev/hd0, 
 		// 0x301 表示第 1 个硬盘的第 1 个分区, 对应的设备文件是 /dev/hd1, 
 		// 0x305 表示整个第 2 个硬盘. 对应的设备文件是 /dev/hd5.
