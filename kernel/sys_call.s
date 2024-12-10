@@ -133,7 +133,7 @@ system_call:
 	pushl %ecx						# push %ebx, %ecx, %edx as parameters
 	pushl %ebx						# to the system call
 	# 在保存过段寄存器之后, 让 ds, es 指向内核数据段, 而 fs 指向当前任务的局部数据段, 
-	# 即指向执行本次系统调用的用户程序的数据段. 
+	# 即指向执行本次系统调用的用户程序的数据段. (内核数据段基地址是 0x0, 所以内核态访问 0-16MB 的内存空间时, 线性地址与物理地址相同)
 	# 注意, 在 Linux0.12 中内核给任务分配的代码和数据内存段是重叠的, 它们的段基址和段限长相同.
 	movl $0x10, %edx				# set up ds, es to kernel space.  	// 当前的 CPL = 0, 选择符 0x10 的 RPL = 0.
 	mov %dx, %ds 					# ds/es 指向内核数据段.
@@ -165,9 +165,9 @@ sys_call:
 # 导致进程组中所有进程处于停止状态. 而当前进程则会立刻返回.
 2:
 	movl current, %eax				# 取当前任务(进程)数据结构指针 -> eax.
-	cmpl $0, state(%eax)			# state(%eax): task_struct->state, 如果当前进程的状态不是 0 就绪状态则重新进行调度进程执行.
+	cmpl $0, state(%eax)			# state(%eax): task_struct->state, 如果当前进程的状态不是 0 就绪状态则执行进程调度.
 	jne reschedule
-	cmpl $0, counter(%eax)			# counter, 如果当前进程剩余的执行时间为 0 则重新进行调度进程执行.
+	cmpl $0, counter(%eax)			# counter, 如果当前进程剩余的执行时间为 0 则进行进程调度.
 	je reschedule
 
 # 以下这段代码执行从系统调用功能函数返回后, 对信号进行识别处理. 
@@ -341,7 +341,7 @@ sys_fork:
 	pushl %ebp 						# 第二个参数
 	pushl %eax 						# eax 中是调用 copy_process 时的第一个参数 nr.
 	call copy_process				# 调用 C 函数 copy_process()(kernel/fork.c)
-	addl $20, %esp					# 丢弃这里所有压栈内容.
+	addl $20, %esp					# 丢弃这里所有压栈内容(eax/ebp/edi/esi/gs).
 1:	ret 							# 返回值是新进程的 pid(last_pid), 存放在 eax 中.
 
 # int 46 -- (int 0x2E) 硬盘中断处理程序, 响应硬盘中断请求 IRQ14.

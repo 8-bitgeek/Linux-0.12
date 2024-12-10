@@ -184,7 +184,7 @@ struct task_struct {
 
 	/* various fields */
 	int exit_code;						// 任务执行停止的退出码, 其父进程会取.
-	unsigned long start_code;			// 代码段地址.
+	unsigned long start_code;			// 代码段地址(线性地址).
 	unsigned long end_code;				// 代码长度(字节数).
 	unsigned long end_data;				// 代码长度 + 数据长度(字节数).
 	unsigned long brk;					// 总长度(代码长度 + 数据长度 + 未初始化数据区长度[bss]).
