@@ -535,36 +535,37 @@ void do_hd_request(void)
 	// 函数首先检测请求项的合法性. 若请求队列中已没有请求项则退出(参见 kernel/blk_drv/blk.h)
 	// 然后取设备号中的子设备号以及设备当前请求项中的起始扇区号. 
 	// 子设备号即对应硬盘上各分区(0 - 整个硬盘; 1 - 第一分区; 2 - 第二分区... 5 - 第二个硬盘, 6 - 第二个硬盘第一个分区...). 
-	// 如果子设备号不存在或者起始扇区大于该分区扇区数 - 2, 则结束该请求项, 
-	// 并跳转到标号 repeat 处(定义在 INIT_REQUEST 开始处).
+	// 如果子设备号不存在或者起始扇区大于该分区扇区数 - 2, 则结束该请求项, 并跳转到标号 repeat 处(定义在 INIT_REQUEST 开始处).
 	// 因为一次请求要读写一个缓冲块数据(2 个扇区, 即 1024 字节), 所以请求的扇区号不能大于分区中最后倒数第二个扇区号. 
 	// 然后通过加上子设备号对应分区的起始扇区号, 就把需要读写的块对应到整个硬盘的绝对扇区号 block 上. 
 	// 而子设备号除以 5 即可得到对应的硬盘号(0x305 / 5 ==> 5 / 5 = 1 ==> 第 1(从 0 开始)个硬盘).
 	INIT_REQUEST;
  	dev = MINOR(CURRENT->dev); 						// 取当前请求项的子设备号.
 	block = CURRENT->sector;						// 当前请求的起始扇区号.
-	if (dev >= 5 * NR_HD || block + 2 > hd[dev].nr_sects) {
+	if (dev >= 5 * NR_HD || block + 2 > hd[dev].nr_sects) { // 如果参数不对, 则结束请求.
 		end_request(0);
 		goto repeat;								// 该标号在 INIT_REQUEST(kernel/blk_drv/blk.h) 开始处.
 	}
 	block += hd[dev].start_sect; 					// 得到绝对扇区号(整个磁盘中的扇区号).
 	dev /= 5;										// 此时 dev 代表硬盘号(硬盘 0 还是硬盘 1).
 	// 然后根据求得的绝对扇区号 block 和硬盘号 dev, 
-	// 我们就可以计算出对应硬盘中的磁道中扇区号(sec), 所在柱面号(cyl)和磁头号(head).
+	// 我们就可以计算出对应硬盘中的磁道中扇区号(sec), 所在磁道(柱面)号(cyl)和磁头号(head).
 	// 下面嵌入的汇编代码即用来根据硬盘信息结构中的每磁道扇区数和硬盘磁头数来计算这些数据. 
 	// 计算方法为: 初始时 eax 是扇区号 block, edx 中置 0. 
 	// 			 divl 指令把 edx:eax 组成的扇区号除以每磁道扇区数(hd_info[dev].sect),
 	// 			 所得整数商值在 eax 中, 余数在 edx 中. 
 	// 			 其中 eax 中是到指定位置的对应总磁道数(所有磁头面), edx 中是当前磁道上的扇区号. 
-	__asm__("divl %4":"=a" (block), "=d" (sec):"0" (block), "1" (0),
-		"r" (hd_info[dev].sect));
+	__asm__("divl %4"                   \
+	     	:"=a"(block), "=d"(sec) 	\
+			:"0"(block), "1"(0), "r"(hd_info[dev].sect));
 	// 代码初始时 eax 是上面计算出的对应总磁道数, edx 中置 0. 
 	// divl 指令把 edx:eax 的对应总磁道数除以硬盘总磁头数(hd_info[dev].head),
 	// 在 eax 中得到的整除值是柱面号(cyl), edx 得到的余数就是对应得当前磁头号(head).
 	// 对应总磁道数 * 每磁道扇区数 + 当前磁道上的扇区号 = 绝对扇区号.
 	// 总磁头数 * 柱面号 + 磁头号 = 对应总磁道数.
-	__asm__("divl %4":"=a" (cyl), "=d" (head):"0" (block), "1" (0),
-		"r" (hd_info[dev].head));
+	__asm__("divl %4" 					\ 
+	 		:"=a"(cyl), "=d"(head) 		\
+			:"0"(block), "1"(0), "r"(hd_info[dev].head));
 	sec++;											// 对计算所得当前磁道扇区号进行调整.
 	nsect = CURRENT->nr_sectors;					// 预读/写的扇区数.
 	// 此时我们得到了要读写的硬盘起始扇区 block 对应的硬盘上柱面号(cyl), 
