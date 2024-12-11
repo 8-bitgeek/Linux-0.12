@@ -268,7 +268,7 @@ static inline void __sleep_on(struct task_struct **p, int state)
 {
 	struct task_struct *tmp;
 
-	// 若指针无效, 则退出. (指针所指的对象可以是NULL, 但指针本身不会为 0).
+	// 若指针无效, 则退出. (指针所指的对象可以是 NULL, 但指针本身不会为 0).
 	// 如果当前任务是任务 0, 则死机(impossible!).
 	if (!p)
 		return;

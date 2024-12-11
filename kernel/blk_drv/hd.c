@@ -18,7 +18,6 @@
  *
  * 由 Drew Eckhardt 修改, 利用 CMOS 信息检测硬盘数.
  */
-
 #include <linux/config.h>							// 内核配置头文件, 定义键盘语言和硬盘类型(HD_TYPE)选项.
 #include <linux/sched.h>
 #include <linux/fs.h>
@@ -137,7 +136,7 @@ int sys_setup(void * BIOS)
 		BIOS += 16;														// 每个硬盘参数表长 16 字节, 这里 BIOS 指向下一表.
 	}
 	// setup.s 程序在取 BIOS 硬盘参数表信息时, 如果系统中只有 1 个硬盘, 就会将对应第 2 硬盘的 16 字节全部清零. 
-	// 因此这里只要判断第 2 个硬盘柱面数是否为 0 就可以知道是否有第 2 个硬盘了.
+	// 因此这里只要判断第 2 个硬盘磁道(柱面)数是否为 0 就可以知道是否有第 2 个硬盘了.
 	if (hd_info[1].cyl)
 		NR_HD = 2;														// 硬盘数置为 2.
 	else
@@ -148,7 +147,7 @@ int sys_setup(void * BIOS)
 	// 因此这里仅设置硬盘整体信息的两项(项 0 和 5).
 	for (i = 0; i < NR_HD; i++) {
 		hd[i * 5].start_sect = 0;													// 硬盘起始扇区号.
-		hd[i * 5].nr_sects = hd_info[i].head * hd_info[i].sect * hd_info[i].cyl;	// 硬盘总扇区数 = 磁头数 * 磁道扇区数 * 磁道(柱面)数.
+		hd[i * 5].nr_sects = hd_info[i].head * hd_info[i].cyl * hd_info[i].sect;	// 硬盘总扇区数 = 磁头数 * 磁道(柱面)数 * 磁道扇区数.
 	}
 
 	/*
@@ -171,7 +170,7 @@ int sys_setup(void * BIOS)
 		an AT controller hard disk for that drive.
 	*/
 	/*
-		我们对 CMOS 有关硬盘的信息有些怀疑: 可能会出现这样的情况, 我们有一块 SCSI/ESDI/ 等的控制器, 
+		我们对 CMOS 有关硬盘的信息有些怀疑: 可能会出现这样的情况, 我们有一块 SCSI/ESDI 等的控制器, 
 		它是以 ST-506 方式与 BIOS 兼容的, 因而会出现在我们的 BIOS 参数表中, 但又不是寄存器兼容的, 
 		因此这些参数在 CMOS 中又不存在.
 		另外, 我们假设 ST-506 驱动器(如果有的话)是系统中的基本驱动器, 标号为驱动器 1 或 2.
@@ -197,8 +196,8 @@ int sys_setup(void * BIOS)
 		hd[i * 5].start_sect = 0;
 		hd[i * 5].nr_sects = 0;
 	}
-	// 好, 到此为止我们已经真正确定了系统中所含的硬盘个数 NR_HD. 现在我们来读取每个硬盘上第 1 个扇区中的分区表信息, 
-	// 用来设置分区结构数组 hd[] 中硬盘各分区的信息. 首先利用读函数 bread() 读取硬盘第 1 个数据块(fs/buffer.c), 
+	// 好, 到此为止我们已经真正确定了系统中所含的硬盘个数 NR_HD. 现在我们来读取每个硬盘上 0 号扇区中的分区表信息, 
+	// 用来设置分区结构数组 hd[] 中硬盘各分区的信息. 首先利用读函数 bread() 读取硬盘第 0 号数据块(fs/buffer.c), 
 	// 第 1 个参数(0x300, 0x305)分别是两个硬盘的设备号, 第 2 个参数(0)是所需读取的块号. 
 	// 若读操作成功, 则数据会被存放在缓冲块 bh 的数据区中.
 	// 若缓冲块头指针 bh 为 0, 则说明读操作失败, 则显示出错信息并停机. 

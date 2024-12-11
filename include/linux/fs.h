@@ -98,10 +98,12 @@ struct buffer_head {
 	unsigned char b_count;				/* users using this block */				// 该缓冲块的使用用户数.
 	unsigned char b_lock;				/* 0 - ok, 1 - locked */					// 缓冲区是否被锁定.
 	struct task_struct * b_wait;		// 指向等待该缓冲区解锁的进程.
+	// 以下两个字段用于实现哈希槽链表(即 dev + block 哈希后为同一个槽位值的缓冲区组成的链表)
 	struct buffer_head * b_prev;		// hash 队列上前一块(这四个指针用于缓冲区的管理).
 	struct buffer_head * b_next;		// hash 队列上下一块.
-	struct buffer_head * b_prev_free;	// 空闲表上前一块.
-	struct buffer_head * b_next_free;	// 空闲表上后一块.
+	// 以下两个字段用于实现空闲缓冲块循环链表
+	struct buffer_head * b_prev_free;	// 空闲链表上前一块.
+	struct buffer_head * b_next_free;	// 空闲链表上后一块.
 };
 
 // 磁盘上的索引节点(i 节点)数据结构.

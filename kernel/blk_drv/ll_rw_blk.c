@@ -122,13 +122,13 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 	// 然后查看指定设备当前是否有请求项, 即查看设备是否正忙. 
 	// 如果指定设备 dev 当前请求项(current_request)字段为空, 则表示目前该设备没有请求项, 
 	// 本次是第 1 个请求项, 也是唯一的一个. 因此可将块设备的当前请求指针直接指向该请求项, 并立刻执行相应设备的请求处理函数.
-	if (!(tmp = dev->current_request)) {
+	if (!(tmp = dev->current_request)) { // 当前该设备的请求队列为空.
 		dev->current_request = req; 	// 直接设置为该设备的当前请求项.
 		sti();							// 开中断.
 		(dev->request_fn)();			// 执行请求处理函数, 对于硬盘是 do_hd_request() (kernel/blk_drv/hd.c).
 		return; 						// 读请求已将块设备中的数据读入高速缓冲区(buffer_head->data),
 	} 									// 或写请求已将高速缓冲区中的数据写入块设备.
-	// 如果目前该设备已经有请求项在处理, 则首先利用电梯算法搜索最佳插入位置, 然后将当前请求项插入到请求链表中. 
+	// 如果目前该设备已经有请求在处理, 则首先利用电梯算法搜索最佳插入位置, 然后将当前请求项插入到请求队列中. 
 	// 在搜索过程中, 如果要插入的请求项的缓冲块头指针空, 即没有缓冲块, 那么就需要找一个项, 其已经有可用的缓冲块. 
 	// 因此若当前插入位置(tmp 之后)处的空闲项缓冲块头指针不空, 就选择这个位置, 于是退出循环并把请求项插入此处. 
 	// 最后开中断并退出函数. 电梯算法的作用是让磁盘磁头的移动距离最小, 从而改善(减少)硬盘访问时间.
@@ -164,7 +164,7 @@ static void make_request(int major, int rw, struct buffer_head * bh)
 	// 就放弃预读/写请求, 否则就作为普通 READ/WRITE 命令进行操作. 
 	// 另外, 如果参数给出的命令既不是 READ 也不是 WRITE, 则表示内核程序有错, 显示出错信息并停机. 
 	// 注意, 在修改命令之前这里已为参数是否为预读/写命令设置了标志 rw_ahead.
-	if (rw_ahead = (rw == READA || rw == WRITEA)) {
+	if (rw_ahead = (rw == READA || rw == WRITEA)) { // 如果该请求是预读或预写, 则 rw_ahead = 1, 同时进入条件表达式.
 		if (bh->b_lock) 							// 缓冲块已经锁定的情况下忽略 READA/WRITEA 请求.
 			return;
 		if (rw == READA) 							// 未锁定的情况是转换为普通的读写请求.
@@ -175,7 +175,7 @@ static void make_request(int major, int rw, struct buffer_head * bh)
 	if (rw != READ && rw != WRITE)
 		panic("Bad block dev command, must be R/W/RA/WA");
 	lock_buffer(bh);                				// 锁定缓冲块.
-	// 如果是 WRITE 操作并且缓冲块未修改, 或是 READ 操作并且缓冲块已更新, 则直接返回缓冲区块.
+	// 如果是 WRITE 操作并且缓冲块未修改, 或是 READ 操作并且缓冲块已更新, 则直接返回.
 	if ((rw == WRITE && !bh->b_dirt) || (rw == READ && bh->b_uptodate)) {
 		unlock_buffer(bh);
 		return;
@@ -294,7 +294,7 @@ void ll_rw_block(int rw, struct buffer_head * bh)
 {
 	unsigned int major;									// 主设备号(对于硬盘是 3).
 
-	// 如果设备主设备号不存在或者该设备的请求操作函数不存在, 则显示出错信息, 并返回. 否则创建请求项并插入请求队列.
+	// 如果请求的块设备主设备号不对或者该块设备的请求操作函数不存在, 则显示出错信息, 并返回. 否则创建请求项并插入请求队列.
 	if ((major = MAJOR(bh->b_dev)) >= NR_BLK_DEV || !(blk_dev[major].request_fn)) {
 		printk("Trying to read nonexistent block-device\n\r");
 		return;
