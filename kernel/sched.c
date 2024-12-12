@@ -299,7 +299,7 @@ repeat:	schedule();
 	// 若确实存在这样一个任务, 即在当前任务之前就已有任务(tmp)在等待资源(tmp 不为空), 就一块唤醒它. 
 	// 如果等待该资源的任务为空, 是有问题的, 不应该出现这种情况!
 	if (!*p) 													// 等待资源的任务为空是不对的!
-		printk("Warning: *p = NULL\n\r");
+		printk("Warning: current resource has no waitting task, *p = NULL\n\r");
 	// 把等待该资源的任务设置为在本任务之前就已经在等待的任务(如果有的话, 如果没有的话 tmp 就是 NULL, *p 也会变为 NULL), 并使这个任务就绪.
 	if (*p = tmp)
 		// 如果在任务之前就已经有在等待的任务, 那么唤醒它.
