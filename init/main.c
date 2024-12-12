@@ -85,14 +85,14 @@ _syscall0(int, sync)
 static char printbuf[1024];							// 静态字符串数组, 用作内核显示信息的缓存.
 
 extern char *strcpy();
-extern int vsprintf();								// 送格式化输出到一字符串中(vsprintf.c).
+extern int vsprintf();								// 送格式化输出到一字符串中(kernel/vsprintf.c).
 extern void init(void);								// 函数原型, 初始化.
-extern void blk_dev_init(void);						// 块设备初始化子程序(blk_drv/ll_rw_blk.c).
-extern void chr_dev_init(void);						// 字符设备初始化(chr_drv/tty_io.c).
-extern void hd_init(void);							// 硬盘初始化程序(blk_drv/hd.c).
-extern void floppy_init(void);						// 软驱初始化程序(blk_drv/floppy.c).
+extern void blk_dev_init(void);						// 块设备初始化子程序(kernel/blk_drv/ll_rw_blk.c).
+extern void chr_dev_init(void);						// 字符设备初始化(kernel/chr_drv/tty_io.c).
+extern void hd_init(void);							// 硬盘初始化程序(kernel/blk_drv/hd.c).
+extern void floppy_init(void);						// 软驱初始化程序(kernel/blk_drv/floppy.c).
 extern void mem_init(long start, long end);			// 内存管理初始化(mm/memory.c).
-extern long rd_init(long mem_start, int length);	// 虚拟盘初始化(blk_drv/ramdisk.c).
+extern long rd_init(long mem_start, int length);	// 虚拟盘初始化(kernel/blk_drv/ramdisk.c).
 extern long kernel_mktime(struct tm * tm);			// 计算系统开机启动时间(秒).
 
 // fork 系统调用函数, 该函数作为 static inline 表示内联函数, 主要用来在 TASK-0 里面创建 TASK-1 的时候内联, 
@@ -265,7 +265,7 @@ int main(void)										/* This really IS void, no error here. */
  	sched_init();									// 调度程序初始化(加载任务 0 的 tr, ldtr). (kernel/sched.c)
 	// 高速缓冲区用于缓冲读/写块设备(比如硬盘)中的数据.
 	buffer_init(buffer_memory_end);					// 高速缓冲区管理初始化, 建立内存缓冲区链表等. 一页大小为 1KB. (fs/buffer.c)
-	hd_init();										// 硬盘初始化. (blk_drv/hd.c)
+	hd_init();										// 硬盘初始化: 设置硬盘读写请求处理函数并设置硬盘中断. (blk_drv/hd.c)
 	floppy_init();									// 软盘初始化. (blk_drv/floppy.c)
 	sti();											// 所有初始化工作都完了, 于是开启中断(注意, 只能屏蔽硬件中断而不能屏蔽软件中断).
 	// 打印内核初始化完毕

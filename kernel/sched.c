@@ -313,17 +313,19 @@ void interruptible_sleep_on(struct task_struct **p)
 }
 
 // 把当前任务置为不可中断的等待状态(TASK_UNINTERRUPTIBLE), 
-// 并让睡眠队列头指针指向当前任务. 只有明确地唤醒时才会返回. 
+// 并更新等待资源的任务为当前任务. 只有明确地唤醒时才会返回. 
 // 该函数提供了进程与中断处理程序之间的同步机制.
+// 参数 p 是资源(比如缓存块 buffer_head)结构体中的 wait 成员(比如 bh->b_wait)的地址, 该成员用于保存等待该资源的任务指针.
 void sleep_on(struct task_struct **p)
 {
 	// 将进程设置为不可中断的等待状态, 此时进程不会被信号中断, 包括 KILL 信号.
 	__sleep_on(p, TASK_UNINTERRUPTIBLE);
 }
 
-// 唤醒 *p 指向的任务. *p 是任务等待队列头指针. 
+// 唤醒 *p(任务指针)指向的不可中断等待的任务. *p 是等待资源的任务指针. 
 // 由于新等待任务是插入在等待队列头指针处的, 因此唤醒的是最后进入等待队列的任务. 
 // 若该任务已经处于停止或僵死状态, 则显示警告信息.
+// 参数 p 是资源(比如缓存块 buffer_head)结构体中的 wait 成员(比如 bh->b_wait)的地址, 该成员用于保存等待该资源的任务指针.
 void wake_up(struct task_struct **p)
 {
 	if (p && *p) {

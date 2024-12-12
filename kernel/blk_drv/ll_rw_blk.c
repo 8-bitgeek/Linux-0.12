@@ -83,7 +83,7 @@ static inline void lock_buffer(struct buffer_head * bh)
 }
 
 // 释放(解锁)锁定的缓冲区.
-// 该函数与 hlk.h 文件中的同名函数完全一样.
+// 该函数与 blk.h 文件中的同名函数完全一样.
 static inline void unlock_buffer(struct buffer_head * bh)
 {
 	if (!bh->b_lock)				// 如果该缓冲区没有被锁定, 则打印出错信息.
@@ -149,7 +149,7 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 	sti();
 }
 
-// 创建请求项并插入请求队列中.
+// 创建请求项并插入设备的请求队列中.
 // 参数 major 是主设备号; rw 是指定命令; bh 是存放数据的缓冲区头指针.
 static void make_request(int major, int rw, struct buffer_head * bh)
 {
