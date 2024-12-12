@@ -64,8 +64,10 @@ int NR_BUFFERS = 0;													// 系统含有缓冲块个数.
 static inline void wait_on_buffer(struct buffer_head * bh)
 {
 	cli();							// 关中断.
-	while (bh->b_lock)				// 如果已被上锁则进程进入睡眠, 等待其解锁.
-		sleep_on(&bh->b_wait);
+	// 这里之所以用 while 而不是 if, 是因为要保证睡眠结束后资源是可用的, 如果用 if 的话, 进程被唤醒后就会进行下一步, 
+	// 而不会再判断资源是否可用, 而使用 while 被唤醒后还会检查资源可用性, 如果不可用会继续睡眠, 直到资源可用.
+	while (bh->b_lock)				// 如果已被上锁则进程进入睡眠, 等待其解锁(解锁是由硬件中断例程来实现).
+		sleep_on(&bh->b_wait); 		// 进入 sleep 后会开启中断, 以响应硬件中断, 否则硬盘中断响应不了, 这个锁状态就不会更新.
 	sti();							// 开中断.
 }
 

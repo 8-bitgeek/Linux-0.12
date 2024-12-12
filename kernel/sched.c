@@ -299,7 +299,7 @@ repeat:	schedule();
 	// 若确实存在这样一个任务, 即队列中还有任务(tmp 不为空), 就唤醒之. 
 	// 最先进入队列的任务在唤醒后运行时最终会把等待队列头指针置成 NULL.
 	if (!*p)
-		printk("Warning: *P = NULL\n\r");
+		printk("Warning: *p = NULL\n\r");
 	if (*p = tmp)
 		tmp->state = 0;
 }
@@ -329,7 +329,7 @@ void wake_up(struct task_struct **p)
 			printk("wake_up: TASK_STOPPED");
 		if ((**p).state == TASK_ZOMBIE)							// 处于僵死状态.
 			printk("wake_up: TASK_ZOMBIE");
-		(**p).state=0;											// 置为就绪状态 TASK_RUNNING.
+		(**p).state = 0;										// 置为就绪状态 TASK_RUNNING.
 	}
 }
 
