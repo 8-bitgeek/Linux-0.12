@@ -280,7 +280,7 @@ static inline void __sleep_on(struct task_struct **p, int state)
 	tmp = *p;
 	*p = current;
 	current->state = state;
-	// 将当前进程睡眠后立刻调用调度函数进行调度新的进程执行
+	// 将当前进程睡眠后立刻执行调度函数调度其它的进程执行.
 repeat:	schedule();
 	// 只有当这个等待任务被唤醒时, 程序才会返回到这里, 表示进程已被明确地唤醒并执行. 
 	// 如果等待队列中还有等待任务, 并且队列头指针 *p 所指向的任务不是当前任务时,
@@ -315,6 +315,7 @@ void interruptible_sleep_on(struct task_struct **p)
 // 该函数提供了进程与中断处理程序之间的同步机制.
 void sleep_on(struct task_struct **p)
 {
+	// 将进程设置为不可中断的等待状态, 此时进程不会被信号中断, 包括 KILL 信号.
 	__sleep_on(p, TASK_UNINTERRUPTIBLE);
 }
 

@@ -125,6 +125,7 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 	if (!(tmp = dev->current_request)) { // 当前该设备的请求队列为空.
 		dev->current_request = req; 	// 直接设置为该设备的当前请求项.
 		sti();							// 开中断.
+		// **此时也不是同步等待 I/O 完成, 而是向硬盘提交了任务后立即返回, 也是等待硬盘中断通知请求完成.**
 		(dev->request_fn)();			// 执行请求处理函数, 对于硬盘是 do_hd_request() (kernel/blk_drv/hd.c).
 		return; 						// 读请求已将块设备中的数据读入高速缓冲区(buffer_head->data),
 	} 									// 或写请求已将高速缓冲区中的数据写入块设备.
