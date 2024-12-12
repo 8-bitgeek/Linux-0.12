@@ -554,7 +554,7 @@ void do_hd_request(void)
 	// 计算方法为: 初始时 eax 是扇区号 block, edx 中置 0. 
 	// 			 divl 指令把 edx:eax 组成的扇区号除以每磁道扇区数(hd_info[dev].sect),
 	// 			 所得整数商值在 eax 中, 余数在 edx 中. 
-	// 			 其中 eax 中是到指定位置的对应总磁道数(所有磁头面), edx 中是当前磁道上的扇区号. 
+	// 			 其中 eax 中是到指定位置的对应总磁道数(所有磁头面) block, edx 中是当前磁道上的扇区号(sec). 
 	__asm__("divl %4"                   \
 	     	:"=a"(block), "=d"(sec) 	\
 			:"0"(block), "1"(0), "r"(hd_info[dev].sect));
@@ -567,7 +567,7 @@ void do_hd_request(void)
 	 		:"=a"(cyl), "=d"(head) 		\
 			:"0"(block), "1"(0), "r"(hd_info[dev].head));
 	sec++;											// 对计算所得当前磁道扇区号进行调整.
-	nsect = CURRENT->nr_sectors;					// 预读/写的扇区数.
+	nsect = CURRENT->nr_sectors;					// 要读/写的扇区数.
 	// 此时我们得到了要读写的硬盘起始扇区 block 对应的硬盘上柱面号(cyl), 
 	// 在当前磁道上的扇区号(sec), 磁头号(head)以及要读写的总扇区数(nsect). 
 	// 接着我们可以根据这些信息向硬盘控制器发送 I/O 操作信息了. 
@@ -586,8 +586,7 @@ void do_hd_request(void)
 	// 该命令会执行寻道操作, 让处于任何地方的磁头移动到 0 柱面.
 	if (recalibrate) {
 		recalibrate = 0;
-		hd_out(dev, hd_info[CURRENT_DEV].sect, 0, 0, 0,
-			WIN_RESTORE, &recal_intr);
+		hd_out(dev, hd_info[CURRENT_DEV].sect, 0, 0, 0, WIN_RESTORE, &recal_intr);
 		return;
 	}
 	// 如果以上两个标志都没有置位, 那么我们就可以开始向硬盘控制器发送真正的数据读/写操作命令了. 
