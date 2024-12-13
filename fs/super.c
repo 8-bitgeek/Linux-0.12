@@ -366,7 +366,7 @@ void mount_root(void)
 	// 若磁盘 i 节点结构不是 32 字节, 则出错停机. 该判断用于防止修改代码时出现不一致情况.
 	if (32 != sizeof (struct d_inode))
 		panic("bad i-node size");
-	// 首先初始化文件表数组(共 64 项, 即系统只能同时打开 64 个文件)和超级块表. 
+	// 首先初始化打开的文件表数组(共 64 项, 即系统只能同时打开 64 个文件)和超级块表. 
 	// 这里将所有文件结构中的引用计数设置为 0(表示空闲), 并把超级块表中各项结构的设备字段初始化为 0(也表示空闲). 
 	// 如果根文件系统所在设备是软盘的话, 就提示 "插入根文件系统盘, 并按回车键", 并等待按键.
 	for (i = 0; i < NR_FILE; i++)					// 初始化文件表.
@@ -375,8 +375,9 @@ void mount_root(void)
 		printk("Insert root floppy and press ENTER\r\n");
 		wait_for_keypress();
 	}
+	// 初始化超级块列表.
 	for (p = &super_block[0]; p < &super_block[NR_SUPER]; p++) {
-		p->s_dev = 0;								// 初始化超级块表.
+		p->s_dev = 0;								// 超级块的设备号.
 		p->s_lock = 0;
 		p->s_wait = NULL;
 	}
