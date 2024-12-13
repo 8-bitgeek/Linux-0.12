@@ -328,11 +328,11 @@ extern int jiffies_offset;												// 用于累计需要调整的时间滴答
 
 // 添加定时器函数(定时时间 jiffies 嘀嗒数, 定时到时调用函数 *fn()). (kernel/sched.c)
 extern void add_timer(long jiffies, void (*fn)(void));
-// 不可中断的等待睡眠.(kernel/sched.c)
+// 不可中断的睡眠等待.(kernel/sched.c)
 extern void sleep_on(struct task_struct ** p);
-// 可中断的等待睡眠.(kernel/sched.c)
+// 可中断的睡眠等待.(kernel/sched.c)
 extern void interruptible_sleep_on(struct task_struct ** p);
-// 明确唤醒睡眠的进程.(kernel/sched.c)
+// 明确唤醒睡眠等待的进程.(kernel/sched.c)
 extern void wake_up(struct task_struct ** p);
 // 检查当前进程是否在指定的用户组 grp 中.
 extern int in_group_p(gid_t grp);
