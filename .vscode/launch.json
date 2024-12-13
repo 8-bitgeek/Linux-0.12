@@ -12,10 +12,10 @@
             // "miDebuggerServerAddress": "192.168.192.192:1234",
             "miDebuggerServerAddress": "localhost:1234",
             "args": [],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": false,
+            "externalConsole": true,
             "MIMode": "gdb",
             "sourceFileMap": {
                 "/root/Linux-0.12": {

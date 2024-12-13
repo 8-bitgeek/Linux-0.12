@@ -297,7 +297,7 @@ void init_swapping(void)
 	// 如果没有定义交换设备则返回. 如果交换设备没有设置块数数组, 则显示并返回.
 	if (!SWAP_DEV)
 		return;
-	if (!blk_size[MAJOR(SWAP_DEV)]) {  				// SWAP_DEV = 0x304: 硬盘的第 4 个分区.
+	if (!blk_size[MAJOR(SWAP_DEV)]) {  		// SWAP_DEV = 0x304: 硬盘的第 4 个分区.
 		printk("Unable to get size of swap device\n\r");
 		return;
 	}
@@ -310,7 +310,7 @@ void init_swapping(void)
 		printk("Swap device too small (%d blocks)\n\r", swap_size);
 		return;
 	}
-	// 每页 4 个数据块(4096KB), 所以 swap_size >>= 2 计算出交换页面总数.
+	// 每页 4 个数据块(4KB), 所以 swap_size >>= 2 计算出交换页面总数.
 	// 交换数据块总数转换成对应可交换页面总数. 该值不能大于 SWAP_BITS 所能表示的页面数. 即交换页面总数不得大于 32768.
 	swap_size >>= 2; 								// swap_size /= 4.
 	if (swap_size > SWAP_BITS)

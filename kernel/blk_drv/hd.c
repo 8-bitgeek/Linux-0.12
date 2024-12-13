@@ -116,7 +116,7 @@ int sys_setup(void * BIOS)
 	static int callable = 1;	// 限制本函数只能被调用 1 次的标志.
 	int i, drive;
 	unsigned char cmos_disks;
-	struct partition *p;
+	struct partition *p; 		// 硬盘分区表指针.
 	struct buffer_head * bh;
 
 	// 首先设置 callable 标志, 使得本函数只能被调用 1 次. 然后设置硬盘信息数组 hd_info[]. 
@@ -212,11 +212,11 @@ int sys_setup(void * BIOS)
 			printk("Unable to read partition table of drive %d\n\r", drive);
 			panic("");
 		}
-		if (bh->b_data[510] != 0x55 || (unsigned char) bh->b_data[511] != 0xAA) {	// 判断硬盘标志 0xAA55. 
+		if (bh->b_data[510] != 0x55 || (unsigned char) bh->b_data[511] != 0xAA) {	// 判断硬盘标志 0xAA55(有效引导扇区标志). 
 			printk("Bad partition table on drive %d\n\r", drive);
 			panic("");
 		}
-		p = 0x1BE + (void *)bh->b_data;	 				// 分区表位于第 1(0) 扇区 0x1BE 开始处.
+		p = 0x1BE + (void *)bh->b_data;	 				// p 指向硬盘分区表, 位于第 1(0) 扇区 0x1BE 开始处.
 		for (i = 1; i < 5; i++, p++) { 					// 保存每个分区的起始扇区及拥有的扇区数.(每个硬盘最多 4 个分区)
 			// hd[1] 表示第一个硬盘的第一个分区; hd[6] 表示第二个硬盘的第一个分区.
 			hd[i + 5 * drive].start_sect = p->start_sect;
@@ -233,7 +233,7 @@ int sys_setup(void * BIOS)
 		hd_sizes[i] = hd[i].nr_sects >> 1 ;
 	}
 	blk_size[MAJOR_NR] = hd_sizes;
-	// 现在总算完成设置硬盘分区结构数组 hd[] 的任务. 如果确实有硬盘存在并且读入其分区表, 则显示 "分区表正常" 信息. 
+	// 如果确实有硬盘存在并且读入其分区表, 则显示 "分区表正常" 信息. 
 	// 然后尝试在系统内存虚拟盘中加载启动盘中包含的根文件系统映像(kernel/blk_drv/ramdisk.c).
 	// 即在系统设置有虚拟盘的情况下判断启动盘上是否还含有根文件系统的映像数据. 
 	// 如果有(此时该启动盘称为集成盘)则尝试把该映像加载并存放到虚拟盘中, 

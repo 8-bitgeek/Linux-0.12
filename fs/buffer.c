@@ -399,7 +399,7 @@ void brelse(struct buffer_head * buf)
 {
 	if (!buf)						// 如果缓冲头指针无效则返回.
 		return;
-	wait_on_buffer(buf);
+	wait_on_buffer(buf);			// 等待缓冲块解锁.
 	if (!(buf->b_count--))
 		panic("Trying to free free buffer");
 	wake_up(&buffer_wait); 			// 唤醒其它因没有缓冲块可用而进入睡眠等待的进程, 因为现在有空闲的缓冲块可用了.
