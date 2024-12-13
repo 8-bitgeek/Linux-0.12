@@ -52,8 +52,8 @@ void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 #define NAME_LEN 14										// 名字最大长度值.
 #define ROOT_INO 1										// 根 i 节点号.
 
-#define I_MAP_SLOTS 8									// i 节点位图槽数.
-#define Z_MAP_SLOTS 8									// 逻辑块(区段块)位图槽数.
+#define I_MAP_SLOTS 8									// i 节点位图槽数(这个位图最多可以使用 8KB 的数据块).
+#define Z_MAP_SLOTS 8									// 逻辑块位图槽数(这个位图最多可以使用 8KB 的数据块).
 #define SUPER_MAGIC 0x137F								// 文件系统魔数.
 
 #define NR_OPEN 		20								// 进程能打开的最大文件数.

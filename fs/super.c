@@ -147,7 +147,9 @@ void put_super(int dev)
 // 读取指定设备的超级块.
 // 如果指定设备 dev 上的文件系统超级块已经在超级块表中, 则直接返回该超级块项的指针. 
 // 否则就从设备 dev 上读取超级块到缓冲块中, 并复制到超级块表中, 并返回超级块指针.
-static struct super_block * read_super(int dev)
+// 硬盘中的信息分布:  |引导块|    分区 1    |    分区 2    |    分区 3    |
+// 各个分区中的信息分布: |超级块|i节点位图|逻辑块位图|   i节点   |           数据区             |
+static struct super_block * read_super(int dev) 			// dev = 769 = 0x301 即第一个硬盘的第一个分区.
 {
 	struct super_block * s;
 	struct buffer_head * bh;
@@ -207,10 +209,10 @@ static struct super_block * read_super(int dev)
 		s->s_imap[i] = NULL;
 	for (i = 0; i < Z_MAP_SLOTS; i++)
 		s->s_zmap[i] = NULL;
-	block = 2; 			// 2 号块保存 i 节点位图(引导块 - 超级块 - i 节点位图 - 逻辑块位图 - i 节点 - 数据区).
+	block = 2; 			// 2 号块保存 i 节点位图(0-引导块 1-超级块 2-i 节点位图 3-逻辑块位图 4-i 节点 5-数据区).
 	// 从第二逻辑块号(2 号块)开始读取 i 节点位图.
 	// 读取块设备中 i 节点位图信息到高速缓冲区, 并设置超级块信息指向这些缓冲区.
-	for (i = 0; i < s->s_imap_blocks; i++)
+	for (i = 0; i < s->s_imap_blocks; i++)				// s_imap_blocks 是超级块中保存的, 表示这个文件系统中 i 节点位图信息占几个数据块.
 		if (s->s_imap[i] = bread(dev, block)) 			// 从设备中依次读取各个 i 节点位图到高速缓冲区.
 			block++;
 		else
@@ -222,15 +224,15 @@ static struct super_block * read_super(int dev)
 		else
 			break;
 	// 如果读出的位图个数不等于位图应该占有的逻辑块数, 说明文件系统位图信息有问题, 超级块初始化失败. 
-	// 因此只能释放前面申请并占用的所有资源, 即释放 i 节点位图和逻辑块位图占用的高速缓冲块, 
-	// 释放上面选定的超级块数组项, 解锁该超级块项, 并返回空指针退出.
+	// 因此要释放刚才申请占用的所有资源: 释放 i 节点位图和逻辑块位图占用的缓冲块, 释放这个超级块, 并返回空指针.
 	if (block != 2 + s->s_imap_blocks + s->s_zmap_blocks) {
-		for(i = 0; i < I_MAP_SLOTS; i++)				// 释放位图占用的高速缓冲块.
+		// 释放两个位图占用的高速缓冲块.
+		for(i = 0; i < I_MAP_SLOTS; i++)
 			brelse(s->s_imap[i]);
 		for(i = 0; i < Z_MAP_SLOTS; i++)
 			brelse(s->s_zmap[i]);
-		s->s_dev = 0;									// 释放选定的超级块数组项.
-		free_super(s);									// 解锁该超级块项.
+		s->s_dev = 0;
+		free_super(s);									// 释放该超级块项.
 		return NULL;
 	}
 	// 否则一切成功. 另外, 由于对于申请空闲 i 节点的函数来讲, 如果设备所有的 i 节点已经全被使用, 则查找函数会返回 0 值.
