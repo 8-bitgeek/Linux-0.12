@@ -285,25 +285,29 @@ repeat:
 	return;
 }
 
-/* 从 i 节点表(inode_table)中获取一个空闲 i 节点项(脏标志为 0, 且未上锁).
-   寻找引用计数 count 为 0 的 i 节点, 并将其写盘后清零, 返回其指针. 引用计数被置 1. */
+// 从 i 节点表(inode_table)中获取一个空闲 i 节点项(脏标志为 0, 且未上锁).
+// 寻找空闲的 i 节点项(引用计数 i_count 为 0 的 i 节点), 并将其写盘(在 i_dirt = 1 的情况下写盘, 否则不需要写), 
+// 清零该 inode 的信息, 为新的 inode 准备, 引用计数被置 1, 返回其指针. 
 struct m_inode * get_empty_inode(void)
 {
 	struct m_inode * inode;
 	static struct m_inode * last_inode = inode_table;			// 指向 i 节点表第 0 项.
 	int i;
 
-	// 在初始化 last_inode 指针指向 i 节点表第一(0)项后循环扫描整个 i 节点表, 
-	// 如果 last_inode 已经指向 i 节点表的最后一项之后, 则让其重新指向 i 节点表开始处,
-	// 以继续循环寻找空闲 i 节点项. 如果 last_inode 所指向的 i 节点计数值为 0, 则说明可能找到空闲 i 节点项. 
-	// 让 inode 指向该 i 节点. 如果该 i 节点的已修改标志和和锁定标志均为 0, 则我们可以使用该 i 节点, 于是退出 for 循环.
+	// 在 inode_table 表中寻找空闲 i_node 项, 直到找到一个空闲项, 否则一直循环查找.
 	do {
 		inode = NULL;
+		// 在初始化 last_inode 指针指向 i 节点表第一(0)项后循环扫描整个 i 节点表, 
+		// 如果 last_inode 已经指向 i 节点表的最后一项之后, 则让其重新指向 i 节点表开始处,
+		// 以继续循环寻找空闲 i 节点项. 如果 last_inode 所指向的 i 节点计数值为 0, 则说明可能找到空闲 i 节点项. 
+		// 让 inode 指向该 i 节点. 如果该 i 节点的已修改标志和和锁定标志均为 0, 则我们可以使用该 i 节点, 于是退出 for 循环.
 		for (i = NR_INODE; i; i--) {							// NR_INODE = 64.
 			// TODO: ++last_inode 有导致一个问题: last_inode 会在系统初始化时由 inode_table[1] 开始寻找空闲项.
-			if (++last_inode >= inode_table + NR_INODE) 		// 如果超出表末尾则从头开始.
+			// if (++last_inode >= inode_table + NR_INODE) 		// 如果超出列表末尾则从头开始.
+			// bugfix: 从 inode_table[0] 开始寻找空闲项.
+			if (last_inode++ >= inode_table + NR_INODE - 1) 	// 如果超出列表末尾则从头开始.
 				last_inode = inode_table;
-			if (!last_inode->i_count) {
+			if (!last_inode->i_count) { 						// 引用次数 i_count == 0, 即该节点空闲.
 				inode = last_inode;
 				if (!inode->i_dirt && !inode->i_lock) 			// 脏标志为 0, 且未上锁表示已找到空闲项.
 					break;
@@ -315,15 +319,16 @@ struct m_inode * get_empty_inode(void)
 				printk("%04x: %6d\t", inode_table[i].i_dev, inode_table[i].i_num);
 			panic("No free inodes in mem");
 		}
-		// 等待该 i 节点解锁(如果又被上锁的话). 如果该 i 节点已修改标志被置位的话, 则将该 i 节点刷新(同步). 
-		// 因为刷新时可能会睡眠, 因此需要再次循环等待 i 节点解锁.
+		// 等待该 i 节点解锁(如果又被上锁的话). 
 		wait_on_inode(inode);
+		// 如果该 i 节点已修改标志被置位的话, 则将该 i 节点刷新(同步). 
+		// 因为刷新时可能会睡眠, 因此需要再次循环等待 i 节点解锁.
 		while (inode->i_dirt) {
 			write_inode(inode);
 			wait_on_inode(inode);
 		}
-	} while (inode->i_count);
 	// 如果 i 节点又被其他占用的话(i 节点的计数值不为 0 了), 则重新寻找空闲 i 节点. 
+	} while (inode->i_count); 									// 循环直至找到空闲块.
 	// 否则说明已找到符合要求的空闲 i 节点项. 则将该 i 节点项内容清零, 并置引用计数为 1, 返回该 i 节点指针.
 	memset(inode, 0, sizeof(*inode));
 	inode->i_count = 1;
