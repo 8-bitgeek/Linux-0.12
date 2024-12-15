@@ -303,9 +303,7 @@ struct m_inode * get_empty_inode(void)
 		// 让 inode 指向该 i 节点. 如果该 i 节点的已修改标志和和锁定标志均为 0, 则我们可以使用该 i 节点, 于是退出 for 循环.
 		for (i = NR_INODE; i; i--) {							// NR_INODE = 64.
 			// TODO: ++last_inode 有导致一个问题: last_inode 会在系统初始化时由 inode_table[1] 开始寻找空闲项.
-			// if (++last_inode >= inode_table + NR_INODE) 		// 如果超出列表末尾则从头开始.
-			// bugfix: 从 inode_table[0] 开始寻找空闲项.
-			if (last_inode++ >= inode_table + NR_INODE - 1) 	// 如果超出列表末尾则从头开始.
+			if (++last_inode >= inode_table + NR_INODE) 		// 如果超出列表末尾则从头开始.
 				last_inode = inode_table;
 			if (!last_inode->i_count) { 						// 引用次数 i_count == 0, 即该节点空闲.
 				inode = last_inode;
@@ -328,7 +326,7 @@ struct m_inode * get_empty_inode(void)
 			wait_on_inode(inode);
 		}
 	// 如果 i 节点又被其他占用的话(i 节点的计数值不为 0 了), 则重新寻找空闲 i 节点. 
-	} while (inode->i_count); 									// 循环直至找到空闲块.
+	} while (inode->i_count); 									// 循环直至找到空闲项.
 	// 否则说明已找到符合要求的空闲 i 节点项. 则将该 i 节点项内容清零, 并置引用计数为 1, 返回该 i 节点指针.
 	memset(inode, 0, sizeof(*inode));
 	inode->i_count = 1;
@@ -422,9 +420,9 @@ struct m_inode * iget(int dev, int nr)
 			iput(empty);
 		return inode;
     }
-	// 如果我们在 i 节点表中没有找到指定的 i 节点, 则利用前面申请的空闲 i 节点 empty 在 i 节点表中建立该 i 节点. 
-	// 并从相应设备上读取该 i 节点信息, 返回该 i 节点指针.
-	if (!empty)
+	// 如果我们在 i 节点表中没有找到指定的 i 节点, 则设置前面申请的空闲 i 节点项 empty, 
+	// 然后从对应设备上读取该 i 节点信息, 最后返回该 i 节点指针.
+	if (!empty) 										// 如果没有申请到空闲项, 则返回 NULL.
 		return (NULL);
 	inode = empty;
 	inode->i_dev = dev;									// 设置 i 节点的设备.
@@ -449,20 +447,21 @@ static void read_inode(struct m_inode * inode)
 	lock_inode(inode);
 	if (!(sb = get_super(inode->i_dev)))
 		panic("trying to read inode without dev");
-	// 该 i 节点所在设备逻辑块号 = (启动块(1) + 超级块(1)) + i 节点位图占用的块数 + 逻辑块位图的块数 + ((i 节点号 - 1) / 每块含有的 i 节点数).
+	// 该 i 节点所在设备逻辑块号 = (引导块(1) + 超级块(1)) + i 节点位图占用的块数 + 逻辑块位图的块数 + ((i 节点号 - 1) / 每块含有的 i 节点数).
 	// 虽然 i 节点号从 0 开始编号, 但第 1 个 0 号 i 节点不用, 并且磁盘上也不保存对应的 0 号 i 节点结构. 
-	// 因此存放 i 节点的盘块的第 1 块上保存的是 i 节点号是 1--16 的 i 节点结构而不是 0--15 的. 
+	// 因此存放 i 节点的盘块上第 1 块上保存的是 i 节点号是 1--32 的 i 节点结构而不是 0--31 的. 
 	// 因此在上面计算 i 节点号对应的 i 节点结构所在盘块时需要减 1, 即: B = (i 节点号 - 1) / 每块含有 i 节点结构数. 
-	// 例如, 节点号 16 的 i 节点结构应该在 B = (16 - 1) / 16 = 0 的块上. 
+	// 例如, 节点号 32 的 i 节点结构应该在 B = (32 - 1) / 32 = 0 的块上. 
 	// 这里我们从设备上读取该 i 节点所在逻辑块, 并复制指定 i 节点内容到 inode 指针所指位置处.
 	block = 2 + sb->s_imap_blocks + sb->s_zmap_blocks + ((inode->i_num - 1) / INODES_PER_BLOCK);
 	// 将 i 节点信息所在的逻辑块读取到高速缓存中.
 	if (!(bh = bread(inode->i_dev, block)))
 		panic("unable to read i-node block");
-	// 复制磁盘上的 inode 信息到内存中.
+	// 复制磁盘上相应的 inode 信息到内存中(只复制指定的那个 inode 信息).
 	*(struct d_inode *)inode = ((struct d_inode *)bh->b_data)[(inode->i_num - 1) % INODES_PER_BLOCK]; 	// 求余得到在该页面内的下标.
-	// 最后释放读入的缓冲块, 并解锁该 i 节点. 对于块设备文件(比如 /dev/fd0), 还需要设置 i 节点的文件最大长度值.
+	// 最后释放读入的缓冲块, 并解锁该 i 节点. 
 	brelse(bh);
+	// 对于块设备文件(比如 /dev/fd0), 还需要设置 i 节点的文件最大长度值.
 	if (S_ISBLK(inode->i_mode)) {
 		int i = inode->i_zone[0];							// 对于块设备文件, i_zone[0] 中是设备号.
 		if (blk_size[MAJOR(i)])

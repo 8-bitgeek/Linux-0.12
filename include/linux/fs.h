@@ -175,7 +175,7 @@ struct super_block {
 	struct buffer_head * s_imap[8];			// i 节点位图所在的高速缓冲块(每块 1KB)指针数组(占用 8 块, 可表示 64M).
 	struct buffer_head * s_zmap[8];			// 逻辑块位图所在的高速缓冲块指针数组(占用 8 块).
 	unsigned short s_dev;					// 超级块所在设备号(比如 0x301 表示第一个硬盘的第一个分区). 0 表示空闲.
-	struct m_inode * s_isup;				// 被安装的文件系统根目录的 i 节点. (isup-superi)
+	struct m_inode * s_isup;				// 文件系统的根目录 i 节点. (isup-superi)
 	struct m_inode * s_imount;				// 该文件系统(超级块)被安装到哪个 i 节点.
 	unsigned long s_time;					// 修改时间.
 	struct task_struct * s_wait;			// 等待该超级块的进程指针.
@@ -234,9 +234,9 @@ extern struct buffer_head * getblk(int dev, int block);         // 从设备读�
 extern void ll_rw_block(int rw, struct buffer_head * bh);       // 读/写数据块.
 extern void ll_rw_page(int rw, int dev, int nr, char * buffer); // 读/写数据页面, 即每次 4 块数据块.
 extern void brelse(struct buffer_head * buf);                   // 释放指定缓冲块.
-extern struct buffer_head * bread(int dev, int block);           // 读取指定的数据块.
-extern void bread_page(unsigned long addr, int dev, int b[4]);    // 读取设备上一个页面(4 个缓冲块)的内容到指定内存地址处。
-extern struct buffer_head * breada(int dev, int block,...);      // 读取头一个指定的数据块, 并标记后续将要读的块.
+extern struct buffer_head * bread(int dev, int block);          // 读取指定的数据块.
+extern void bread_page(unsigned long addr, int dev, int b[4]);  // 读取设备上一个页面(4 个缓冲块)的内容到指定内存地址处。
+extern struct buffer_head * breada(int dev, int block,...);     // 读取头一个指定的数据块, 并标记后续将要读的块.
 extern int new_block(int dev);                                  // 向设备 dev 申请一个磁盘块(区段, 逻辑块). 返回逻辑块号.
 extern int free_block(int dev, int block);                      // 释放设备数据区中的逻辑块(区段, 逻辑块) block.
 extern struct m_inode * new_inode(int dev);                     // 为设备 dev 建立一个新 i 节点, 返回 i 节点号.
