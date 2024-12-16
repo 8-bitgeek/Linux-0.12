@@ -392,11 +392,11 @@ void mount_root(void)
 		panic("Unable to read root i-node");
 	// 现在我们对超级块和根 i 节点进行设置. 把根 i 节点引用次数增加 +3. 
 	// 因为随后 3 行代码也引用了该 i 节点. 并且 iget() 函数中 i 节点引用计数已被设置为 1. 
-	// 然后设置该超级块的被安装文件系统 i 节点和被安装到 i 节点字段为该 i 节点.
+	// 然后设置该超级块的文件系统根 i 节点和被挂载到的 i 节点字段为这个根 inode.
 	// 再设置当前进程的当前工作目录和根目录 i 节点. 当前进程是 TASK-1(init 进程).
 	mi->i_count += 3;								/* NOTE! it is logically used 4 times, not 1 */
                                 					/* 注意! 从逻辑上讲, 它已被引用了 4 次, 而不是 1 次 */
-	p->s_isup = p->s_imount = mi; 					// 设置根目录 i 节点及超级块被安装到的 i 节点(均是根 i 节点).
+	p->s_isup = p->s_imount = mi; 					// 设置超级块的根 inode 及超级块挂载到的 inode(均是根 i 节点).
 	current->pwd = mi; 								// 设置当前任务的工作目录 i 节点(根 i 节点).
 	current->root = mi; 							// 设置当前任务的根目录 i 节点(根 i 节点).
 	// 然后我们对根文件系统上的资源进行统计. 统计该设备上空闲逻辑块数和空闲 i 节点数. 
