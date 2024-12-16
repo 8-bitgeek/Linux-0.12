@@ -147,7 +147,7 @@ struct m_inode {
 	unsigned char i_lock;								// i 节点被锁定标志.
 	unsigned char i_dirt;								// i 节点已修改(脏)标志.
 	unsigned char i_pipe;								// i 节点用作管道标志.
-	unsigned char i_mount;								// 安装标志: 该 i 节点是否安装了文件系统.
+	unsigned char i_mount;								// 挂载标志: 该 i 节点是否挂载其它文件系统, 只有挂载了其它文件系统会置位, 根 inode 不会置位.
 	unsigned char i_seek;								// 搜索标志(lseek 操作时).
 	unsigned char i_update;								// i 节点已更新标志.
 };

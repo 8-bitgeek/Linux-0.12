@@ -361,9 +361,11 @@ struct m_inode * get_pipe_inode(void)
 
 // 获取指定 dev 上指定 inode 号对应的 i 节点指针.
 // 参数: dev - 设备号; nr - i 节点号.
-// 从设备上读取指定节点号的 i 节点结构内容到内存 i 节点表中, 并且返回该 i 节点指针. 
-// 首先在位于高速缓冲区中的 i 节点表中搜寻, 若找到指定节点号的 i 节点则在经过一些判断处理后返回该 i 节点指针. 
-// 否则从设备 dev 上读取指定 i 节点号的 i 节点信息放入 i 节点表中, 并返回该 i 节点指针.
+// 从设备上读取指定节点号的 i 节点结构内容到内存 i 节点表中, 并且返回该 inode 指针. 
+// 首先在 inode 列表中查找该 inode 是否已缓存过, 若找到指定的 inode, 
+// 如果该 inode 是其它文件系统的挂载点(i_mount == 1)则查找并返回该文件系统的根 inode 指针,
+// 如果不是其它文件系统的挂载点, 则直接返回该 inode 指针.
+// 如果没有在 inode 列表中找到, 则从设备 dev 上读取指定 i 节点号的 inode 信息放入 i 节点表中, 并返回该 i 节点指针.
 struct m_inode * iget(int dev, int nr)
 {
 	struct m_inode * inode, * empty;
@@ -381,7 +383,7 @@ struct m_inode * iget(int dev, int nr)
 			inode++;
 			continue;
 		}
-		// 如果在 i 节点表中找到指定设备号 dev 和节点号 nr 的 i 节点, 则等待该节点解锁(如果已上锁的话). 
+		// 如果在 inode 列表中找到指定设备号 dev 和节点号 nr 的 i 节点, 则等待该节点解锁(如果已上锁的话). 
 		// 在等待该节点解锁过程中, i 节点内容可能会发生变化. 所以再次进行上述相同判断. 
 		// 如果发生了变化, 则重新扫描整个 i 节点表.
 		wait_on_inode(inode);
@@ -394,28 +396,31 @@ struct m_inode * iget(int dev, int nr)
 		// 如果该 i 节点的确是其他文件系统的安装点, 则在超级块表中搜寻安装在此 i 节点的超级块. 
 		// 如果没有找到, 则显示出错信息, 并放回本函数开始时获取的空闲节点 empty, 返回该 i 节点指针.
 		inode->i_count++;
-		if (inode->i_mount) { 								// 该 i 节点是否安装了文件系统.
+		// 当另一个文件系统挂载到了这个 inode 上(只有挂载 i_mount 才会置位), 这个 inode 就不是普通的 inode 了, 
+		// 它在超级块表中就有一个对应的超级块, 我们需要通过这个超级块获取挂载到这个 inode 的物理设备号, 并获取这个文件系统的根 inode.
+		if (inode->i_mount) { 								// 该 inode 是否挂载了其它文件系统.
 			int i;
 
-			for (i = 0 ; i < NR_SUPER ; i++)
-				if (super_block[i].s_imount == inode) 		// 如果某个文件系统(超级块)安装到了这个 i 节点.
+			for (i = 0; i < NR_SUPER; i++)
+				if (super_block[i].s_imount == inode) 		// 如果某个文件系统(超级块)挂载到了这个 i 节点.
 					break;
-			if (i >= NR_SUPER) { 							// 如果没有超级块(文件系统)安装到这个 i 节点.
+			// 如果没有超级块(文件系统)安装到这个 i 节点, 那么这个 inode 还是一个普通的 inode, 直接返回它.
+			if (i >= NR_SUPER) { 							
 				printk("Mounted inode hasn't got super block.\n");
-				if (empty) 									// inode_table 中有空闲的 i 节点的情况下.
+				if (empty) 									// 将之前获取的空闲 inode 项释放.
 					iput(empty);
 				return inode;
 			}
-			// 执行到这里表示已经找到安装到 inode 节点的文件系统超级块. 
-			// 于是将该 i 节点写盘放回, 并从安装在此 i 节点上的文件系统超级块中取设备号, 并令 i 节点号为 ROOT_INO. 
-			// 然后重新扫描整个 i 节点表, 以获取该被安装文件系统的根 i 节点信息.
+			// 执行到这里表示已经找到挂载到该 inode 节点的文件系统的超级块. 
+			// 于是将该 i 节点写盘放回, 并从挂载到这个 inode 的文件系统的超级块中获取设备号, 并令 i 节点号为 ROOT_INO. 
+			// 然后重新扫描整个 i 节点表, 以获取该被挂载的文件系统的根 i 节点信息.
 			iput(inode);
-			dev = super_block[i].s_dev;
+			dev = super_block[i].s_dev; 					// 
 			nr = ROOT_INO;
 			inode = inode_table;
 			continue;
 		}
-		// 最终我们找到了相应的 i 节点. 因此可以放弃本函数开始处临时的空闲 i 节点, 返回找到的 i 节点指针.
+		// 最终我们找到了缓存的 i 节点. 因此可以放弃本函数开始处临时的空闲 i 节点, 返回找到的 i 节点指针.
 		if (empty)
 			iput(empty);
 		return inode;
