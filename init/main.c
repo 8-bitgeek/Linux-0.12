@@ -314,7 +314,7 @@ int printf(const char *fmt, ...)
 	return i;
 }
 
-// 在 main() 中已经进行子系统初始化, 包括内存管理, 各种硬件设备和驱动程序. init() 函数在任务 0 第 1 次创建的子进程(任务 1)中.
+// 在 main() 中已经进行子系统初始化, 包括内存管理, 各种硬件设备和驱动程序. init() 函数由 TASK-1 执行.
 // 它首先对第一个将要执行的程序(shell)的环境进行初始化, 然后以登录 shell 方式加载程序并执行之.
 void init(void)
 {
@@ -326,7 +326,7 @@ void init(void)
 	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 
 	// 这里再把它以读和写的方式分别打开是为了复制产生标准输出(写)句柄 stdout 和标准出错输出句柄 stderr.
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
-	(void) open("/dev/tty1", O_RDWR, 0); 				// (fs/open.c)
+	(void) open("/dev/tty1", O_RDWR, 0); 				// sys_open 系统调用(fs/open.c)
 	(void) dup(0);										// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c sys_dup())
 	(void) dup(0);										// 复制句柄, 产生句柄 2 号 -- stderr 标准出错输出设备.
 	// 下面打印缓冲区块数和总字节数, 每块 1024 字节, 以及主内存区空闲内存字节数.
