@@ -5,7 +5,7 @@
 
 /* open/fcntl - NOCTTY, NDELAY isn't implemented yet */
 /* open/fcntl - NOCTTY 和 NDELAY 现在还没有实现 */
-#define O_ACCMODE	00003           		// 文件访问模式屏蔽码.
+#define O_ACCMODE	   03           		// 文件访问模式屏蔽码.
 // 打开文件 open() 和文件控制函数 fcntl() 使用的文件访问模式. 同时只能使用三者之一.
 #define O_RDONLY	   00					// 以只读方式打开文件. 000
 #define O_WRONLY	   01					// 以只写方式打开文件. 001

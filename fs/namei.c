@@ -416,14 +416,12 @@ static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode
  * It returns NULL on failure.
  */
 /*
- *	get_dir()
- *
  * 该函数根据给出的路径名进行搜索, 直到达到最深层(比如 /dev/tty1 -> /dev/ 为最深层目录)的目录. 
  * 如果失败是返回 NULL.
  */
-// 从指定目录开始搜寻给定路径名的最深层目录(或文件名[TODO: 存疑])的 i 节点. 
+// 从指定目录开始获取给定路径名的最深层目录的 inode. 
 // 参数: pathname - 路径名; inode - 指定起始目录的 i 节点.
-// 返回: 给定目录名最深层目录或文件的 i 节点指针. 失败时返回 NULL.
+// 返回: 给定目录名最深层目录的 inode 指针. 失败时返回 NULL.
 static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 {
 	char c;
@@ -520,11 +518,11 @@ static struct m_inode * dir_namei(const char * pathname, int * namelen,
 	const char * basename;
 	struct m_inode * dir; 		// 最深层的目录对应的 inode. 比如 '/dev/tty1' -> '/dev/' 对应的 inode.
 
-	// 首先取得指定路径名最深层目录的 i 节点. 
+	// 首先取得指定路径名最深层目录的 inode. 
 	// 然后对路径名 pathname 进行搜索检测, 查出最后一个 '/' 字符后面的文件名字符串, 
-	// 计算其长度, 并且返回最深层目录的 i 节点指针. 
+	// 计算其长度, 并且返回最深层目录的 inode 指针. 
 	// 注意! 如果路径名最后一个字符是斜杠字符 '/', 那么返回的文件名为空, 并且长度为 0. 
-	// 但返回的 i 节点指针仍然指向最后一个 '/' 字符前目录名的 i 节点. 
+	// 但返回的 inode 指针仍然指向最后一个 '/' 字符前目录名的 inode. 
 	// 比如 '/dev/tty1' 则返回的是 'dev/' 对应的 inode.
 	if (!(dir = get_dir(pathname, base)))		// base 是指定的起始目录 i 节点. (获取最深层目录的 inode 指针)
 		return NULL;
@@ -640,18 +638,18 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 {
 	const char * basename;
 	int inr, dev, namelen;
-	struct m_inode * dir, *inode;
+	struct m_inode * dir, * inode;
 	struct buffer_head * bh;
 	struct dir_entry * de;
 
-	// 首先对函数参数进行合理的处理. 如果文件访问模式标志是只读(O_RDONLY), 但是文件截零标志 O_TRUNC 却置位了, 
-	// 则在文件打开标志中添加只写标志 O_WRONLY. 这样做的原因是由于截零标志 O_TRUNC 必须在文件可写情况下有效.
-	if ((flag & O_TRUNC) && !(flag & O_ACCMODE))
-		flag |= O_WRONLY;
-	// 使用当前进程的文件访问许可屏蔽码, 屏蔽掉给定模式中的相应位, 并添上普通文件标志 I_REGULAR(include/const.h).
-	// 该标志将用于打开的文件不存在, 需要创建文件时, 作为*新文件的默认属性*.
+	// 首先对函数参数进行合规处理. 如果文件访问标志是只读(O_RDONLY, flag == 0), 但是清空文件标志 O_TRUNC 却置位了, 
+	// 则在文件访问标志中添加只写标志 O_WRONLY. 这样做的原因是由于清空文件标志 O_TRUNC 必须在文件可写情况下有效.
+	if ((flag & O_TRUNC) && !(flag & O_ACCMODE)) 	// !(flag & O_ACCMODE) 成立则表示 flag == 0, 即 O_RDONLY.
+		flag |= O_WRONLY;							// 访问标志添加只写标志.
+	// 使用当前进程的文件访问许可屏蔽码, 屏蔽掉给定 mode 中的相应位, 并添上普通文件标志 I_REGULAR(include/const.h).
+	// 该 mode 将用于打开的文件不存在, 需要创建文件时, 作为*新文件的默认属性*.
 	mode &= (0777 & ~current->umask);
-	mode |= I_REGULAR;								// 常规文件标志. 参见 include/const.h 文件.
+	mode |= I_REGULAR;								// 添加常规文件标志. 参见 include/const.h 文件.
 	// 然后根据指定的路径名寻找到对应的 i 节点(比如 '/dev/tty1' 则得到 '/dev/' 对应的 i 节点), 
 	// 以及最顶端目录名及其长度. 此时如果最顶端目录名长度为 0(例如 '/usr/' 这种路径名的情况), 
 	// 那么如果操作不是读/写/创建/文件长度截 0, 则表示是在打开一个目录名文件操作. 

@@ -300,6 +300,7 @@ int sys_open(const char * filename, int flag, int mode)
 	// 若文件打开操作成功, 则 inode 是已打开文件的 i 节点指针.
 	(current->filp[fd] = f)->f_count++;
 	// Log(LOG_INFO_TYPE, "<<<<< sys_open: fd = %d >>>>>\n", fd);
+	// flag: 访问文件使用的标志; mode: 如果创建新文件, 用作新文件的默认权限属性.
 	if ((i = open_namei(filename, flag, mode, &inode)) < 0) { 		// 如果出错则进行相应处理后返回出错码.
 		current->filp[fd] = NULL;
 		f->f_count = 0;
