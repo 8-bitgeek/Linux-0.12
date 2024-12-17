@@ -254,7 +254,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 }
 
 // 打开(或创建)文件的系统调用.
-// 参数 filename 是文件名, flag 是打开文件标志, 它可取值: O_RDONLY(00, 只读), O_WRONLY(01, 只写), 
+// 参数 filename 是文件名, flag 是文件访问标志, 它可取值: O_RDONLY(00, 只读), O_WRONLY(01, 只写), 
 // O_RDWR(02, 读写), 以及 O_CREAT(00100, 不存在则创建), O_EXCL(00200, 被创建文件必须不存在), 
 // O_APPEND(在文件尾添加数据) 等其他一些标志的组合(include/fcntl.h).
 // 如果本调用创建了一个新文件, 则 mode 就用于指定文件的许可属性. 
@@ -287,20 +287,19 @@ int sys_open(const char * filename, int flag, int mode)
 	// 那么在执行 execve() 时该对应文件句柄将被关闭(这是不希望的), 否则该文件句柄将始终处于打开状态. 
 	// 当打开一个文件时, 默认情况下文件句柄在子进程中也处于打开状态. 
 	// 因此这里要复位对应位, 然后为打开的文件在系统文件表 file_table 中寻找一个空闲结构项. 
-	// 我们令 f 指向文件表数组开始处, 搜索空闲文件结构项(引用计数为 0 的项), 若已经没有空闲文件表结构项, 则返回出错码. 
-	// 另外, 下面的指针赋值 "f = 0 + file_table" 等同于 "f = file_table" 和 "f = &file_table[0]", 
 	current->close_on_exec &= ~(1 << fd);           // 复位对应文件打开位, 不让其在执行 execve 时关闭.
+	// 令 f 指向系统的文件列表开始处, 搜索空闲文件项(引用计数为 0 的项), 若已经没有空闲文件表结构项, 则返回出错码. 
+	// 另外, 下面的指针赋值 "f = 0 + file_table" 等同于 "f = file_table" 和 "f = &file_table[0]", 
 	f = 0 + file_table; 							// (fs/file_table.c)
 	for (i = 0; i < NR_FILE; i++, f++)
 		if (!f->f_count) break;         			// 在系统文件表中找到空闲结构项(没有被引用的文件项). 
 	if (i >= NR_FILE)
 		return -EINVAL;
-	// 此时我们让进程对应文件句柄 fd 的文件结构指针指向搜索到的文件结构, 并令文件引用计数递增 1. 
+	// 此时我们让进程文件列表中 fd 文件指针指向系统的文件列表中的空闲项, 并令文件引用计数递增 1. 
 	// 然后调用函数 open_namei() 执行打开操作, 若返回值小于 0, 则说明出错, 于是释放刚申请到的文件结构, 返回出错码 i.
-	// 若文件打开操作成功, 则 inode 是已打开文件的 i 节点指针.
+	// 若文件打开操作成功, 则 inode 是已打开文件的 inode 指针.
 	(current->filp[fd] = f)->f_count++;
 	// Log(LOG_INFO_TYPE, "<<<<< sys_open: fd = %d >>>>>\n", fd);
-	// flag: 访问文件使用的标志; mode: 如果创建新文件, 用作新文件的默认权限属性.
 	if ((i = open_namei(filename, flag, mode, &inode)) < 0) { 		// 如果出错则进行相应处理后返回出错码.
 		current->filp[fd] = NULL;
 		f->f_count = 0;

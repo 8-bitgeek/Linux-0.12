@@ -124,8 +124,9 @@ struct d_inode {
 
 // 这是内存中的 i 节点结构. 前 7 项与 d_inode 完全一样.
 struct m_inode {
+	// 位 15-12 表示文件类型， 位 11-9 表示执行时设置的用户 id, 组 id, 目录删除受限标志; 位 8-0 分别是宿主/组员/其它的访问权限.
 	unsigned short i_mode;								// 文件类型和属性(宿主, 组员, 其他人的访问权限信息: rwx).
-	unsigned short i_uid;								// 文件宿主的用户 id(文件拥有者标识符).
+	unsigned short i_uid;								// 文件宿主的 id.
 	unsigned long i_size;								// 文件大小(字节数).
 	unsigned long i_mtime;								// 修改时间(自 1970.1.1.:0 算起, 秒).
 	unsigned char i_gid;								// 文件宿主的组 id(文件拥有者所在的组).
@@ -176,7 +177,8 @@ struct super_block {
 	struct buffer_head * s_zmap[8];			// 逻辑块位图所在的高速缓冲块指针数组(占用 8 块).
 	unsigned short s_dev;					// 超级块所在设备号(比如 0x301 表示第一个硬盘的第一个分区). 0 表示空闲.
 	struct m_inode * s_isup;				// 文件系统的根 inode. (isup-superi)
-	struct m_inode * s_imount;				// 该文件系统(超级块)被安装(挂载)到哪个 inode.
+	// 只有被挂载的文件系统的超级块该属性才会设置(挂载到哪个 inode 上了), 根文件系统的超级块该属性为空(不是挂载的).
+	struct m_inode * s_imount;				// 该文件系统(超级块)被挂载到哪个 inode
 	unsigned long s_time;					// 修改时间.
 	struct task_struct * s_wait;			// 等待该超级块的进程指针.
 	unsigned char s_lock;					// 锁定标志(0 - 未被锁定, 1 - 被锁定).

@@ -40,10 +40,10 @@ struct stat {
 
 #define S_ISLNK(m)	(((m) & S_IFMT) == S_IFLNK)		// 测试是否为符号链接文件.
 #define S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)		// 测试是否为常规文件.
-#define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)		// 是否为目录文件(imode 位 14 置位).
+#define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)		// 是否为目录文件(i_mode 属性位 14 置位).
 #define S_ISCHR(m)	(((m) & S_IFMT) == S_IFCHR)		// 是否为字符设备文件.
 #define S_ISBLK(m)	(((m) & S_IFMT) == S_IFBLK)		// 是否为块设备(硬盘, 软盘)文件. (/dev/fd0)
-#define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)     // 是否为 FIFO 特殊文件。
+#define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)     // 是否为 FIFO 特殊文件.
 
 // 文件访问权限:
 #define S_IRWXU 00700           // 宿主可以读, 写, 执行/搜索(名称最后字母代表 User).
