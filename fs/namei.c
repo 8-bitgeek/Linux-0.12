@@ -369,17 +369,17 @@ static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode
 	struct buffer_head * bh;
 
 	// 首先判断函数参数的有效性. 
-	// 如果没有给出目录 i 节点(dir), 我们就使用进程任务结构中设置的根 i 节点, 并把链接数增 1. 
-	// 如果没有给出目录项 i 节点(inode), 则放回目录 i 节点后返回 NULL. 
-	// 如果指定目录项不是一个符号链接, 就直接返回目录项对应的 i 节点 inode.
+	// 如果没有给出目录 i 节点(dir), 我们就使用当前进程结构中设置的根 i 节点, 并把链接数 +1. 
 	if (!dir) {
 		dir = current->root;
 		dir->i_count++;
 	}
+	// 如果没有给出目录项 i 节点(inode), 则放回目录 i 节点后返回 NULL. 
 	if (!inode) {
 		iput(dir);
 		return NULL;
 	}
+	// 如果指定目录项不是一个符号链接, 就直接返回目录项对应的 i 节点 inode.
 	if (!S_ISLNK(inode->i_mode)) {
 		iput(dir);
 		return inode;
@@ -472,7 +472,8 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 		// 例如: 对于目录 /usr/src/linux, 该函数将只返回 src/ 目录名的 i 节点.
 		for(namelen = 0; (c = get_fs_byte(pathname++)) && (c != '/'); namelen++) 	
 			/* nothing */; // 每次该循环结束都将得到 pathname 中的一部分(比如 'dev/'[目录] 或者 'tty1'[文件]).
-		if (!c) 						// 如果当前到达 pathname 末尾('\0'), 则直接返回本次循环前的 inode.
+		/* 循环处理, 直至获取到最深层目录的 inode 后返回其指针 */
+		if (!c) 						// 如果当前到达 pathname 末尾('\0'), 则直接返回本次循环前的 inode(最深层目录的 inode).
 			return inode; 				// 比如 '/dev/tty1' -> 则返回的是 'dev/' 对应的 inode.
 		// 在得到当前目录名部分(或文件名)后, 
 		// 我们调用查找目录项函数 find_entry() 在当前 inode 中寻找指定名称的目录项(dir_entry). 
@@ -487,12 +488,12 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 		}
 		inr = de->inode;										// 当前目录项指定(对应)的 i 节点号.
 		brelse(bh);
-		dir = inode;
-		if (!(inode = iget(dir->i_dev, inr))) {					// 获取当前目录项对应的 i 节点内容.
-			iput(dir);
+		dir = inode; 											// 暂存原 inode.
+		if (!(inode = iget(dir->i_dev, inr))) {					// 将 inode 更新为当前目录项(dir_entry)对应的 inode 信息.
+			iput(dir); 											// 读取出错则释放原 inode.
 			return NULL;
 		}
-		if (!(inode = follow_link(dir, inode)))
+		if (!(inode = follow_link(dir, inode)))					// 如果当前的 inode 是符号链接, 则将指针更新为其链接到的 inode.
 			return NULL;
     }
 }
@@ -506,10 +507,10 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 /*
  *	dir_namei()
  *
- * dir_namei() 函数返回指定目录名的 inode 指针, 以及在最深层目录的名称.
+ * dir_namei() 函数返回给定路径中最深层的目录 inode 指针, 以及最深层目录/文件的名称.
  */
-// 参数: pathname - 目录路径名; namelen - 路径名长度; 
-// 		name - 返回的最深层目录名; base - 搜索起始目录的 i 节点.
+// 参数: pathname - 目录路径名; namelen - 用于保存得到的最深层目录/文件名的长度; 
+// 		name - 用于保存得到的最深层目录/文件名; base - 搜索路径中的起始目录的 i 节点.
 // 返回: 指定目录名最深层的 i 节点指针和最顶层目录名称及长度. 出错时返回 NULL.
 // 注意!! 这里 "最深层目录" 是指路径名中最靠近末端的目录(比如 '/dev/tty1' 的最深层目录为 'dev/' 而不是 '/').
 static struct m_inode * dir_namei(const char * pathname, int * namelen, 
@@ -530,10 +531,11 @@ static struct m_inode * dir_namei(const char * pathname, int * namelen,
 	basename = pathname;
 	while (c = get_fs_byte(pathname++))
 		if (c == '/')
-			// 得到最终的目录或文件名, 比如 '/dev/tty1' -> 'tty1', 如果是 '/dev/' 则 basename 为空.
+			// 更新并最终得到路径最深层的一个目录或文件名, 比如 '/dev/tty1' 则 basename 是 'tty1', 
+			// 如果是 '/dev/' 则 basename 为空, 如果是 '/dev' 则 basename 是 'dev'.
 			basename = pathname; 				
-	*namelen = pathname - basename - 1;
-	*name = basename;
+	*namelen = pathname - basename - 1; 		// 得到最深层目录或文件名的长度.
+	*name = basename; 							// 最深层的目录或文件名字符指针.
 	return dir;
 }
 
@@ -669,12 +671,12 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 		iput(dir); 												// 否则表示出错.
 		return -EISDIR;
 	}
-	// 接着根据上面得到的最深层目录的 i 节点 dir, 
-	// 在其中查找 pathname 中*文件名*(/dev/tty1 中的 tty1)对应的目录项结构 de, 
-	// 并同时得到该目录项所在的高速缓冲区指针. 如果该高速缓冲指针为 NULL, 则表示没有找到对应文件名的目录项, 
+	// 最后在当前目录 inode 中查找 pathname 中的*最终目录/文件名*(/dev/tty1 中的 tty1)对应的目录项结构 de, 
+	// 并同时得到该目录项所在数据块的缓冲块头指针. 
+	bh = find_entry(&dir, basename, namelen, &de);
+	// 如果该数据块的缓冲块指针为 NULL, 则表示没有找到对应文件名的目录项, 
 	// 因此只可能是创建文件操作. 此时如果不是创建文件, 则放回该目录的 i 节点, 返回出错号退出. 
 	// 如果用户在该目录没有写权限, 则也放回该目录的 i 节点, 返回出错号退出.
-	bh = find_entry(&dir, basename, namelen, &de);
 	if (!bh) { 										// 该目录下没有指定文件名的文件的情况下:
 		if (!(flag & O_CREAT)) {                	// 如果不是创建文件操作, 则放回 i 节点并返回错误号.
 			iput(dir);
