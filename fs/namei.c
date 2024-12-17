@@ -724,14 +724,15 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 	inr = de->inode;
 	dev = dir->i_dev;
 	brelse(bh);
-	if (flag & O_EXCL) { 							// 如果独占标志, 则被访问文件必须不存在, 所以返回出错码.
+	if (flag & O_EXCL) { 							// 如果设置了独占标志, 则被访问文件必须不存在, 所以返回出错码.
 		iput(dir);
 		return -EEXIST;
 	}
-	// 然后我们读取该目录项的 i 节点内容. 若该 i 节点是一个目录的 i 节点并且访问模式是只写或读写, 
-	// 或者没有访问的许可权限, 则放回该 i 节点, 返回访问权限出错码退出.
+	// 然后我们读取该目录项的 i 节点内容. 
 	if (!(inode = follow_link(dir, iget(dev, inr))))
 		return -EACCES;
+	// 若该 inode 对应的是一个目录, 并且访问模式不是只读(O_RDONLY)(也就是说目录只能是只读?), 
+	// 或者没有访问的许可权限, 则放回该 i 节点, 返回访问权限出错码退出.
 	if ((S_ISDIR(inode->i_mode) && (flag & O_ACCMODE)) || !permission(inode, ACC_MODE(flag))) {
 		iput(inode);
 		return -EPERM;

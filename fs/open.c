@@ -201,7 +201,7 @@ int sys_chown(const char * filename, int uid, int gid)
 	return 0;
 }
 
-// 检查字符设备类型.
+// 检查字符设备.
 // 该函数仅用于下面文件打开系统调用 sys_open(), 用于检查若打开的文件是 tty 终端字符设备时, 
 // 对当前进程和 tty 表进行相应设置. 返回 0 检测处理成功, 返回 -1 表示失败, 对应字符设备不能打开.
 static int check_char_dev(struct m_inode * inode, int dev, int flag)
@@ -253,7 +253,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 	return 0;
 }
 
-// 打开(或创建)文件的系统调用.
+// 打开(或创建)文件的系统调用(实际就是从硬盘中读取或创建这个文件名对应的 inode, 并在进程的文件列表中添加一个文件项来指向这个 inode).
 // 参数 filename 是文件名, flag 是文件访问标志, 它可取值: O_RDONLY(00, 只读), O_WRONLY(01, 只写), 
 // O_RDWR(02, 读写), 以及 O_CREAT(00100, 不存在则创建), O_EXCL(00200, 被创建文件必须不存在), 
 // O_APPEND(在文件尾添加数据) 等其他一些标志的组合(include/fcntl.h).
@@ -296,10 +296,10 @@ int sys_open(const char * filename, int flag, int mode)
 	if (i >= NR_FILE)
 		return -EINVAL;
 	// 此时我们让进程文件列表中 fd 文件指针指向系统的文件列表中的空闲项, 并令文件引用计数递增 1. 
-	// 然后调用函数 open_namei() 执行打开操作, 若返回值小于 0, 则说明出错, 于是释放刚申请到的文件结构, 返回出错码 i.
-	// 若文件打开操作成功, 则 inode 是已打开文件的 inode 指针.
 	(current->filp[fd] = f)->f_count++;
 	// Log(LOG_INFO_TYPE, "<<<<< sys_open: fd = %d >>>>>\n", fd);
+	// 调用函数 open_namei() 执行打开 inode 操作, 若返回值小于 0, 则说明出错, 于是释放刚申请到的文件结构, 返回出错码 i.
+	// 所谓打开 inode 是指从硬盘中读取或新建这个文件名对应的 inode 信息, 将其指针放到 inode 变量中(打开成功的情况下).
 	if ((i = open_namei(filename, flag, mode, &inode)) < 0) { 		// 如果出错则进行相应处理后返回出错码.
 		current->filp[fd] = NULL;
 		f->f_count = 0;
@@ -310,7 +310,7 @@ int sys_open(const char * filename, int flag, int mode)
 	// 如果允许(函数返回 0), 那么在 check_char_dev() 中会根据具体文件打开标志为进程设置控制终端. 
 	// 如果不允许打开使用该字符设备文件, 那么我们只能释放上面申请的文件项和句柄资源. 返回出错码.
 	/* ttys are somewhat special (ttyxx major==4, tty major==5) */
-	if (S_ISCHR(inode->i_mode)) 					// 如果是字符设备文件(比如 tty1 等, 终端设备, 内存设备, 网络设备).
+	if (S_ISCHR(inode->i_mode)) 					// 如果是字符设备文件(比如 /dev/tty1 等, 终端设备, 内存设备, 网络设备).
 		if (check_char_dev(inode, inode->i_zone[0], flag)) { 	// 对于设备文件, 其 zone[0] 中存放的是设备号.
 			iput(inode);
 			current->filp[fd] = NULL;
