@@ -12,7 +12,7 @@
 #define O_RDWR		   02					// 以读写方式打开文件. 010
 // 下面是文件创建和操作, 用于 open(). 可与上面访问模式用 '位或' 的方式一起使用.
 #define O_CREAT		00100	/* not fcntl */	// 如果文件不存在就创建. fcntl 函数不用.
-#define O_EXCL		00200	/* not fcntl */	// 独占使用文件标志(被创建文件必须不存在). 000-010-000-000
+#define O_EXCL		00200	/* not fcntl */	// 独占使用文件标志(被访问文件必须不存在). 000-010-000-000
 #define O_NOCTTY	00400	/* not fcntl */	// 不分配控制终端.
 #define O_TRUNC		01000	/* not fcntl */	// 若文件已存在且是写操作, 则将内容清空.
 #define O_APPEND	02000					// 以添加方式打开,文件指针置为文件尾.

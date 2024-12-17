@@ -710,21 +710,21 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 			iput(dir);
 			return -ENOSPC;
 		}
-		de->inode = inode->i_num;
-		bh->b_dirt = 1;
-		brelse(bh);
-		iput(dir);
-		*res_inode = inode;
+		de->inode = inode->i_num; 					// 设置目录项的 inode 编号.
+		bh->b_dirt = 1; 							// 更新 dirt 标志, 因为添加了新的目录项. 需要刷写到硬盘上.
+		brelse(bh); 								// 释放这个缓存块, 引用次数 -1.
+		iput(dir); 									// 释放目录 inode.
+		*res_inode = inode; 						// 最终得到最深层目录/文件的 inode.
 		return 0;
     }
-	// 若上面在目录中取文件名对应目录项结构的操作成功(即 bh 不为 NULL), 则说明指定打开的文件已经存在. 
+	// 在目录中找到目录/文件名对应目录项(即 bh 不为 NULL), 则说明要打开的文件已经存在. 
 	// 于是取出该目录项的 i 节点号和其所在设备号, 
-	// 并释放该高速缓冲区以及放回这个文件所在目录的 i 节点(比如文件 'tty1' 所在的目录 i 节点为 '/dev/'). 
+	// 并释放该高速缓冲区以及放回这个文件所在目录的 i 节点(比如文件 'tty1' 所在的目录 i 节点为 'dev/'). 
 	// 如果此时独占操作标志 O_EXCL 置位, 但现在文件已经存在, 则返回文件已存在出错码退出.
 	inr = de->inode;
 	dev = dir->i_dev;
 	brelse(bh);
-	if (flag & O_EXCL) {
+	if (flag & O_EXCL) { 							// 如果独占标志, 则被访问文件必须不存在, 所以返回出错码.
 		iput(dir);
 		return -EEXIST;
 	}
