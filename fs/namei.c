@@ -201,13 +201,13 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 		// 因为已在 '/' 目录下了, 没有上级目录了， 那么要获取的目录项名就只取 '.'
 		if ((*dir) == current->root) 	
 			namelen = 1;
-		else if ((*dir)->i_num == ROOT_INO) { 	// 如果是真正的根 i 节点的情况下.
+		else if ((*dir)->i_num == ROOT_INO) { 	// 如果是真正的根 inode 的情况(inode 号为 1)下.
 			/* '..' over a mount-point results in 'dir' being exchanged for the mounted
 			   directory-inode. NOTE! We set mounted, so that we can iput the new dir */
 			/* 在一个挂载点上的 '..' 需要将目录切换到挂载到的目录 i 节点上. 
 			   注意! 由于我们设置了 mounted 标志, 因而我们能够放回该新目录. */
-			sb = get_super((*dir)->i_dev);
-			if (sb->s_imount) { 				// 如果该文件系统挂载到某个 inode 了(这个文件系统是挂载的).
+			sb = get_super((*dir)->i_dev); 		// 获取设备的超级块信息.
+			if (sb->s_imount) { 				// 如果该文件系统挂载到某个 inode 了.
 				iput(*dir);
 				(*dir) = sb->s_imount; 			// 将当前的 inode 更换为挂载点的 inode.
 				(*dir)->i_count++;

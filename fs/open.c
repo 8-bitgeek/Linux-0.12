@@ -201,7 +201,7 @@ int sys_chown(const char * filename, int uid, int gid)
 	return 0;
 }
 
-// 检查字符设备.
+// 检查字符设备. tty: Teletype, 电传打字机.
 // 该函数仅用于下面文件打开系统调用 sys_open(), 用于检查若打开的文件是 tty 终端字符设备时, 
 // 对当前进程和 tty 表进行相应设置. 返回 0 检测处理成功, 返回 -1 表示失败, 对应字符设备不能打开.
 static int check_char_dev(struct m_inode * inode, int dev, int flag)
@@ -217,33 +217,32 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 	// 即取 4 号设备的子设备号. 否则如果打开的是某个 4 号设备, 则直接取其子设备号. 
 	// 如果得到的 4 号设备子设备号小于 0, 那么说明进程没有控制终端, 或者设备号错误, 
 	// 则返回 -1, 表示由于进程没有控制终端或者不能打开这个设备.
-	if (MAJOR(dev) == 4 || MAJOR(dev) == 5) {
+	if (MAJOR(dev) == 4 || MAJOR(dev) == 5) { 		// 只检查主设备是 ttyxx 或者 tty 的设备.
 		if (MAJOR(dev) == 5)
-			min = current->tty;
+			min = current->tty; 					// 如果主设备是 tty, 则子设备号是当前任务的 tty(-1 表示没有).
 		else
 			min = MINOR(dev);
 		if (min < 0)
 			return -1;
-		// 主伪终端设备文件只能被进程独占使用. 
-		// 如果子设备号表明这是一个主伪终端, 并且该打开文件 i 节点引用计数大于 1, 则说明该设备已被其他进程使用.
-		// 因此不能再打开该字符设备文件, 于是返回 -1. 否则, 我们让 tty 结构指针指向 tty 表中对应结构项.
-		// 若打开文件操作标志 flag 中没有表明不需要控制终端 O_NOCTTY, 并且当前进程是进程组首领, 
-		// 并且当前进程没有控制终端, 并且 tty 结构中 session 字段为 0(表示该终端还不是任何进程组的控制终端), 
-		// 那么就允许为进程设置这个终端设备 min 为其控制终端. 于是设置进程任务结构终端设备号字段 tty 值等于 min, 
-		// 并且设置对应 tty 结构的会话号 session 和进程组号 pgrp 分别等于进程的会话号和进程组号.
-		if ((IS_A_PTY_MASTER(min)) && (inode->i_count > 1))
+		// 主伪终端设备文件只能被进程独占使用, 即设备文件的 inode->i_count 不能大于 1, 如果 > 1 则出错. 
+		if ((IS_A_PTY_MASTER(min)) && (inode->i_count > 1)) 	// 如果引用次数 > 1 则表示被两个地方引用, 不是独占的.
 			return -1;
+		// 我们让 tty 结构指针指向 tty 表中对应结构项.
 		tty = TTY_TABLE(min);
 		// Log(LOG_INFO_TYPE, "<<<<< tty index = %d>>>>>\n", min);
+		// 若文件访问标志 flag 中没有表明不需要分配终端(O_NOCTTY), 并且当前进程是进程组首领, 
+		// 并且当前进程还没有控制终端, 并且 tty 中 session 字段为 0(表示该终端还没分配给其它进程), 
+		// 那么就将这个 tty 设置为当前进程的终端(current->tty = min).
+		// 并且将该 tty 的会话号 session 和进程组号 pgrp 分别设置为当前进程的会话号和进程组号(关系绑定).
 		if (!(flag & O_NOCTTY) && current->leader && current->tty < 0 && tty->session == 0) {
-			current->tty = min;
-			tty->session = current->session;
-			tty->pgrp = current->pgrp;
+			current->tty = min; 								// 设置当前进程的终端号.
+			tty->session = current->session; 					// 将 tty 的会话号设置为当前进程的会话号.
+			tty->pgrp = current->pgrp; 							// 设置终端对应的进程组号.
 		}
-		// 如果打开文件操作标志 flag 中含有 O_NONBLOCK(非阻塞)标志, 则我们需要对该字符终端设备进行相关设置, 
+		// 如果文件访问标志 flag 中含有 O_NONBLOCK(非阻塞)标志, 则我们需要对该字符终端设备进行相关设置, 
 		// 设置为满足读操作需要读取的最少字符数为 0, 设置超时定时值为 0, 并把终端设备设置成非规范模式. 
 		// 非阻塞方式只能工作于非规范模式. 在此模式下当 VMIN 和 VTIME 均设置为 0 时, 
-		// 辅助队列中有多少支进程就读取多少字符, 并立刻返回.
+		// 辅助队列中有多少字符进程就读取多少字符, 并立刻返回.
 		if (flag & O_NONBLOCK) {
 			TTY_TABLE(min)->termios.c_cc[VMIN] = 0;
 			TTY_TABLE(min)->termios.c_cc[VTIME] = 0;
@@ -289,7 +288,7 @@ int sys_open(const char * filename, int flag, int mode)
 	// 因此这里要复位对应位, 然后为打开的文件在系统文件表 file_table 中寻找一个空闲结构项. 
 	current->close_on_exec &= ~(1 << fd);           // 复位对应文件打开位, 不让其在执行 execve 时关闭.
 	// 令 f 指向系统的文件列表开始处, 搜索空闲文件项(引用计数为 0 的项), 若已经没有空闲文件表结构项, 则返回出错码. 
-	// 另外, 下面的指针赋值 "f = 0 + file_table" 等同于 "f = file_table" 和 "f = &file_table[0]", 
+	// 另外, 下面的指针赋值 "f = 0 + file_table" 等同于 "f = file_table" 和 "f = &file_table[0]". 
 	f = 0 + file_table; 							// (fs/file_table.c)
 	for (i = 0; i < NR_FILE; i++, f++)
 		if (!f->f_count) break;         			// 在系统文件表中找到空闲结构项(没有被引用的文件项). 
@@ -311,7 +310,7 @@ int sys_open(const char * filename, int flag, int mode)
 	// 如果不允许打开使用该字符设备文件, 那么我们只能释放上面申请的文件项和句柄资源. 返回出错码.
 	/* ttys are somewhat special (ttyxx major==4, tty major==5) */
 	if (S_ISCHR(inode->i_mode)) 					// 如果是字符设备文件(比如 /dev/tty1 等, 终端设备, 内存设备, 网络设备).
-		if (check_char_dev(inode, inode->i_zone[0], flag)) { 	// 对于设备文件, 其 zone[0] 中存放的是设备号.
+		if (check_char_dev(inode, inode->i_zone[0], flag)) { 	// 设备文件的 zone[0] 中存放的是设备号.
 			iput(inode);
 			current->filp[fd] = NULL;
 			f->f_count = 0;

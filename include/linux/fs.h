@@ -46,7 +46,8 @@
 
 void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 
-#define MAJOR(a) (((unsigned)(a)) >> 8)					// 取高字节(主设备号); 1 - 内存, 2 - 磁盘, 3 - 硬盘, 4 - ttyx, 5 - tty, 6 - 并行口, 7 - 非命名管道.
+// 主设备号: 1 - 内存, 2 - 磁盘, 3 - 硬盘, 4 - ttyx, 5 - tty, 6 - 并行口, 7 - 非命名管道.
+#define MAJOR(a) (((unsigned)(a)) >> 8)					// 取高字节(主设备号); 
 #define MINOR(a) ((a) & 0xff)							// 取低字节(次设备号)
 
 #define NAME_LEN 14										// 名字最大长度值.
@@ -177,8 +178,7 @@ struct super_block {
 	struct buffer_head * s_zmap[8];			// 逻辑块位图所在的高速缓冲块指针数组(占用 8 块).
 	unsigned short s_dev;					// 超级块所在设备号(比如 0x301 表示第一个硬盘的第一个分区). 0 表示空闲.
 	struct m_inode * s_isup;				// 文件系统的根 inode. (isup-superi)
-	// 只有被挂载的文件系统的超级块该属性才会设置(挂载到哪个 inode 上了), 根文件系统的超级块该属性为空(不是挂载的).
-	struct m_inode * s_imount;				// 该文件系统(超级块)被挂载到哪个 inode
+	struct m_inode * s_imount;				// 该文件系统(超级块)被挂载到哪个 inode.
 	unsigned long s_time;					// 修改时间.
 	struct task_struct * s_wait;			// 等待该超级块的进程指针.
 	unsigned char s_lock;					// 锁定标志(0 - 未被锁定, 1 - 被锁定).

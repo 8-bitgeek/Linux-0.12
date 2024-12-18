@@ -319,7 +319,7 @@ int printf(const char *fmt, ...)
 void init(void)
 {
 	int pid, i, fd;
-	// setup() 是一个系统调用. 用于读取硬盘参数和分区表信息并加载虚拟盘(若存在的话)和安装根文件系统设备. 
+	// setup() 是 sys_setup() 系统调用. 用于读取硬盘参数和分区表信息并加载虚拟盘(若存在的话)以及安装根文件系统. 
 	// 该函数用上面的 _syscall1() 宏定义, 对应函数是 sys_setup(), 在块设备子目录 (kernel/blk_drv/hd.c).
 	setup((void *) &drive_info);
 	// 下面以读写访问方式打开设备 "/dev/tty0", 它对应终端控制台. 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0.

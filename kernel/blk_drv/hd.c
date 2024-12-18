@@ -116,7 +116,7 @@ int sys_setup(void * BIOS)
 	static int callable = 1;	// 限制本函数只能被调用 1 次的标志.
 	int i, drive;
 	unsigned char cmos_disks;
-	struct partition *p; 		// 硬盘分区表指针.
+	struct partition * p; 		// 硬盘分区表指针.
 	struct buffer_head * bh;
 
 	// 首先设置 callable 标志, 使得本函数只能被调用 1 次. 然后设置硬盘信息数组 hd_info[]. 

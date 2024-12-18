@@ -83,13 +83,13 @@ extern struct tty_struct tty_table[];			// tty 终端结构数组.
 extern int fg_console;							// 前台控制台号.
 
 // 根据终端类型在 tty_table[] 中取对应终端号 nr 的 tty 结构指针. 
-// 后半部分用于根据子设备号 nr 在 tty_table[] 表中选择对应的 tty 结构.
-// 如果 nr = 0, 表示正在使用前台终端, 因此直接使用终端号 fg_console 作为 tty_table[] 项索引取 tty 结构. 
+// nr == 0 ? fg_console : (nr < 64 ? tty_table[nr - 1] : tty_table[nr]).
+// 如果 nr == 0, 表示正在使用前台终端, 因此直接使用终端号 fg_console 作为 tty_table[] 项索引取 tty 结构. 
 // 如果 nr 大于 0, 那么就要分两种情况考虑: 1 -- nr 是虚拟终端号; 2 -- nr 是串行终端号或者伪终端号. 
 // 对于虚拟终端其 tty 结构在 tty_table[] 索引项是 nr - 1(0 -- 63). 
 // 对于其他类型终端, 则它们在 tty_table 中的索引值就是 nr. 
 // 例如, 如果 nr = 64, 表示是一个串行终端, 则其 tty 结构就是 tty_table[nr]. 
-// 如果 nr = 1, 则对应终端的 tty 结构是 tty_table[0].
+// 如果 nr = 1, 则对应虚拟终端的 tty 结构是 tty_table[0].
 #define TTY_TABLE(nr) (tty_table + ((nr) ? (((nr) < 64) ? (nr) - 1 : (nr)) : fg_console))
 
 // 这里给出了终端 termios 结构中可更改的特殊字符数组 c_cc[] 的初始值. 该 termios 结构定义在 include/termios.h 中. 
