@@ -159,7 +159,7 @@ struct file {
 	unsigned short f_mode;								// 文件操作模式(R/W 位).
 	unsigned short f_flags;								// 文件打开和控制的标志.
 	unsigned short f_count;								// 对应文件引用计数值.
-	struct m_inode * f_inode;							// 指向对应 i 节点.
+	struct m_inode * f_inode;							// 指向文件对应 inode.
 	off_t f_pos;										// 文件位置(读写偏移值).
 };
 
