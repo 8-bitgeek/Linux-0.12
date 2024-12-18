@@ -194,7 +194,7 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 	// 于是我们让 *dir 指向该被安装到的 i 节点; 并且该 i 节点的引用数加 1. 
 	// 即针对这种情况, 我们悄悄进行了 "偷梁换柱" 工程:)
 	/* check for '..', as we might have to do some "magic" for it */
-	/* 检查目录项 '..', 因为我们可能需要对其进行特殊处理 */
+	/* 检查目录项 '..', 因为我们可能需要对其进行特殊处理, 这里为什么要用 get_fs_type 来获取字符内容, 参考 do_execve() 函数的说明 */
 	if (namelen == 2 && get_fs_byte(name) == '.' && get_fs_byte(name + 1) == '.') { 	// 如果要处理的目录项名是 '..'
 		/* '..' in a pseudo-root results in a faked '.' (just change namelen) */
 		// 在给定 inode 是进程根节点('/' 目录对应的 inode)的情况下， 如果再查找 '..' 目录项是不行的, 

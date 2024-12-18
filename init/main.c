@@ -323,7 +323,7 @@ void init(void)
 	// 该函数用上面的 _syscall1() 宏定义, 对应函数是 sys_setup(), 在块设备子目录 (kernel/blk_drv/hd.c).
 	setup((void *) &drive_info);
 	// 下面以读写访问方式打开设备 "/dev/tty1", 它对应终端控制台. 
-	// 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0.
+	// 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0, 即作为标准输入.
 	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
 	// 这里把它以读和写(O_RDWR)的方式打开是为了复制产生标准输出句柄 stdout(1) 和标准错误输出句柄 stderr(2).
@@ -339,16 +339,16 @@ void init(void)
 	// 对于原进程(父进程)则返回子进程的进程号 pid. TASK-2 关闭了文件句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 
 	// 并使用 execve() 函数将进程自身代码替换成 /bin/sh 程序(即 shell 程序), 然后执行 /bin/sh 程序. 
 	// 所携带的参数和环境变量分别由 argv_rc 和 envp_rc 数组给出. 
-	// 关闭句柄 0 并立刻打开 /etc/rc 文件的作用是把标准输入 stdin 重定向到 /etc/rc 文件. 
-	// 这样 shell 程序 /bin/sh 就可以运行 rc 文件中设置的命令. 
-	// 由于这里 sh 的运行方式是非交互式的, 因此在执行完 rc 文件中的命令后就会立刻退出, 进程 2 也随之结束. 
+	// 关闭句柄 0 并立刻打开 /etc/rc 文件的作用是把标准输入 stdin 重定向到 /etc/rc 文件(/etc/rc 对的 fd 为 0). 
+	// 这样 shell 程序 /bin/sh 就可以运行 rc 文件中设置的命令(因为 /etc/rc 的 fd 为 0, 所以它作为这个程序的标准输入). 
+	// 由于这里 sh 的运行方式是非交互式的(/etc/rc 作为标准输入), 因此在执行完 rc 文件中的命令后就会立刻退出, 进程 2 也随之结束. 
 	// 函数 _exit() 退出时的出错码 1 - 操作未许可; 2 -- 文件或目录不存在.
 	if (!(pid = fork())) { 								// sys_fork() 系统调用(kernel/sys_call.s)
-		// 以下代码是在 Task-2 中执行.
+		// 以下代码是在 Task-2 中执行. 关闭当前进程 fd 为 0 的文件.
 		close(0); 										// int $0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
 		if (open("/etc/rc", O_RDONLY, 0))
-			_exit(1);									// 若打开文件失败, 则退出(lib/_exit.c).
-		// 调用 int $0x80 中断, __NR_execve. (lib/execve.c) (kernel/sys_call.s sys_execve)
+			_exit(1);									// 若文件打开失败, 则退出(lib/_exit.c).
+		// 调用 int $0x80 中断, __NR_execve. (lib/execve.c) (kernel/sys_call.s sys_execve())
 		execve("/bin/sh", argv_rc, envp_rc);			// 替换成 /bin/sh 程序并执行.
 		// _exit(execve("/usr/root/hello", argv, envp));
 		_exit(2);										// 若 execve() 执行失败则退出.

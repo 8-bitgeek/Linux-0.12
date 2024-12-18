@@ -316,15 +316,14 @@ timer_interrupt:
 	addl $4, %esp					# task switching to accounting ...
 	jmp ret_from_sys_call
 
-# 这是 sys_execve() 系统调用. 取中断调用程序的代码指针作为参数调用 C 函数 do_execve().
-# do_execve() 在 (fs/exec.c).
+# 这是 sys_execve() 系统调用. 实际调用 c 函数 do_execve(). (fs/exec.c)
 .align 4
 sys_execve:
 	# eax 中保存的是栈中指向用户调用 `int 0x80` 代码下一行地址的栈指针地址. 即 eax 中是指向栈中的一个地址.
-	lea EIP(%esp), %eax				# (%esp + 0x20) 即栈顶 -> 栈底方向的第 0x20 的偏移处.
-	pushl %eax
-	call do_execve
-	addl $4, %esp					# 丢弃调用时压入栈的 EIP 值.
+	lea EIP(%esp), %eax				# (%esp + 0x20) 当前栈顶向下偏移 0x20 处保存的是: (下一行注释)
+	pushl %eax 						# 用户态代码调用 0x80 中断的下一行代码地址, 即中断返回后要执行的代码.
+	call do_execve 					# 调用 c 函数 do_execve().
+	addl $4, %esp					# 丢弃上面调用 do_execve 前压入栈的 EIP 值.
 	ret
 
 # sys_fork() 调用, 用于创建子进程, 是 system_call 功能 2. 原型在 include/linux/sys.h 中.

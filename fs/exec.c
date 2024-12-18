@@ -316,14 +316,16 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 // 该函数是系统中断调用(int $0x80)功能号 __NR_execve 调用的函数. 
 // 函数的参数是进入系统调用处理过程后直至调用本函数之前逐步压入栈中的值.  
 // 这些值包括:
-// 1: system_call 在调用系统调用处理函数前入栈的 edx, ecx 和 ebx 寄存器值, 分别对应 **envp, **argv 和 *filename;
-// 2: system_call 在调用用 sys_call_table 中 sys_execve 函数(指针)时(call sys_execve)压入栈的函数返回地址(tmp);
+// 1: system_call 在调用系统调用函数前入栈的 edx, ecx 和 ebx 寄存器值, 分别对应 **envp, **argv 和 *filename;
+// 2: system_call 在调用 sys_call_table 中 sys_execve 函数(指针)时(call sys_execve)压入栈的函数返回地址(tmp);
 // 3: sys_execve 在调用本函数 do_execve 前入栈的指向栈中调用系统中断的程序代码指针 eip.
 // 参数:
-// eip - sys_execve 在调用本函数前入栈的用户态时调用 `int $0x80` 的下一行代码指针. 
-// 		 最后入栈的参数 eip 在参数表的第一个(实际上最后入栈了一个返回地址, 但是不作为参数).
-// 		 用户态在调用 `int $0x80` 时, 会发生特权级变化, 因此会入栈 cs 和 eip, eip[1] = cs(先入栈 cs, 再入栈 eip).
-// tmp - system_call 在调用 sys_execve 时的返回地址, 无用.
+// eip - sys_execve 在调用本函数前入栈的用户态代码调用 `int $0x80` 的下一行代码指针. 
+// 		即系统调用返回后要执行的用户代码的地址.
+// 		最后入栈的参数 eip 在参数列表的第一个(实际上最后入栈了一个返回地址, 但是不作为参数).
+// 		用户态在调用 `int $0x80` 时, 会发生特权级变化, 同时进行堆栈切换, 
+// 		因此会入栈 cs 和 eip, eip[1] = cs(先入栈 cs, 再入栈 eip).
+// tmp - system_call 在调用 sys_execve 时的返回地址, 无用(仅在函数返回时被 cpu 自动使用).
 // filename - 要执行的程序文件名指针;
 // argv - 命令行参数指针数组的指针;
 // envp - 环境变量指针数组的指针.
@@ -342,15 +344,16 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	unsigned long p = PAGE_SIZE * MAX_ARG_PAGES - 4;			// p 指向参数和环境空间的最后一个长字(4k * 32 - 4).
 
 	// 在内核中打印要执行的文件的名字.
-	char s, filename1[128];
+	char s, filename1[128]; 									// 函数内的变量都是在栈中(当前进程的内核态堆栈中).
 	int index = 0;
+	// 将用户数据空间中的 filename 复制到内核的数据段(filename1)中.
 	while (1) {
-		// 此处的 filename 在内核的数据段中, 但是是用的当前进程的 fs(指向 ldt), 
+		// 此时代码运行在内核态, 所以数据段寄存器 ds 指向的是内核的数据段, 这时访问 filename 地址处的内存拿到的不是用户态进程内存里的数据.
 		// 不过目前当前进程 0-640KB 这部分映射关系是复制的内核页表的(看下 TASK(0->1) 的 fork 过程便知), 
 		// 所以现在当前进程的 fs 在 0-640KB 的逻辑空间也是指向内核数据段(物理地址的 0-640KB), 
 		// 后面的 free_page_table 会替换掉 0-640KB 这个映射关系.
 		// 参照: sys_call.s # sys_fork -> copy_process() -> copy_mem() -> copy_page_table() (kernel/fork.c)
-		s = get_fs_byte(filename + index); 						
+		s = get_fs_byte(filename + index); 		// 复制用户数据段中的数据到内核的数据段中.
 		if (s) {
 			*(filename1 + index) = s; 			// 拷贝内核数据段中的 filename 到用户进程内核栈 filename1 (当前进程的内核态栈)中.
 			index++;
