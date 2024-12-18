@@ -263,7 +263,6 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 // 如果调用操作成功, 则返回文件句柄(文件描述符 fd), 否则返回出错码. 参见(include/sys/stat.h include/fcntl.h).
 int sys_open(const char * filename, int flag, int mode)
 {
-	// 打开文件的系统调用的 Log
 	// Log(LOG_INFO_TYPE, "<<<<< sys_open: filename = %s, flag = %d, mode = %d >>>>>\n", filename, flag, mode);
 	struct m_inode * inode;
 	struct file * f;
@@ -341,23 +340,24 @@ int sys_creat(const char * pathname, int mode)
 }
 
 // 关闭文件系统调用.
-// 参数 fd 是文件句柄.
+// 参数 fd 是当前进程要关闭的文件句柄.
 // 成功则返回 0, 否则返回出错码.
 int sys_close(unsigned int fd)
 {
 	struct file * filp;
 
-	// 首先检查参数有效性. 若给出的文件句柄值大于程序同时打开的文件数 NR_OPEN, 则返回出错码(参数无效).
-	// 然后复位进程的执行时关闭文件句柄位图对应位. 若该文件句柄对应的文件结构指针是 NULL, 则返回出错码.
+	// 首先检查参数有效性. 若给出的文件句柄值大于进程的最大打开文件数 NR_OPEN, 则返回出错码(参数无效).
 	if (fd >= NR_OPEN)
 		return -EINVAL;
+	// 然后复位该句柄对应的 close_on_exec 位. 
 	current->close_on_exec &= ~(1 << fd);
+	// 若该文件句柄对应的文件指针是 NULL, 则返回出错码.
 	if (!(filp = current->filp[fd]))
 		return -EINVAL;
-	// 现在置该文件句柄的文件结构指针为 NULL.
+	// 将文件句柄对应的文件指针置为 NULL.
 	// 若在关闭文件之前, 对应文件结构中的句柄引用计数已经为 0, 则说明内核出错, 停机. 
-	// 否则将对应文件结构的引用计数减 1. 此时如果它还不为 0, 则说明有其他进程正在使用该文件, 于是返回 0(成功).
-	// 如果引用计数已等于 0, 说明该文件已经没有进程引用, 该文件结构已变为空闲. 则释放该文件 i 节点, 返回 0.
+	// 否则将对应文件的引用计数减 1. 此时如果它还不为 0, 则说明有其它进程正在使用该文件, 直接返回 0(成功).
+	// 如果引用计数已等于 0, 说明该文件已经没有进程引用, 该文件已变为空闲. 则释放该文件对应的 inode, 然后返回 0.
 	current->filp[fd] = NULL;
 	if (filp->f_count == 0)
 		panic("Close: file count is 0");

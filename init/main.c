@@ -322,26 +322,28 @@ void init(void)
 	// setup() 是 sys_setup() 系统调用. 用于读取硬盘参数和分区表信息并加载虚拟盘(若存在的话)以及安装根文件系统. 
 	// 该函数用上面的 _syscall1() 宏定义, 对应函数是 sys_setup(), 在块设备子目录 (kernel/blk_drv/hd.c).
 	setup((void *) &drive_info);
-	// 下面以读写访问方式打开设备 "/dev/tty0", 它对应终端控制台. 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0.
+	// 下面以读写访问方式打开设备 "/dev/tty1", 它对应终端控制台. 
+	// 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0.
 	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 
-	// 这里再把它以读和写的方式分别打开是为了复制产生标准输出(写)句柄 stdout 和标准出错输出句柄 stderr.
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
+	// 这里把它以读和写(O_RDWR)的方式打开是为了复制产生标准输出句柄 stdout(1) 和标准错误输出句柄 stderr(2).
 	(void) open("/dev/tty1", O_RDWR, 0); 				// sys_open 系统调用(fs/open.c)
+	// 复制 0 号文件句柄: 三个句柄都指向同一个文件(/dev/tty1).
 	(void) dup(0);										// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c sys_dup())
-	(void) dup(0);										// 复制句柄, 产生句柄 2 号 -- stderr 标准出错输出设备.
+	(void) dup(0);										// 复制句柄, 产生句柄 2 号 -- stderr 标准错误输出设备.
 	// 下面打印缓冲区块数和总字节数, 每块 1024 字节, 以及主内存区空闲内存字节数.
 	printf("<<<<< %d buffers = %d bytes buffer space >>>>>\n\r", NR_BUFFERS, NR_BUFFERS * BLOCK_SIZE); 	// 高速缓冲区.
 	printf("<<<<< Free mem: %d bytes >>>>>\n\r", memory_end - main_memory_start); 						// 主内存.
 	// 下面 fork() 用于创建一个子进程(TASK-2). 
-	// 对于被创建的子进程, fork() 将返回 0 值, 对于原进程(父进程)则返回子进程的进程号 pid. 
-	// TASK-2 关闭了文件句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 
-	// 并使用 execve() 函数将进程自身替换成 /bin/sh 程序(即 shell 程序), 然后执行 /bin/sh 程序. 
+	// 对于被创建的子进程, fork() 将返回 0 值(sys_fork() 调用的过程中会将新进程的返回值寄存器 eax 设置为 0), 
+	// 对于原进程(父进程)则返回子进程的进程号 pid. TASK-2 关闭了文件句柄 0(stdin), 以只读方式打开 /etc/rc 文件, 
+	// 并使用 execve() 函数将进程自身代码替换成 /bin/sh 程序(即 shell 程序), 然后执行 /bin/sh 程序. 
 	// 所携带的参数和环境变量分别由 argv_rc 和 envp_rc 数组给出. 
 	// 关闭句柄 0 并立刻打开 /etc/rc 文件的作用是把标准输入 stdin 重定向到 /etc/rc 文件. 
 	// 这样 shell 程序 /bin/sh 就可以运行 rc 文件中设置的命令. 
 	// 由于这里 sh 的运行方式是非交互式的, 因此在执行完 rc 文件中的命令后就会立刻退出, 进程 2 也随之结束. 
 	// 函数 _exit() 退出时的出错码 1 - 操作未许可; 2 -- 文件或目录不存在.
-	if (!(pid = fork())) { 								// (kernel/sys_call.s)
+	if (!(pid = fork())) { 								// sys_fork() 系统调用(kernel/sys_call.s)
 		// 以下代码是在 Task-2 中执行.
 		close(0); 										// int $0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
 		if (open("/etc/rc", O_RDONLY, 0))
@@ -356,9 +358,9 @@ void init(void)
   	if (pid > 0)
 		while (pid != wait(&i));
 	// 如果执行到这里, 说明刚创建的子进程的执行已停止或终止了. 
-	// 下面循环中再创建一个子进程, 如果出错, 则显示 "初始化程序创建子进程失败" 信息并继续执行. 
+	// 下面循环中再创建一个新的子进程, 如果出错, 则显示 "初始化程序创建子进程失败" 信息并继续执行. 
 	// 对于所创建的子进程将关闭所有以前遗留的文件句柄(stdin, stdout, stderr), 新创建一个会话并设置进程组号,
-	// 然后重新打开 /dev/tty0 作为 stdin, 并复制成 stdout 和 stderr. 再次执行系统解释程序 /bin/sh. 
+	// 然后重新打开 /dev/tty0 作为 stdin, 并复制出 stdout 和 stderr. 再次执行系统解释程序 /bin/sh. 
 	// 但这次执行所选用的参数和环境数组另选了一套. 然后父进程再次运行 wait() 等等. 
 	// 如果子进程又停止了执行, 则在标准输出上显示出错信息 "子进程 pid 停止了运行, 返回码是 i",
 	// 然后继续重试下去..., 形成 "大" 死循环.
