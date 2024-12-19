@@ -388,7 +388,7 @@ restart_interp:
 		goto exec_error2;								// 若不是常规文件则置出错码, 跳转 exec_error2.
 	}
 	// 下面检查当前进程是否有权运行指定的执行文件. 即根据执行文件 i 节点中的属性, 看看本进程是否有权执行它. 
-	// 我们首先查看属性中是否设置了 set-user-ID(i_mode 位 9 置位)标志和 set-group-id(i_mode 位 10 置位)标志. 
+	// 我们首先查看 inode 属性中是否设置了 set-user-ID(i_mode 位 9 置位)标志和 set-group-id(i_mode 位 10 置位)标志. 
 	// 这两个标志主要是让一般用户能够执行特权用户(如超级用户 root)的程序, 例如改变密码的程序 passwd 等. 
 	// 如果 set-user-ID 标志置位, 则后面执行进程的有效用户 ID(euid) 就设置成执行文件的用户 ID, 否则设置成当前进程的 euid. 
 	// 如果执行文件 set-group-id 被置位的话, 则执行进程的有效组 ID(egid) 就设置为执行执行文件的组 ID. 
