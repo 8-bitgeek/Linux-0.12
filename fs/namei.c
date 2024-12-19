@@ -511,7 +511,8 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
  */
 // 参数: pathname - 目录路径名; namelen - 用于保存得到的最深层目录/文件名的长度; 
 // 		name - 用于保存得到的最深层目录/文件名; base - 搜索路径中的起始目录的 i 节点.
-// 返回: 指定目录名最深层的 i 节点指针和最顶层目录名称及长度. 出错时返回 NULL.
+// 返回: 指定目录名最深层的 i 节点指针和最深层目录/文件名称及长度. 
+// 		比如 '/dev/tty1' 返回的文件名是 'tty1', 返回的 inode 是 'dev/' 的 inode. 出错时返回 NULL.
 // 注意!! 这里 "最深层目录" 是指路径名中最靠近末端的目录(比如 '/dev/tty1' 的最深层目录为 'dev/' 而不是 '/').
 static struct m_inode * dir_namei(const char * pathname, int * namelen, 
 								  const char ** name, struct m_inode * base)
@@ -541,7 +542,7 @@ static struct m_inode * dir_namei(const char * pathname, int * namelen,
 
 // 取指定路径名的 i 节点内部函数.
 // 参数: pathname - 路径名; base - 搜索起点目录 i 节点; 
-// 		follow_links - 是否跟随符号链接的标志, 1 - 需要, 0 不需要.
+// 		follow_links - 是否跟随符号链接的标志, 1 - 需要, 0 - 不需要.
 struct m_inode * _namei(const char * pathname, struct m_inode * base, int follow_links)
 {
 	const char * basename;
@@ -551,7 +552,7 @@ struct m_inode * _namei(const char * pathname, struct m_inode * base, int follow
 	struct dir_entry * de;
 
 	// 首先查找指定路径名中最深层目录的目录名并得到其 i 节点. 若不存在, 则返回 NULL 退出. 
-	// 如果返回的最深层文件名字的长度是 0, 则表示该路径名以一个目录名为结尾. 
+	// 如果返回的最深层文件名字的长度是 0, 则表示该路径名以一个目录名为结尾(比如 '/dev/'). 
 	// 因此说明我们已经找到对应目录的 i 节点, 可以直接返回该 i 节点退出.
 	if (!(base = dir_namei(pathname, &namelen, &basename, base)))
 		return NULL;
@@ -613,7 +614,7 @@ struct m_inode * lnamei(const char * pathname)
 // 返回: 对应的 i 节点.
 struct m_inode * namei(const char * pathname)
 {
-	return _namei(pathname, NULL, 1);
+	return _namei(pathname, NULL, 1); 			// 起始目录 inode 为 NULL, 1 - 需要追踪符号链接信息.
 }
 
 /*
