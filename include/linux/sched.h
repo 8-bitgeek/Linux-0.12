@@ -494,7 +494,7 @@ static inline unsigned long _get_base(char * addr){
 }
 */
 
-// 取局部描述符表中 ldt 所指段描述符中的基地址.
+// 取局部描述符表中 ldt 所指段描述符中的段基地址.
 #define get_base(ldt) _get_base(((char *) &(ldt)))
 
 // 取段选择符 segment 指定的 **描述符** 中的段限长值.

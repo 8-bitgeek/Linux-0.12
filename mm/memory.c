@@ -117,16 +117,16 @@ void free_page(unsigned long addr)
 // 每个页表有 1024 项, 每项 4 字节, 因此也占 4KB(1 页)内存. 
 // 各进程(除了在内核代码中的进程 0 和 1)的页表所占据的页面在进程被创建时由内核为其在**主内存区**申请得到. 
 // 每个页表项对应 1 页物理内存, 因此一个页表最多可映射 4MB 的物理内存.
-// 参数: from - 起始线性基地址; size - 释放的字节长度.
+// 参数: from - 起始地址(线性地址); size - 释放的字节长度.
 int free_page_tables(unsigned long from, unsigned long size)
 {
 	unsigned long * pg_table;
 	unsigned long * dir, nr;
 
 	// 首先检测参数 from 给出的线性基地址是否在 4MB 的边界处. 因为该函数只能处理这种情况. 
-	// 若 from = 0, 则出错: 说明试图释放内核和缓冲所占空间.
 	if (from & 0x3fffff)
 		panic("free_page_tables called with wrong alignment");
+	// 若 from = 0, 则出错: 说明试图释放内核和缓冲所占空间.
 	if (!from)
 		panic("Trying to free up swapper memory space");
 	// 然后计算参数 size 给出的长度所占的页目录数(4MB 的进位整数倍), 也即所占页表数.
