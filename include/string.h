@@ -62,7 +62,7 @@ __asm__(
 	"rep\n\t"												// 否则, 在目的串中存放剩余个数的空字符.
 	"stosb\n"
 	"2:"
-	::"S" (src), "D" (dest), "c" (count):"ax");
+	::"S" (src), "D" (dest), "c" (count) : "ax");
 return dest;												// 返回目的字符串指针.
 }
 
