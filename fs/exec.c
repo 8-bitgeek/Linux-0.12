@@ -539,24 +539,24 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 	brelse(bh);
 	if (N_MAGIC(ex) != ZMAGIC || ex.a_trsize || ex.a_drsize ||
 			ex.a_text + ex.a_data + ex.a_bss > 0x3000000 ||
-			inode->i_size < ex.a_text + ex.a_data + ex.a_syms + N_TXTOFF(ex)) {
+			inode->i_size < ex.a_text + ex.a_data + ex.a_syms + N_TXTOFF(ex)) {	// N_TXTOFF(ex) == 1024.
 		retval = -ENOEXEC;
 		goto exec_error2;
 	}
 	// 另外, 如果执行文件中代码开始处没有位于 1 个页面(1024 字节)边界处, 则也不能执行. 
-	// 因为需求页(Demand paging)技术要求加载执行文件内容时以页面为单位, 因此要求执行文件映像中代码和数据都从页面边界处开始.
+	// 因为需求页(Demand paging)技术要求加载可执行文件内容时以页面为单位, 因此要求可执行文件映像中代码和数据都从页面边界处开始.
 	if (N_TXTOFF(ex) != BLOCK_SIZE) {
 		printk("%s: N_TXTOFF != BLOCK_SIZE. See a.out.h.", filename);
 		retval = -ENOEXEC;
 		goto exec_error2;
 	}
-	// 如果 sh_bang 标志没有设置, 则复制指定个数的命令行参数和环境字符串到参数和环境空间中. 
+	// 如果 sh_bang 标志没有设置(即要执行的不是脚本文件指定的解释程序), 则复制指定个数的命令行参数和环境字符串到参数和环境空间中. 
 	// 若 sh_bang 标志已经设置, 则表明将运行脚本解释程序, 此时环境变量页面已经复制完成, 无需再复制. 
 	// 同样, 若 sh_bang 没有置位而需要复制的话, 那么此时指针 p 随着复制信息增加而逐渐向小地址方向移动,
 	// 因此这两个复制串函数执行完后, 环境参数串信息块位于程序参数串信息块的后面, 并且 p 指向程序的第 1 个参数. 
 	// 事实上, p 是在 128KB 参数和环境空间中的偏移值. 因此如果 p = 0, 则表示环境变量与参数空间页面已经被占满, 容纳不下了.
 	// page 中的空间分布  开始-->|             | argv (page 低地址空间处) | envp (page 高地址空间处) |<--page 空间末端
-	if (!sh_bang) { 								// sh_bang: 是否执行脚本程序的标志, 0 - 否.
+	if (!sh_bang) { 								// sh_bang: 当前是否是执行脚本的解释程序, 0 - 否.
 		p = copy_strings(envc, envp, page, p, 0);
 		p = copy_strings(argc, argv, page, p, 0);
 		if (!p) {
@@ -581,20 +581,21 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 	// 并在 chang_ldt() 函数中使用 put_page() 放到了进程逻辑空间的末端处. 
 	// 另外, 在 create_tables() 中也会由于在用户栈上存放参数和环境指针表而引起缺页异常, 
 	// 从而内存管理程序也会就此为用户栈空间映射物理内存页.
-	//
-	// 这里我们首先放回进程原执行程序的 i 节点, 并且让进程 executable 字段指向新执行文件的 i 节点. 
+
+	// 这里我们首先放回进程原执行程序的 i 节点, 并且让进程 executable 字段指向新的可执行文件的 inode.
 	// 然后复位原进程的所有信号处理句柄, 但对于 SIG_IGN 句柄无须复位.
-	if (current->executable)
+	if (current->executable) 					// 如果当前进程有可执行文件, 则将其释放.
 		iput(current->executable);
-	current->executable = inode; 				// 设置当前进程对应的可执行文件的 inode 信息.
+	current->executable = inode; 				// 设置当前进程指向新的可执行文件的 inode.
 	current->signal = 0; 						// 对信号和信号处理函数进行初始化.
 	for (i = 0; i < 32; i++) {
 		current->sigaction[i].sa_mask = 0;
 		current->sigaction[i].sa_flags = 0;
+		// 清空 32(31) 种信号的处理函数.
 		if (current->sigaction[i].sa_handler != SIG_IGN)
 			current->sigaction[i].sa_handler = NULL;
 	}
-	// 再根据设定的执行时关闭文件句柄(close_on_exec)位图标志, 关闭指定的打开文件并复位该标志.
+	// 再根据设定的执行时关闭文件句柄(close_on_exec)位图标志, 关闭对应的文件并复位该标志.
 	for (i = 0; i < NR_OPEN; i++)
 		if ((current->close_on_exec >> i) & 1)
 			sys_close(i);
