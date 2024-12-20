@@ -189,7 +189,7 @@ static int count(char ** argv)
  * 由于加载一个段寄存器代价太高, 所以我们尽量避免调用 set_fs(), 除非实在必要.
  */
 // 复制指定个数的参数字符串到参数和环境空间中.
-// 参数: argc - 欲添加的参数个数; argv - 参数指针数组; page - 参数和环境空间页面指针数组. 
+// 参数: argc - 欲添加的参数个数; argv - 参数字符串指针数组; page - 参数和环境空间页面指针数组. 
 // 		p - 参数表空间中偏移指针, 始终指向已复制串的头部; from_kmem - 字符串来源标志. 
 // 在 do_execve() 函数中, p 初始化为指向参数表(128KB)空间的最后一个长字处, 
 // 参数字符串是以堆栈操作方式逆向往其中复制存放的. 
@@ -208,42 +208,44 @@ static unsigned long copy_strings(int argc, char ** argv, unsigned long * page,
 		return 0;									/* bullet-proofing */	/* 偏移指针验证 */
 	// 内核数据段作为 new_fs, 用户数据段作为 old_fs. 
 	// 如果字符串和字符串数组(指针)来自内核空间, 则设置 fs 段寄存器指向内核数据段.
-	new_fs = get_ds();
-	old_fs = get_fs();
-	if (from_kmem == 2)								// 若串指针在内核空间则设置 fs 指向内核空间.
+	new_fs = get_ds();								// 获取当前 ds 寄存器的值. 系统调用时 ds 指向内核数据段(0x10).
+	old_fs = get_fs(); 								// 获取当前 fs 寄存器的值. 系统调用时 fs 指向任务局部数据段(0x17).
+	if (from_kmem == 2)								// 若字符串指针和字符串都在内核空间则设置 fs 指向内核空间.
 		set_fs(new_fs);
 	// 然后循环处理各个参数, 从最后一个参数逆向开始复制, 复制到指定偏移地址处. 在循环中, 首先取需要复制的当前字符串指针. 
 	// 如果字符串在用户空间而字符串数组(字符串指针)在内核空间, 则设置 fs 段寄存器指向内核数据段(ds). 
 	// 并在内核数据空间中取了字符串指针 tmp 之后就立刻恢复 fs 段寄存器原值(fs 再指回用户空间). 
 	// 否则不用修改 fs 值而直接从用户空间取字符串指针到 tmp.
 	while (argc-- > 0) {
-		if (from_kmem == 1)							// 若参数字符串指针在内核空间, 则 fs 指向内核空间.
+		if (from_kmem == 1)							// 若参数字符串指针在内核空间, 字符串在用户空间, 则让 fs 先指向内核空间来读取字符串指针.
 			set_fs(new_fs);
-		if (!(tmp = (char *) get_fs_long(((unsigned long *) argv) + argc))) 	// tmp 指向参数字符串数组中的某一个.
+		// tmp 指向参数字符串数组中的某一个(开始时指向最后一个字符串, 每次循环都向前一个字符串移动).
+		if (!(tmp = (char *) get_fs_long(((unsigned long *) argv) + argc)))
 			panic("argc is wrong");
-		if (from_kmem == 1)							// 若参数字符串指针在内核空间, 则 fs 指回用户空间.
+		if (from_kmem == 1)							// 若参数字符串指针在内核空间, 字符串在用户空间, 则让 fs 再指回用户空间, 下面要读取字符串了.
 			set_fs(old_fs);
-		// 然后从用户空间取该字符串, 并计算参数字符串长度 len. 此后 tmp 指向该字符串末端. 
-		// 如果该字符串长度超过此时参数和环境空间中还剩余的空闲长度, 则空间不够了. 
-		// 于是恢复 fs 段寄存器值(如果被改变的话)并返回 0. 不过因为参数和环境空间留 128KB, 所以通常不可能发生这种情况.
+		// 如果 from_kmem == 0(参数字符串及其指针均在进程内存空间中), 那么 fs 仍然指向进程局部数据段.
+		// 从用户空间读取当前参数字符串, 并计算其长度 len. 此后 tmp 指向该字符串末端. 
 		len = 0;									/* remember zero-padding */
 		do {										/* 我们知道串是以 NULL 字节结尾的 */
 			len++;
 		} while (get_fs_byte(tmp++)); 				// 循环结束后 tmp 指向当前参数字符串的末尾.
+		// 如果环境和参数空间不够再放下这个字符串, 则还原 fs, 并返回 0.
 		if (p - len < 0) {							/* this shouldn't happen - 128kB */
 			set_fs(old_fs);							/* 不会发生 -- 因为有 128KB 的空间 */
 			return 0;
 		}
-		// 接着我们逆向逐个字符地把字符串复制到参数和环境空间末端处. 
+		// 然后逐个字符把字符串复制到参数和环境空间中.
+		// 从最后一个页面(*page[PAGE_SIZE])末尾向页面头开始写, 也即先写字符串的最后一个字符. 
 		// 在循环复制字符串的字符过程中, 我们首先要判断参数和环境空间中相应位置处是否已经有内存页面. 
-		// 如果还没有就先为其申请 1 页内存页面. 偏移量 offset 被用作在一个页面中的当前指针偏移值. 
+		// 如果还没有就先为其申请 1 页内存页面. 偏移量 offset 被用作当前在一个页面中的指针. 
 		// 因为刚开始执行本函数时, 偏移量 offset 被初始化为 0, 
 		// 所以(offset - 1 < 0)肯定成立而使得 offset 重新被设置为当前 p 指针在页面范围内的偏移值.
 		while (len) {
 			--p; --tmp; --len;
-			if (--offset < 0) {
+			if (--offset < 0) { 					// 当前指针如果小于 0, 那么重置该指针.
 				offset = p % PAGE_SIZE; 			// 设置 offset 为页内偏移量.
-				if (from_kmem == 2)					// 若参数在内核空间则 fs 指回用户空间.
+				if (from_kmem == 2)					// 若参数字符串和其指针都在内核空间则 fs 指回用户空间.
 					set_fs(old_fs);
 				// 如果当前偏移值 p 所在的页面指针数组项 page[p/PAGE_SIZE] == 0, 
 				// 表示此时 p 指针所处的空间内存页面还不存在, 则需申请一页空闲内存页, 
@@ -336,7 +338,7 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	struct m_inode * inode;
 	struct buffer_head * bh;
 	struct exec ex;
-	unsigned long page[MAX_ARG_PAGES];							// 参数和环境变量所在页面的地址指针数组.
+	unsigned long page[MAX_ARG_PAGES];							// 参数和环境变量内存页面的地址指针数组.
 	int i, argc, envc;
 	int e_uid, e_gid;											// 有效(effective)用户 ID 和有效组 ID.
 	int retval;
@@ -469,22 +471,22 @@ restart_interp:
 			i_arg = cp;             						// i_arg 指向解释程序后面的参数. 
 		}
 		/* OK, we've parsed out the interpreter name and (optional) argument. */
-        /* OK, 我们已经解析出解释程序的文件名以及参数(如果有的话). */
 		// 现在我们要把上面解析出来的解释程序文件名 i_name 及其参数 i_arg 和脚本文件名作为解释程序的参数放进环境和参数内存页中. 
-		// 不过首先我们需要把函数提供的原来一些参数和环境字符串先放进去, 然后再放这里解析出来的. 
+		// 首先把函数提供的参数和环境变量字符串先放到环境和参数内存页, 然后再复制脚本中解析出来的. 
 		// 例如对于命令行参数来说, 如果原来的参数是 "-arg1 -arg2", 解释程序名是 "bash", 其参数是 "-iarg1 -iarg2", 
 		// 脚本文件名(即原来的执行文件名)是 "example.sh", 那么在放入这里的参数之后, 新的命令行类似于这样: 
 		//              "bash -iarg1 -iarg2 example.sh -arg1 -arg2"
-		// 这里我们把 sh_bang 标志 +1, 然后把函数参数提供的原有参数和环境字符串放入到空间中. 
-		// 环境字符串和参数个数分别是 envc 和 argc - 1 个. 少复制的一个原有参数是原来的执行文件名, 即这里的脚本文件名. 
 		// [[?? 可以看出, 实际上我们不需要去另行处理脚本文件名, 即这里完全可以复制 argc 个参数, 
 		// 		包括原来执行文件名(即现在的脚本文件名). 因为它位于同一个位置上]]. 
 		// 注意！这里指针 p 随着复制信息增加而逐渐向小地址方向移动, 因此这两个复制串函数执行完后, 
 		// 环境参数串信息块位于程序命令行参数串信息块的上方, 并且 p 指向程序的第 1 个参数串. 
-		// copy_strings() 最后一个参数(0)指明参数字符串在用户空间. 
-		if (sh_bang++ == 0) {
-			p = copy_strings(envc, envp, page, p, 0);
-			p = copy_strings(--argc, argv + 1, page, p, 0);
+
+		// 首先把函数设置的参数和环境变量复制到进程的环境和参数内存页中.
+		// 这里我们把 sh_bang 标志 +1, 然后把函数参数提供的原有参数和环境字符串放入到空间中. 
+		// 环境字符串和参数个数分别是 envc 和 argc - 1 个. 少复制的一个原有参数是原来的执行文件名, 即这里的脚本文件名. 
+		if (sh_bang++ == 0) { 									// 如果是在解析脚本文件(sh_bang ==0), 将 sh_bang +1 .
+			p = copy_strings(envc, envp, page, p, 0); 			// 0 表示 envp 和要复制到的目的地 *page[] 都是用户空间的内存地址.
+			p = copy_strings(--argc, argv + 1, page, p, 0); 	// 将环境和参数复制到进程的环境和参数内存页中.
 		}
 		/*
 		 * Splice in (1) the interpreter's name for argv[0]
