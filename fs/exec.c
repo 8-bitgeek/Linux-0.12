@@ -245,20 +245,19 @@ static unsigned long copy_strings(int argc, char ** argv, unsigned long * page,
 			--p; --tmp; --len;
 			if (--offset < 0) { 					// 当前指针如果小于 0, 那么重置该指针.
 				offset = p % PAGE_SIZE; 			// 设置 offset 为页内偏移量.
-				if (from_kmem == 2)					// 若参数字符串和其指针都在内核空间则 fs 指回用户空间.
+				// 若参数字符串和其指针都在内核空间则 fs 指回用户空间(有可能要调用 get_free_page(), 所以需要先将 fs 改回去).
+				if (from_kmem == 2)
 					set_fs(old_fs);
-				// 如果当前偏移值 p 所在的页面指针数组项 page[p/PAGE_SIZE] == 0, 
-				// 表示此时 p 指针所处的空间内存页面还不存在, 则需申请一页空闲内存页, 
-				// 并将该页面指针填入指针数组, 同时也使页面指针 pag 指向该新页面. 
-				// 若申请不到空闲页面则返回 0.
+				// 如果当前参数指针 p 所在的参数和环境页面地址 page[p/PAGE_SIZE] == 0, 
+				// 则表示这个内存页面不存在, 则需要申请一页空闲内存页, 并将该页面地址填入地址列表 page[] 中, 
 				if (!(pag = (char *) page[p / PAGE_SIZE]) && 		
 				    !(pag = (char *) (page[p / PAGE_SIZE] = get_free_page())))
 					return 0;
-				if (from_kmem == 2)					// 若参数在内核空间则 fs 指向内核空间.
+				if (from_kmem == 2)					// 然后再将 fs 改回来, 指向内核空间.
 					set_fs(new_fs);
 
 			}
-			// 然后从 fs 段中复制字符串的 1 字节到参数和环境空间内存页面 pag 的 offset 处.
+			// 然后从 fs 段中复制字符串的 1 字节到参数和环境内存页面 pag 的 offset 处.
 			*(pag + offset) = get_fs_byte(tmp);
 		}
 	}
@@ -385,7 +384,7 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 	argc = count(argv);									// 命令行参数个数.
 	envc = count(envp);									// 环境字符串变量个数.
 
-restart_interp:
+restart_interp:											// 脚本文件处理完后, 使用这个标号重启解释程序.
 	if (!S_ISREG(inode->i_mode)) {						/* must be regular file */
 		retval = -EACCES;
 		goto exec_error2;								// 若不是常规文件则置出错码, 跳转 exec_error2.
@@ -476,10 +475,7 @@ restart_interp:
 		// 例如对于命令行参数来说, 如果原来的参数是 "-arg1 -arg2", 解释程序名是 "bash", 其参数是 "-iarg1 -iarg2", 
 		// 脚本文件名(即原来的执行文件名)是 "example.sh", 那么在放入这里的参数之后, 新的命令行类似于这样: 
 		//              "bash -iarg1 -iarg2 example.sh -arg1 -arg2"
-		// [[?? 可以看出, 实际上我们不需要去另行处理脚本文件名, 即这里完全可以复制 argc 个参数, 
-		// 		包括原来执行文件名(即现在的脚本文件名). 因为它位于同一个位置上]]. 
-		// 注意！这里指针 p 随着复制信息增加而逐渐向小地址方向移动, 因此这两个复制串函数执行完后, 
-		// 环境参数串信息块位于程序命令行参数串信息块的上方, 并且 p 指向程序的第 1 个参数串. 
+		// 注意: 这里指针 p 随着复制信息增加而逐渐向小地址方向移动.
 
 		// 首先把函数设置的参数和环境变量复制到进程的环境和参数内存页中.
 		// 这里我们把 sh_bang 标志 +1, 然后把函数参数提供的原有参数和环境字符串放入到空间中. 
@@ -501,21 +497,17 @@ restart_interp:
          *     (2) (可选的) 	解释程序的参数. 
          *     (3) 			   脚本程序的名称. 
          *
-         * 这是以逆序进程处理的, 是由于用户环境和参数的存放方式造成的. 
+         * 这是以逆序(从高地址向低地址)进行处理的, 是由于用户环境和参数的存放方式造成的. 
          */
-		// 接着我们逆向复制脚本文件名, 解释程序的参数和解释程序文件名到参数和环境空间中. 
-		// 若出错, 则置出错码, 跳转到 exec_error1. 
-		// 另外, 由于本函数参数提供的脚本文件名 filename 在用户空间, 
-		// 但这里赋予 copy_strings() 的脚本文件名的指针在内核空间, 
-		// 因此这个复制字符串函数的最后一个参数(字符串来源标志)需要被设置成 1. 
-		// 若字符串在内核空间, 则 copy_strings() 的最后一个参数要设置成功, 如下面. 
-		p = copy_strings(1, &filename, page, p, 1);
+		// 复制脚本文件名, 解释程序的参数和解释程序文件名到参数和环境空间中. 
+		// from_kmem 表示 filename 在进程数据段中, 但是 filename 的指针保存在内核空间中, 
+		p = copy_strings(1, &filename, page, p, 1); 		// 将脚本文件名复制到参数和环境内存空间.
 		argc++;
-		if (i_arg) {            							// 复制解释程序的多个参数. 
-			p = copy_strings(1, &i_arg, page, p, 2);
+		if (i_arg) {            							// 复制脚本中给解释程序带的参数(上面解析的那些).
+			p = copy_strings(1, &i_arg, page, p, 2);		// 2 表示参数字符串和其指针都在内核的数据段中.
 			argc++;
 		}
-		p = copy_strings(1, &i_name, page, p, 2);
+		p = copy_strings(1, &i_name, page, p, 2); 			// 复制解释程序的文件名(非路径名)
 		argc++;
 		if (!p) {
 			retval = -ENOMEM;
@@ -523,21 +515,20 @@ restart_interp:
 		}
 		/* OK, now restart the process with the interpreter's inode. */
 	    /* OK, 现在使用解释程序的 i 节点重启进程. */
-		// 最后我们取得解释程序的 i 节点指针, 然后跳转到 204 行去执行解释程序. 
+		// 最后我们取得解释程序的 i 节点指针, 然后跳转到 restart_interp 去执行解释程序. 
 		// 为了获得解释程序的 i 节点, 我们需要使用 namei() 函数, 
-		// 但是该函数所使用的参数(文件名)是从用户数据空间得到的, 即从段寄存器 fs 所指空间中取得. 
+		// 但是该函数所使用的参数(文件名)是从用户数据空间得到的, 即使用的是 fs 段寄存器. 
 		// 因此在调用 namei() 函数之前我们需要先临时让 fs 指向内核数据空间, 
-		// 以让函数能从内核空间得到解释程序名, 并在 namei() 返回后恢复 fs 的默认设置. 
-		// 因此这里我们先临时保存原 fs 段寄存器(原指向用户数据段)的值, 将其设置成指向内核数据段, 然后取解释程序的 i 节点. 
-		// 之后再恢复 fs 的原值. 并跳转到 restart_interp 处重新处理新的执行文件 -- 脚本文件的解释程序. 
+		// 使函数能从内核空间得到解释程序名, 并在 namei() 返回后恢复 fs. 
+		// 最后跳转到 restart_interp 执行脚本文件指定的解释程序.
 		old_fs = get_fs();
-		set_fs(get_ds());
+		set_fs(get_ds());										// 先让 fs 临时指向内核数据段(0x10).
 		if (!(inode = namei(interp))) { 						/* get executables inode */
-			set_fs(old_fs);       								/* 取得解释程序的 i 节点 */
+			set_fs(old_fs);       								/* 更新 inode 为解释程序的 inode */
 			retval = -ENOENT;
 			goto exec_error1;
 		}
-		set_fs(old_fs);
+		set_fs(old_fs); 										// 恢复 fs 指向进程的局部数据段(0x17).
 		goto restart_interp;
     }
 	// 此时缓冲块中的执行文件头结构已经复制到了 ex 中. 于是先释放该缓冲块, 并开始对 ex 中的执行头信息进行判断处理. 
