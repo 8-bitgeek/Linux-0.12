@@ -163,7 +163,7 @@ int free_page_tables(unsigned long from, unsigned long size)
 		free_page(0xfffff000 & *dir);							// 释放该页表所占的内存页面.
 		*dir = 0;												// 页表对应的目录项清零.
 	}
-	invalidate();												// 刷新 CPU 页变换高速缓冲.
+	invalidate();												// 重新加载页目录表基地址寄存器 CR3, 刷新 CPU 页变换高速缓冲.
 	return 0;
 }
 
@@ -372,7 +372,7 @@ static unsigned long put_page(unsigned long page, unsigned long address)
  * 因为 exec.c 中函数会在放置页面之前修改过页面内容. 为了实现 VM, 我们需要能正确设置已修改状态标志. 
  * 因而下面就有了与上面相同的函数, 但是该函数在放置页面时会把页面标志为已修改状态.
  */
-// 把一内容已修改过的物理内存页面映射到线性地址空间指定处.
+// 把内容已修改过(dirty)的物理内存页面(page)映射到线性地址空间指定处(address).
 // 该函数与上面的 put_page() 几乎完全一样, 但是本函数在设置页表项内容时, 同时还设置了页面已修改标志(位 6, PAGE_DIRTY).
 unsigned long put_dirty_page(unsigned long page, unsigned long address)
 {
@@ -386,7 +386,7 @@ unsigned long put_dirty_page(unsigned long page, unsigned long address)
 	// 再查看一下该 page 页面是不是已经申请的页面, 即判断其在内存页面映射字节图 mem_map[] 中相应字节是否已置位. 若没有则发出警告.
 	if (page < LOW_MEM || page >= HIGH_MEMORY)
 		printk("Trying to put page %p at %p\n", page, address);
-	if (mem_map[(page-LOW_MEM)>>12] != 1) 					// >> 12 得到对应 page 的页面号.
+	if (mem_map[(page - LOW_MEM) >> 12] != 1) 					// >> 12 得到对应 page 的页面号.
 		printk("mem_map disagrees with %p at %p\n", page, address);
 	// 然后根据参数指定的线性地址 address 计算其在页目录表中对应的目录项指针, 并从中取得页表地址. 
 	// 如果该目录项有效(P = 1), 即指定的页表在内存中, 则从中取得指定页表地址放到 page_table 变量中. 
@@ -400,11 +400,10 @@ unsigned long put_dirty_page(unsigned long page, unsigned long address)
 		*page_table = tmp | 7; 										// 生成页目录项, 并存储到页目录表(tmp | 7 表示 U/S R/W P 均置位).
 		page_table = (unsigned long *) tmp; 						// 设置页表地址.
 	}
-	// 最后在找到的页表 page_table 中设置相关页表项内容, 即把物理页面 page 的地址填入表项同时置位 3 个标志(U/S, R/W, P).
+	// 最后在找到的页表 page_table 中设置对应的页表项, 即把物理页面地址 page 填入页表项同时置位 3 个标志(U/S, R/W, P).
 	// 该页表项在页表中的索引值等于线性地址 address 位 21 ~ 位 12 组成的 10 位的值. 每个页表共可有 1024 项(0~0x3ff).
-	page_table[(address >> 12) & 0x3ff] = page | (PAGE_DIRTY | 7); 	// 线性地址 page_table[i] 指向页面的物理地址.
-	/* no need for invalidate */
-	/* 不需要刷新页变换高速缓冲 */
+	page_table[(address >> 12) & 0x3ff] = page | (PAGE_DIRTY | 7); 	// 页表项 page_table[i] 指向物理物理页面地址 page.
+	/* no need for invalidate */ /* 不需要刷新页目录基地址寄存器 cr3 */
 	return page;
 }
 

@@ -290,15 +290,16 @@ static unsigned long change_ldt(unsigned long text_size, unsigned long * page)
 	set_limit(current->ldt[2], data_limit);
 	/* make sure fs points to the NEW data segment */
 	/* 要确保 fs 段寄存器已指向新的数据段 */
-	// fs 段寄存器中放入局部表数据段描述符的选择符(0x17). 即默认情况下 fs 都指向任务数据段.
+	// fs 段寄存器中放入局部表数据段描述符的选择符(0x17). 即默认情况下 fs 都指向当前任务局部数据段 LDT[2].
 	__asm__("pushl $0x17; pop %%fs" : :);
-	// 然后将参数和环境空间已存放数据的页面(最多有 MAX_ARG_PAGES 页, 128KB)放到数据段末端. 
-	// 方法是从进程空间库代码位置开始处往前一页一页地放. 库文件代码占用进程空间最后 4MB. 
-	// 函数 put_dirty_page() 用于把物理页面映射到进程逻辑(线性)空间中. 在 mm/memory.c 中.
-	data_base += data_limit - LIBRARY_SIZE; 			// LIBRARY_SIZE = 4MB, data_base 此时指向当前进程线性地址空间的末尾 4MB 开始处.
+	// 然后将参数和环境空间已有数据的页面(最多有 MAX_ARG_PAGES 页, 128KB)放到库文件代码空间前(低地址的内存空间). 
+	// 方法是从进程空间库代码位置开始处往前一页一页地放. 库文件代码占用进程空间(64MB)最后 4MB. 
+	// 进程内存空间分布情况: | ~~~~ | 进程的参数和环境空间 | 库文件代码空间(4MB) | <-- 进程空间末端(内存地址 64MB).
+	data_base += data_limit - LIBRARY_SIZE; 			// LIBRARY_SIZE = 4MB, data_base 此时指向当前进程线性地址空间的末尾 4MB(即 60MB 处).
 	for (i = MAX_ARG_PAGES - 1; i >= 0; i--) {
 		data_base -= PAGE_SIZE; 						// 将参数和环境空间放到库文件代码前面(低地址处).
 		if (page[i])									// 若该页面存在, 就放置该页面.
+			// 函数 put_dirty_page() 用于把物理页面映射到进程逻辑(线性)空间中. 在 mm/memory.c 中.
 			put_dirty_page(page[i], data_base); 		// 把物理页面地址 page[i] 映射到当前进程的线性空间 data_base 中.
 	}
 	return data_limit;									// 最后返回数据段限长(64MB).
@@ -605,9 +606,9 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 	// 此时内存管理程序即会执行缺页处理页为新执行文件申请内存页面和设置相关页表项, 并且把相关执行文件页面读入内存中. **
 	free_page_tables(get_base(current->ldt[1]), get_limit(0x0f)); 		// 只释放原程序代码/数据段大小的页面. 
 	free_page_tables(get_base(current->ldt[2]), get_limit(0x17));		// (初次 execve 时一般是 640KB, 即复制的内核代码/数据段)
+	// 如果 "上次任务使用了协处理器" 指向的是当前进程, 则将其置空, 并复位使用了协处理器的标志.
 	if (last_task_used_math == current)
 		last_task_used_math = NULL;
-	// 如果 "上次任务使用了协处理器" 指向的是当前进程, 则将其置空, 并复位使用了协处理器的标志.
 	current->used_math = 0;
 	// 然后我们根据要执行文件的头结构中的代码长度字段 a_text 的值修改局部表中描述符基址和段限长, 
 	// 并将 128KB 的参数和环境空间页面放置在数据段 64MB - 4MB - 128KB 处.
