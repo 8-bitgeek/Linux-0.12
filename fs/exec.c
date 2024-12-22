@@ -105,34 +105,33 @@ static unsigned long * create_tables(char * p, int argc, int envc)
 	unsigned long * argv, * envp;
 	unsigned long * sp;
 
-	// 栈指针是以 4 字节为边界进行寻址的, 因此这里需让 sp 为 4 的整数倍值. 此时 sp 位于参数环境表的末端. 
+	// 栈指针是以 4 字节为边界进行寻址的, 因此这里需让 sp 为 4 的整数倍. 
 	// 然后我们先把 sp 向下(低地址方向)移动, 在栈中空出环境变量指针占用的空间, 并让环境变量指针 envp 指向该处. 
 	// 多空出的一个位置用于在最后存放一个 NULL 值. 下面指针加 1, sp 将递增指针宽度字节值(4 字节). 
-	// 再把 sp 向下移动, 空出命令行参数指针占用的空间, 并让 argv 指针指向该处. 
-	// 同样, 多空处的一个位置用于存放一个 NULL 值. 此时 sp 指向参数指针块的起始处, 
-	// 我们将环境参数块指针 envp 和命令行参数块指针以及命令行参数个数值分别压入栈中.
-	sp = (unsigned long *) (0xfffffffc & (unsigned long) p);  // 使 sp 指向 4 字节边界.
-	sp -= envc + 1;
-	envp = sp;
-	sp -= argc + 1;
-	argv = sp;
-	// 经过上面的操作后的参数和环境空间: | -- 参数和环境空间剩余部分 -- (sp ->)| 存放命令行参数指针 | NULL | 存放环境变量指针 | NULL | arg | env | <- 参数和环境空间末端
-	put_fs_long((unsigned long)envp, --sp);
-	put_fs_long((unsigned long)argv, --sp);
-	put_fs_long((unsigned long)argc, --sp);
-	// 经过上面的操作后的参数和环境空间: | -- 参数和环境空间剩余部分 -- (sp ->) | argc | 命令行参数指针的指针 | 环境变量指针的指针 | 存放命令行参数指针(s) | NULL | 存放环境变量指针(s) | NULL | arg | env | <- 参数和环境空间末端
-	// 再将命令行各参数指针和环境变量各指针分别放入前面空出来的相应地方, 最后分别放置一个 NULL 指针.
+	// 再把 sp 向下移动, 空出命令行参数指针占用的空间, 并让 argv 指针指向该处. 同样, 多空处的一个位置用于存放一个 NULL 值. 
+	sp = (unsigned long *) (0xfffffffc & (unsigned long) p);  	// 使 sp 指向进程的参数与环境空间中有效(有数据的)起始处, 并 4 字节对齐.
+	sp -= envc + 1; 											// 空出环境变量个数 +1 的栈空间, 用于存放环境变量的指针, 即栈顶向上(低字节)移动 envc + 1.
+	envp = sp; 													// envp 指向存储环境变量指针的栈空间中的地址.
+	sp -= argc + 1; 											// 空出参数个数 +1 的栈空间, 用于存放参数的指针.
+	argv = sp; 													// argv 指向存储参数指针的栈空间中的地址.
+	// 经过上面的操作后的参数和环境空间: | 参数和环境空间剩余部分 (sp ->)| 存放命令行参数指针 | NULL | 存放环境变量指针 | NULL | arg | env |<- 参数和环境空间末端
+	// 我们将环境变量指针 envp 和参数指针以及参数个数值分别压入栈中.
+	put_fs_long((unsigned long)envp, --sp); 					// 将栈中保存环境变量地址的内存地址压入栈中.
+	put_fs_long((unsigned long)argv, --sp); 					// 将栈中保存参数地址的内存地址压入栈中.
+	put_fs_long((unsigned long)argc, --sp); 					// 将参数个数压入栈中.
+	// 上面代码执行后: | 参数和环境空间剩余部分 (sp ->) | argc | 参数指针的指针 | 环境变量指针的指针 | 存放参数指针(s) | NULL | 存放环境变量指针(s) | NULL | arg | env | <- 参数和环境空间末端.
+	// 再将参数指针和环境变量指针分别放入前面空出来的相应地方, 最后分别放置一个 NULL 指针.
 	while (argc-- > 0) {
-		put_fs_long((unsigned long) p, argv++);
+		put_fs_long((unsigned long) p, argv++); 	// 最开始时 p 指向参数与环境变量空间中的参数处.
 		while (get_fs_byte(p++)) /* nothing */ ;	// p 指针指向下一个参数串.
 	}
-	put_fs_long(0, argv);
+	put_fs_long(0, argv); 							// 栈中放置一个 NULL.
 	while (envc-- > 0) {
-		put_fs_long((unsigned long) p, envp++);
+		put_fs_long((unsigned long) p, envp++); 	// 最开始时 p 指向参数与环境变量空间中的环境变量处.
 		while (get_fs_byte(p++)) /* nothing */ ;	// p 指针指向下一个参数串.
 	}
-	put_fs_long(0, envp);
-	return sp;										// 返回构造的当前新栈指针.
+	put_fs_long(0, envp); 							// 栈中放置一个 NULL.
+	return sp;										// 此时栈指针(栈顶)指向栈中的参数个数(argc)的位置, 返回构造的当前新栈指针.
 }
 
 /*
@@ -556,7 +555,7 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 	// 同样, 若 sh_bang 没有置位而需要复制的话, 那么此时指针 p 随着复制信息增加而逐渐向小地址方向移动,
 	// 因此这两个复制串函数执行完后, 环境参数串信息块位于程序参数串信息块的后面, 并且 p 指向程序的第 1 个参数. 
 	// 事实上, p 是在 128KB 参数和环境空间中的偏移值. 因此如果 p = 0, 则表示环境变量与参数空间页面已经被占满, 容纳不下了.
-	// page 中的空间分布  开始-->|             | argv (page 低地址空间处) | envp (page 高地址空间处) |<--page 空间末端
+	// page 中的空间分布: 开始-->| ~ 空闲 ~ | argv (page 低地址空间处) | envp (page 高地址空间处) |<--page 空间末端
 	if (!sh_bang) { 								// sh_bang: 当前是否是执行脚本的解释程序, 0 - 否.
 		p = copy_strings(envc, envp, page, p, 0);
 		p = copy_strings(argc, argv, page, p, 0);
@@ -618,14 +617,15 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 	// | 参数和环境空间(空闲)(p->)| 脚本解释程序名(可选) | 脚本文件中的参数(可选) | 脚本文件名(可选) | arg | env | 动态库文件代码空间(4MB) |<-进程内存空间末端.
 	p -= LIBRARY_SIZE + (MAX_ARG_PAGES * PAGE_SIZE); 	// 此时 p 指向进程空间的 64MB - 4MB - 128KB + p, 即 p 指向 64MB 进程空间中的参数和环境空间.
 	// 然后调用内部函数 create_tables() 在栈空间中创建环境和参数变量指针表, 供程序的 main() 函数作为参数使用, 并返回该栈指针.
-	p = (unsigned long) create_tables((char *)p, argc, envc); 	// 此时 p 指向栈顶.
-	// 接着再修改进程各字段值为新执行文件的信息. 
-	// 即令进程任务结构代码尾字段 end_code 等于执行文件的代码段长度 a_text; 
+	// 执行后的内存分布: || argc | 参数指针的指针 | 变量指针的指针 | 参数指针 | 变量指针 | 参数 | 环境变量 | 动态库文件代码空间(4MB) |
+	p = (unsigned long) create_tables((char *)p, argc, envc); 	// 此时 p 指向栈顶(栈顶是压入的参数个数 argc).
+	// 根据可执行文件的信息, 更新当前进程的各个属性信息.
+	// 即令进程任务结构代码尾字段 end_code 等于可执行文件的代码段长度 a_text; 
 	// 数据尾字段 end_data 等于执行文件的代码段长度加数据段长度(a_data + a_text); 
 	// 并令进程堆起始指针字段 brk = a_text + a_data + a_bss. 
-	// 进程地址空间分布: | text - data - bss | <- brk ------------------- sp -> | --- (参数和环境空间已占用的空间) --- | --------- 4MB --------- |
+	// 进程地址空间分布: | text - data - bss | <- brk -------- sp -> | -- (参数和环境已占用的空间) -- | -- 库文件 4MB -- |
 	// (**堆由低地址向高地址增长[由 brk 开始增长], 栈由高地址向低地址增长[由 sp 开始增长]**).
-	// brk 用于指明进程当前数据段(包括未初始化数据部分)末端位置, 供内核为进程分配内存时指定分配开始位置. 
+	// brk 用于指明进程当前数据段(包括未初始化数据部分)末端位置, 供内核为进程分配内存时指定起始位置. 
 	// 然后设置进程栈开始字段为栈指针所在页面, 并重新设置进程的有效用户 id 和有效组 id.
 	current->brk = ex.a_bss + (current->end_data = ex.a_data + (current->end_code = ex.a_text));
 	current->start_stack = p & 0xfffff000; 			// 4KB 边界.
