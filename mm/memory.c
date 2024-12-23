@@ -765,12 +765,12 @@ void do_no_page(unsigned long error_code, unsigned long address)
 		inode = current->executable;									// 执行文件 i 节点和缺页起始块号.
 		block = 1 + tmp / BLOCK_SIZE; 									// +1 是因为可执行文件的 0 号数据块存放可执行文件头信息.
 	// 若逻辑地址 tmp 既不在可执行文件地址范围内, 也不在库文件空间范围内, 
-	// 则说明缺页是进程访问动态申请的内存页面数据所致, 因此没有对应 i 节点和数据块号(都置空).
+	// 则说明缺页是因为进程访问动态申请的内存页面, 因此没有对应 i 节点和数据块号(都置空).
 	} else {
-		inode = NULL;													// 是动态申请的数据或栈内存页面.
+		inode = NULL;													// 是动态申请的堆内存或栈内存页面.
 		block = 0;
 	}
-	// 若是进程访问其动态申请的页面或为了存放栈信息而引起的缺页异常, 则直接申请一页物理内存页面并映射到线性地址 address 处即可.
+	// 若是进程访问其动态申请的页面或为了存放栈数据而引起的缺页异常, 则直接申请一页物理内存页面并映射到线性地址 address 处即可.
 	if (!inode) {														// 是动态申请的数据内存页面.
 		get_empty_page(address);
 		return;
@@ -779,12 +779,12 @@ void do_no_page(unsigned long error_code, unsigned long address)
 	if (share_page(inode, tmp))											// 尝试逻辑地址 tmp 处页面的共享.
 		return;
 	// 如果共享不成功就只能申请一页物理内存页面 page, 然后从设备上读取执行文件中的相应页面并放置(映射)到进程页面逻辑地址 tmp 处.
-	if (!(page = get_free_page()))										// 申请一页物理内存.
+	if (!(page = get_free_page()))										// 申请一页物理内存, page 保存这页的物理内存地址.
 		oom();
 	/* remember that 1 block is used for header */
-	/* 记住, (程序)头要使用 1 个数据块 */
+	/* 记住, (程序文件)头要使用 1 个数据块 */
 	// 根据这个块号和执行文件的 i 节点, 我们就可以从映射位图中找到对应块设备中对应的设备逻辑块号(保存在 nr[] 数组中). 
-	// 利用 break_page() 即可把这 4 个逻辑块读入到物理页面 page 中.
+	// 利用 bread_page() 即可把这 4 个逻辑块读入到物理页面 page 中.
 	for (i = 0; i < 4; block++, i++)
 		nr[i] = bmap(inode, block);
 	bread_page(page, inode->i_dev, nr);
