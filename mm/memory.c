@@ -717,7 +717,7 @@ void do_no_page(unsigned long error_code, unsigned long address)
 	unsigned long tmp;
 	unsigned long page;
 	int block, i;
-	struct m_inode * inode;
+	struct m_inode * inode; 						// 要加载的缺页文件的 inode.
 
 	// 首先判断 CPU 控制寄存器 CR2 给出的引起页面异常的线性地址在什么范围中. 
 	// 如果 address 小于 TASK_SIZE(0x4000000, 即 64MB), 
@@ -759,13 +759,13 @@ void do_no_page(unsigned long error_code, unsigned long address)
 	if (tmp >= LIBRARY_OFFSET) { 										// LIBRARY_OFFSET = 60MB.
 		inode = current->library;										// 库文件 i 节点和缺页起始块号.
 		block = 1 + (tmp - LIBRARY_OFFSET) / BLOCK_SIZE;
-	// 如果缺页对应的逻辑地址 tmp 小于进程的执行映像文件在逻辑地址空间的末端位置, 则说明缺少的页面在进程执行文件映像中, 
-	// 于是可以从当前进程数据中取得执行文件的 i 节点号 executable, 并计算出该缺页在执行文件映像中的起始数据块号 block.
-	// 若逻辑地址 tmp 既不在执行文件映像的地址范围内,
+	// 如果缺页对应的逻辑地址(进程内偏移地址) tmp 小于进程的可执行文件的数据长度, 则说明缺少的页面在进程执行文件映像中, 
+	// 则取当前进程可执行文件的 i 节点号 executable, 并计算出该缺页在执行文件映像中的起始数据块号 block.
 	} else if (tmp < current->end_data) {
 		inode = current->executable;									// 执行文件 i 节点和缺页起始块号.
-		block = 1 + tmp / BLOCK_SIZE;
-	// 也不在库文件空间范围内, 则说明缺页是进程访问动态申请的内存页面数据所致, 因此没有对应 i 节点和数据块号(都置空).
+		block = 1 + tmp / BLOCK_SIZE; 									// +1 是因为可执行文件的 0 号数据块存放可执行文件头信息.
+	// 若逻辑地址 tmp 既不在可执行文件地址范围内, 也不在库文件空间范围内, 
+	// 则说明缺页是进程访问动态申请的内存页面数据所致, 因此没有对应 i 节点和数据块号(都置空).
 	} else {
 		inode = NULL;													// 是动态申请的数据或栈内存页面.
 		block = 0;
