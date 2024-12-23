@@ -315,8 +315,7 @@ int copy_page_tables(unsigned long from, unsigned long to, long size)
 /*
  * 下面函数将一内存页面放置(映射)到指定线性地址处. 它返回页面的物理地址, 如果内存不够(在访问页面或页面时), 则返回 0.
  */
-// 把一物理内存页面映射到线性地址空间指定处.
-// 或者说是把线性地址空间中指定地址 address 处的页面映射到主内存区页面 page 上. 
+// 创建线性地址空间 address 页面与物理内存页面 page 的映射关系. 
 // 主要工作是在相关页目录项和页表项中设置指定页面的信息. 若成功则返回物理页面地址.
 // 在处理缺页异常的 C 函数 do_no_page() 中会调用此函数. 对于缺页引起的异常, 由于任何缺页缘故而对页表作修改时, 
 // 并不需要刷新 CPU 的页变换缓冲(或称 Translation Lookaside Buffer, TLB), 即使页表项中标志 P 被从 0 修改成 1. 
@@ -331,18 +330,16 @@ static unsigned long put_page(unsigned long page, unsigned long address)
 	/* NOTE !!! This uses the fact that _pg_dir=0 */
 	/* 注意!!! 这里使用了页目录表基地址 pg_dir = 0 的条件 */
 
-	// 首先判断参数给定物理内存页面 page 的有效性. 
-	// 如果该页面位置低于 LOW_MEM(1MB) 或超出系统实际含有内存高端 HIGH_MEMORY, 则发出警告. 
-	// LOW_MEM 是主内存区可能有的最小起始位置. 当系统后果内存小于或等于 6MB 时, 主内存区始于 LOW_MEM 处. 
-	// 再查看一下该 page 页面是不已经申请的页面, 即判断其在内存页面映射字节图 mem_map[] 中相应字节是否以置位. 
-	// 若没有则需发出警告.
+	// 首先判断物理内存页面 page 的有效性: 如果该物理页面地址小于 LOW_MEM(1MB) 或超出系统实际含有内存高端 HIGH_MEMORY, 则发出警告. 
+	// LOW_MEM 是主内存区可能有的最小起始位置. 当系统物理内存小于或等于 6MB 时, 主内存区始于 LOW_MEM 处. 
+	// 再查看一下该 page 页面在映射字节图 mem_map[] 中相应字节是否已经置位, 若没有则发出警告(得到空闲物理内存页面(get_free_page())时必须置位).
 	if (page < LOW_MEM || page >= HIGH_MEMORY)
 		printk("Trying to put page %p at %p\n", page, address);
 	if (mem_map[(page - LOW_MEM) >> 12] != 1)
 		printk("mem_map disagrees with %p at %p\n", page, address);
-	// 然后根据参数指定的线性地址 address 计算其在页目录表中对应的目录项指针, 并从中取得一级页表地址. 
+	// 然后根据参数指定的线性地址 address 计算其在页目录表中对应的目录项指针, 并从中取得页表地址. 
 	// 如果该目录项有效(P = 1), 即指定的页表在内存中, 则从中取得指定页表地址放到 page_table 变量中.
-	// 否则申请一空闲页面给页表使用, 并在对应目录项中置相应标志(7 - User, U/S, R/W). 
+	// 否则申请一空闲页面给页表使用, 并在页目录表的对应目录项中填写页表信息, 同时置位相应标志(7 - User, U/S, R/W). 
 	// 然后将该页表地址放到 page_table 变量中.
 	page_table = (unsigned long *) ((address >> 20) & 0xffc);
 	if ((*page_table) & 1) {
@@ -350,10 +347,10 @@ static unsigned long put_page(unsigned long page, unsigned long address)
 	} else {
 		if (!(tmp = get_free_page()))
 			return 0;
-		*page_table = tmp | 7;
+		*page_table = tmp | 7; 						// 将新页表信息填写到页目录表中的对应项.
 		page_table = (unsigned long *) tmp;
 	}
-	// 最后在找到的页表 page_table 中设置相关页表项内容, 即把物理页面 page 的地址填入表项同时置位 3 个标志(U/S, W/R, P).
+	// 最后在页表中设置相关页表项内容, 即把物理页面 page 的地址填入页表项同时置位 3 个标志(U/S, W/R, P).
 	// 该页表项在页表中的索引值等于线性地址 位 21 ~ 位 12 组成的 10 位的值. 每个页表共可有 1024 项(0~0x3ff).
 	page_table[(address >> 12) & 0x3ff] = page | 7;
 	/* no need for invalidate */
@@ -677,24 +674,24 @@ static int share_page(struct m_inode * inode, unsigned long address)
 	if (inode->i_count < 2 || !inode)
 		return 0;
 	// 否则搜索任务数组中所有任务. 寻找与当前进程可共享页面的进程, 
-	// 即运行相同执行文件的另一个进程, 并尝试对指定地址的页面进行共享. 
-	// 若进程逻辑地址 address 小于进程库文件在逻辑地址空间的起始地址 LIBRARY_OFFSET, 
-	// 则表明共享的页面在进程执行文件对应的逻辑地址空间范围内, 
+	// 即运行相同执行文件或库文件的另一个进程, 并尝试对指定地址的页面进行共享. 
+	// 若进程逻辑地址 address 小于进程库文件起始地址 LIBRARY_OFFSET, 
+	// 则表明共享的页面在进程的可执行文件对应的逻辑地址空间范围内, 
 	// 于是检查一下指定 i 节点是否与进程的执行文件 i 节点(即进程 executable 相同, 若不相同则继续寻找. 
 	// 若进程逻辑地址 address 大于等于进程库文件在逻辑地址空间的起始地址 LIBRARY_OFFSET, 
 	// 则表明想要共享的页面在进程使用的库文件中, 于是检查指定节点 inode 是否与进程的库文件 i 节点相同, 
 	// 若不相同则继续寻找. 如果找到某个进程 p, 其 executable 或 library 与指定的节点 inode 相同, 
 	// 则调用页面试探函数 try_to_share() 尝试页面共享. 
 	// 若共享操作成功, 则函数返回 1. 否则返回 0, 表示共享页面操作失败.
-	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
+	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {// 从任务列表的最后一项开始搜索.
 		if (!*p)								// 如果该任务项空闲, 则继续寻找.
 			continue;
 		if (current == *p)						// 如果是当前任务, 也继续寻找.
 			continue;
-		if (address < LIBRARY_OFFSET) {
-			if (inode != (*p)->executable)		// 进程执行文件 i 节点.
+		if (address < LIBRARY_OFFSET) { 		// 要共享可执行文件.
+			if (inode != (*p)->executable)		// 进程可执行文件 i 节点.
 				continue;
-		} else {
+		} else { 								// 要共享库文件.
 			if (inode != (*p)->library)			// 进程使用库文件 i 节点.
 				continue;
 		}
@@ -729,24 +726,21 @@ void do_no_page(unsigned long error_code, unsigned long address)
 		printk("Bad things happen: nonexistent page error in do_no_page\n\r");
 		do_exit(SIGSEGV);
 	}
-	// 然后根据指定的线性地址 address 求出其对应的页目录项, 
-	// 并根据该页表项内容判断 address 处的页面是否在交换设备中. 若是则调入页面并退出.
-	// 方法是首先取指定线性地址 address 对应的目录项内容. 
-	// 如果对应的二级页表存在, 则取出该目录项中二级页表的地址, 
-	// 加上页表项偏移值即得到线性地址 address 处页面对应的页表项指针, 从而获得页表项内容. 
-	// 若页表项内容不为 0 并且页表存在位 P = 0, 则说明该页表项指定的物理页面应该在交换设备中. 
-	// 于是从交换设备中调入指定页面后退出函数.
+	// 然后根据指定的线性地址 address 求出其对应的页目录项, 页表/目录项格式: 位 31-12 是页面(帧)地址, 位 11-0 是页面属性.
+	// 首先判断对应的页表是否存在, 如果存在, 则是因为页面不在内存中(未创建或在交换设备中), 如果在交换设备中, 将其置换出来, 并退出.
+	// 如果对应的页表未创建, 或者页面未创建, 
 	page = *(unsigned long *) ((address >> 20) & 0xffc);				// 取页目录项内容(页表地址及属性).
-	if (page & 1) { 													// 对应页表存在于物理内存中.
+	if (page & 1) { 													// 如果页表存在但是还触发了缺页异常(页面不存在), 那么对应的页面可能在交换设备中.
 		page &= 0xfffff000;												// 二级页表地址.
-		page += (address >> 10) & 0xffc;								// address 对应的页表项指针.
+		// 页表地址加上页表项偏移值即得到线性地址 address 处页面对应的页表项指针, 从而获得页表项内容. 
+		page += (address >> 10) & 0xffc;								// 得到页表项指针.
 		tmp = *(unsigned long *) page;									// 拿到页表项内容(即 address 对应的页面).
-		if (tmp && !(1 & tmp)) { 										// 如果页表有效, 但是不在内存中.
+		if (tmp && !(1 & tmp)) { 										// 如果页面有效, 但是不在内存中.
 			swap_in((unsigned long *) page);							// 则从交换设备读出该页面.
 			return;
-		}
+		} 		// 如果页面未创建, 则继续向下执行.
 	}
-	// 如果页表不存在, 则取线性地址 address 对应的页面地址, 
+	// 如果页表未创建或者页面未创建, 则取线性地址 address 对应的页面地址, 
 	// 并算出指定线性地址在进程空间中相对于进程基址的偏移长度值 tmp, 即对应的逻辑地址. 
 	// 从而可以算出缺页页面在执行文件映像中或在库文件中的具体起始数据块号.
 	address &= 0xfffff000;												// address 所处页面地址(页目录(10 位)+页表(10 位)).
@@ -784,20 +778,22 @@ void do_no_page(unsigned long error_code, unsigned long address)
 	/* remember that 1 block is used for header */
 	/* 记住, (程序文件)头要使用 1 个数据块 */
 	// 根据这个块号和执行文件的 i 节点, 我们就可以从映射位图中找到对应块设备中对应的设备逻辑块号(保存在 nr[] 数组中). 
-	// 利用 bread_page() 即可把这 4 个逻辑块读入到物理页面 page 中.
+	// 利用 bread_page() 即可把这 4 个逻辑块(每个 1KB, 4 个组成一个内存页面 4KB)读入到物理页面 page 中.
 	for (i = 0; i < 4; block++, i++)
-		nr[i] = bmap(inode, block);
+		nr[i] = bmap(inode, block); 									// 文件的起始块号 + block 可以得到在硬盘中的逻辑块号.
 	bread_page(page, inode->i_dev, nr);
-	// 在读设备逻辑块操作时, 可能会出现这样一种情况, 即在执行文件中的读取页面位置可能离文件尾不到 1 个页面的长度. 
-	// 因此就可能读入一些无用的信息. 下面的操作就是把这部分超出执行文件 end_data 以后的部分进行清零处理. 
-	// 当然, 若该页面离末端超过 1 页, 说明不是从执行文件映像中读取的页面, 而是从库文件中读取的, 因此不用执行清零操作.
-	i = tmp + 4096 - current->end_data;									// 超出的字节长度值.
-	if (i > 4095)														// 离末端超过 1 页则不用清零.
+	// 在读设备逻辑块操作时, 可能会出现这样一种情况, 即读取的文件长度大于可执行文件的总长度.
+	// 就可能读入一些无用的信息. 下面的操作就是把这部分超出执行文件 end_data 以后的部分进行清零处理. 
+	// 当然, 若该页面离末端超过 1 页(i > 4095), 说明不是从执行文件映像中读取的页面, 而是从库文件中读取的, 
+	// 或者没有读取多余数据(i <= 0), 因此不用执行清零操作.
+	i = tmp + 4096 - current->end_data;									// 用于判断是否读的是可执行文件.
+	if (i > 4095)														// 没有读取无用数据或者不是可执行文件.
 		i = 0;
-	tmp = page + 4096;
+	// 如果是读取的可执行文件, 并且读取了多余数据, 则将多余数据清空.
+	tmp = page + 4096; 													// 先指向页面末端.
 	while (i-- > 0) {
 		tmp--;															// tmp 指向页面末端.
-		*(char *)tmp = 0;       										// 页面末端 i 字节清零.
+		*(char *)tmp = 0;       										// 多余数据清空.
 	}
 	// 最后把引起缺页异常的一页物理页面映射到指定线性地址 address 处. 若操作成功就返回. 否则就释放内存页, 显示内存不够.
 	if (put_page(page, address))
