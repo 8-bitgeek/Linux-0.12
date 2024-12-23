@@ -722,15 +722,14 @@ void do_no_page(unsigned long error_code, unsigned long address)
 	// 首先判断 CPU 控制寄存器 CR2 给出的引起页面异常的线性地址在什么范围中. 
 	// 如果 address 小于 TASK_SIZE(0x4000000, 即 64MB), 
 	// 表示异常页面位置在内核或任务 0 和任务 1 所处的线性地址范围内, 于是发出警告信息 "内核范围内存被写保护"; 
-	// 如果(address - 当前进程代码起始地址)大于一个进程的长度(64MB), 
-	// 表示 address 所指的线性地址不在引起异常的进程线性地址空间范围内, 则在发出出错信息后退出.
+	// 如果(address - 当前进程代码起始地址)超出进程的地址空间(base -- base+64MB), 则显示出错信息后退出.
 	if (address < TASK_SIZE)
 		printk("\n\rBAD!! KERNEL PAGE MISSING\n\r");
 	if (address - current->start_code > TASK_SIZE) {
 		printk("Bad things happen: nonexistent page error in do_no_page\n\r");
 		do_exit(SIGSEGV);
 	}
-	// 然后根据指定的线性地址 address 求出其对应的二级页表项指针, 
+	// 然后根据指定的线性地址 address 求出其对应的页目录项, 
 	// 并根据该页表项内容判断 address 处的页面是否在交换设备中. 若是则调入页面并退出.
 	// 方法是首先取指定线性地址 address 对应的目录项内容. 
 	// 如果对应的二级页表存在, 则取出该目录项中二级页表的地址, 
@@ -738,30 +737,30 @@ void do_no_page(unsigned long error_code, unsigned long address)
 	// 若页表项内容不为 0 并且页表存在位 P = 0, 则说明该页表项指定的物理页面应该在交换设备中. 
 	// 于是从交换设备中调入指定页面后退出函数.
 	page = *(unsigned long *) ((address >> 20) & 0xffc);				// 取页目录项内容(页表地址及属性).
-	if (page & 1) { 													// 对应页目录表存在于物理内存中.
+	if (page & 1) { 													// 对应页表存在于物理内存中.
 		page &= 0xfffff000;												// 二级页表地址.
-		page += (address >> 10) & 0xffc;								// 页表项指针.
-		tmp = *(unsigned long *) page;									// 页表项内容.
-		if (tmp && !(1 & tmp)) {
-			swap_in((unsigned long *) page);							// 从交换设备读页面.
+		page += (address >> 10) & 0xffc;								// address 对应的页表项指针.
+		tmp = *(unsigned long *) page;									// 拿到页表项内容(即 address 对应的页面).
+		if (tmp && !(1 & tmp)) { 										// 如果页表有效, 但是不在内存中.
+			swap_in((unsigned long *) page);							// 则从交换设备读出该页面.
 			return;
 		}
 	}
 	// 如果页表不存在, 则取线性地址 address 对应的页面地址, 
 	// 并算出指定线性地址在进程空间中相对于进程基址的偏移长度值 tmp, 即对应的逻辑地址. 
 	// 从而可以算出缺页页面在执行文件映像中或在库文件中的具体起始数据块号.
-	address &= 0xfffff000;												// address 处缺页页面地址(页目录(10 位)+页表(10 位)).
-	tmp = address - current->start_code;								// 缺页页面对应逻辑地址.
-	// 如果缺页对应的逻辑地址 tmp 大于库映像文件在进程逻辑空间中的起始位置, 说明缺少的页面在库映像文件中. 
+	address &= 0xfffff000;												// address 所处页面地址(页目录(10 位)+页表(10 位)).
+	tmp = address - current->start_code;								// 缺页页面在进程内的偏移地址(0-64MB).
+	// 如果缺页对应的逻辑地址 tmp 大于库文件在进程逻辑空间中的起始位置, 说明缺少的页面在库文件代码空间中. 
 	// 于是从当前进程任务数据结构中可以取得库映像文件的 i 节点 library, 并计算出该缺页在库文件中的起始数据块号 block.
 	// 因为设置上存放的执行文件映像第 1 块数据是程序头结构, 因此在读取该文件时需要跳过第 1 块数据. 
 	// 所以需要首先计算缺页所在数据块号. 因为每块数据长度为 BLOCK_SIZE = 1KB, 因此一页内存可存放 4 个数据块. 
 	// 进程逻辑地址 tmp 除以数据块大小再加 1 即可得出缺少的页面在执行映像文件中的起始块号 block.
-	if (tmp >= LIBRARY_OFFSET) {
+	if (tmp >= LIBRARY_OFFSET) { 										// LIBRARY_OFFSET = 60MB.
 		inode = current->library;										// 库文件 i 节点和缺页起始块号.
 		block = 1 + (tmp - LIBRARY_OFFSET) / BLOCK_SIZE;
 	// 如果缺页对应的逻辑地址 tmp 小于进程的执行映像文件在逻辑地址空间的末端位置, 则说明缺少的页面在进程执行文件映像中, 
-	// 于是可以从当前进程任务数据结构中取得执行文件的 i 节点号 executable, 并计算出该缺页在执行文件映像中的起始数据块号 block.
+	// 于是可以从当前进程数据中取得执行文件的 i 节点号 executable, 并计算出该缺页在执行文件映像中的起始数据块号 block.
 	// 若逻辑地址 tmp 既不在执行文件映像的地址范围内,
 	} else if (tmp < current->end_data) {
 		inode = current->executable;									// 执行文件 i 节点和缺页起始块号.
