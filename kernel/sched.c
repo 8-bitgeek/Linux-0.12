@@ -87,14 +87,14 @@ static union task_union init_task = {INIT_TASK, };
 
 // 从开机开始算起的滴答数时间值全局变量(10ms/滴答). 系统时钟中断每发生一次即一个滴答. 
 // 前面的限定符 volatile, 英文解释是易改变的, 不稳定的意思.
-// 这个限定词的含义是向编译器指明变量的内容可能会由于被其他程序修改面变化. 
-// 通常在程序中声明一个变量时, 编译器会尽量把它存放在通用寄存器中, 例如 ebx 以提高访问效率. 
-// 当 CPU 把其值放到 ebx 中后一般就不会再关心该变量对应内存位置中的内容. 
+// 这个限定词的含义是向编译器指明变量的内容可能会由于被其他程序修改而变化. 
+// 通常在程序中声明一个变量时, 编译器会尽量把它存放在通用寄存器中以提高访问效率, 例如 ebx. 
+// 当 CPU 把其值放到 ebx 中后一般就不用再关心该变量在内存中的内容(只从寄存器中取值). 
 // 若此时其他程序(例如内核程序或一个中断过程)修改了内存中该变量的值, ebx 中的值并不会随之更新. 
-// 为了解决这种情况就创建了 volatile 限定符, 让代码在引用该变量时一定要从指定内存位置中取得其值. 
-// 这里即是要求 gcc 不要对 jiffies 进行优化处理, 也不要挪动位置, 并且需要从内存中取其值. 
+// 为了解决这种情况就创建了 volatile 限定符, 让**代码在引用该变量时一定要从内存中取值**. 
+// 这里即是要求 gcc 不要对 jiffies 进行优化处理, 也不要挪动位置, 并且需要从内存中取值. 
 // 因为时钟中断处理过程等程序会修改它的值.
-unsigned long volatile jiffies = 0;
+unsigned long volatile jiffies = 0; 				// 系统开机时间的滴答数.
 unsigned long startup_time = 0;						// 开机时间. 从 1970:0:0:0:0 开始计时的秒数.(kernel/sched.c)
 // 这个变量用于累计需要调整的时间滴答数.
 int jiffies_offset = 0;								/* # clock ticks to add to get "true
@@ -181,16 +181,16 @@ void schedule(void)
 	/* check alarm, wake up any interruptible tasks that have got a signal */
 	/* 检测 alarm(进程的报警定时值), 唤醒任何已得到信号的可中断任务 */
 
-	// 从任务数组中最后一个任务开始循环检测 alarm. 在循环时跳过空指针项.
-	for(p = &LAST_TASK; p > &FIRST_TASK; --p)
-		if (*p) { 	// 任务指针(*p 指向任务数组的某一项[任务指针])不为 0, 即任务不为空, 表示任务存在.
-			// 如果设置过任务超时定时 timeout, 并且已经超时(timeout < jiffies), 则复位超时定时值; 
+	// 从任务列表中最后一个任务开始循环检测任务的 alarm, 跳过空任务.
+	for(p = &LAST_TASK; p > &FIRST_TASK; --p) {
+		if (*p) { 									// 判断任务是否存在.
+			// 如果任务设置了运行结束时间 timeout, 并且已经超时(jiffies > timeout), 则复位超时定时值; 
 			// 并且如果任务处于可中断睡眠状态 TASK_INTERRUPTIBLE 下, 将其置为就绪状态(TASK_RUNNING).
 			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
-			if ((*p)->timeout && (*p)->timeout < jiffies) { 	// jiffies < timeout 表示已经超时
+			if ((*p)->timeout && jiffies > (*p)->timeout) { 	// jiffies > timeout 表示已经超时. TODO: 什么时候设置这个值.
 				(*p)->timeout = 0;
-				if ((*p)->state == TASK_INTERRUPTIBLE) {
-					(*p)->state = TASK_RUNNING;
+				if ((*p)->state == TASK_INTERRUPTIBLE) { 		// 如果进程是可中断睡眠状态, 则打断其睡眠状态.
+					(*p)->state = TASK_RUNNING; 				// 置为可运行状态.
 				}
 			}
 			// 如果设置过任务的 alarm 定时值, 并且已经过期(alarm < jiffies), 
@@ -206,6 +206,7 @@ void schedule(void)
 				(*p)->state = TASK_RUNNING;
 			}
 		}
+	}
 
 	/* this is the scheduler proper: */
 	/* 这里是调度程序的主要部分 */

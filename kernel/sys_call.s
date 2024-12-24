@@ -298,19 +298,19 @@ timer_interrupt:
 	pushl %ecx						# save those across function calls. 
 	pushl %ebx						# %ebx is saved as we use that in ret_sys_call
 	pushl %eax
-	movl $0x10, %eax				# ds, es 置为指向内核数据段.
+	movl $0x10, %eax				# ds, es 指向内核数据段.
 	mov %ax, %ds
 	mov %ax, %es
-	movl $0x17, %eax				# fs 置为指向局部数据 (程序的数据段).
+	movl $0x17, %eax				# fs 指向局部数据(程序的数据段).
 	mov %ax, %fs
-	incl jiffies
-	# 由于初始化中断控制芯片时没有采用自己动 EOI, 所以这里需要发指令结束该硬件中断.
+	incl jiffies 					# 系统滴答数 jiffies +1.
+	# 由于初始化中断控制芯片时没有采用自动 EOI, 所以这里需要发指令结束该硬件中断(表示该中断已得到响应).
 	movb $0x20, %al					# EOI to interrupt controller #1
 	outb %al, $0x20
 	# 下面从堆栈中取出执行系统调用代码的选择符(CS 段寄存器值)中的当前特权级别(0 或 3)并压入堆栈, 作为 do_timer 的参数. 
 	# do_timer() 函数执行任务切换, 计时等工作, 在 kernel/sched.c 实现.
-	movl CS(%esp), %eax
-	andl $3, %eax					# %eax is CPL (0 or 3, 0 = supervisor)
+	movl CS(%esp), %eax 			# CS(%esp) 表示取 %esp + CS(0x24) 内存地址处的数据(栈中保存的 CS 段寄存器的值).
+	andl $3, %eax					# %eax is CPL (0 or 3, 0 = supervisor) 只保留低两位, 即只保留 CPL.
 	pushl %eax
 	call do_timer					# 'do_timer(long CPL)' does everything from
 	addl $4, %esp					# task switching to accounting ...
