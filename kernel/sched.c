@@ -506,19 +506,18 @@ void add_timer(long jiffies, void (*fn)(void))
 // 对于一个进程由于执行时间片用完时, 则进行任务切换. 并执行一个计时更新工作.
 void do_timer(long cpl)
 {
-	static int blanked = 0;
+	static int blanked = 0; 						// 黑屏标志: 1 - 当前黑屏, 0 - 当前亮屏.
 
-	// 首先判断是否经过了一定时间而让屏幕黑屏(blankcount). 
-	// 如果 blankcount 计数不为零, 或者黑屏延时间隔时间 blankinterval 为 0 的话,
-	// 那么若已经处理黑屏状态(黑屏标志 blanked=1), 则让屏幕恢复显示. 
-	// 若 blnkcount 计数不为零, 则递减之, 并且复位黑屏标志.
-	if (blankcount || !blankinterval) {
-		if (blanked)
-			unblank_screen();
-		if (blankcount)
+	// 如果 blankcount 倒计时(黑屏倒计时)不为零, 或者黑屏时间 blankinterval 为 0 的话, 表示此时屏幕应该是亮的.
+	// 那么如果此时处于黑屏状态(黑屏标志 blanked=1)是不对的, 则让屏幕恢复显示. 
+	// 然后倒计时值递减, 并将标志设置为亮屏状态.
+	if (blankcount || !blankinterval) { 			// 如果黑屏时间结束或者没有设置黑屏时间.
+		if (blanked) 								// 如果当前是黑屏状态, 则唤醒屏幕.
+			unblank_screen();						// 唤醒屏幕.
+		if (blankcount) 							// 黑屏倒计时.
 			blankcount--;
-		blanked = 0;
-	// 否则的话若黑屏标志末置位, 则让屏幕黑屏, 并且设置黑屏标志.
+		blanked = 0; 								// 当前是亮屏.
+	// blankcount = 0 && blankinterval != 0 && blanked = 0: 如果设置了黑屏时间, 并且黑屏倒计时结束, 当前是亮屏状态, 那么需要关闭屏幕.
 	} else if (!blanked) {
 		blank_screen();
 		blanked = 1;
@@ -528,18 +527,18 @@ void do_timer(long cpl)
 		if (!--hd_timeout)
 			hd_times_out();							// 硬盘访问超时处理(blk_drv/hd.c).
 
-	// 如果发声计数次数到, 则关闭发声.(向 0x61 口发送命令, 复位位 0 和 1. 
+	// 如果蜂鸣计时结束, 则关闭发声.(向 0x61 口发送命令, 复位位 0 和 1. 
 	// 位 0 控制 8253 计数器 2 的工作, 位 1 控制扬声器.
 	if (beepcount)									// 扬声器发声时间滴答数(chr_drv/console.c)
 		if (!--beepcount)
 			sysbeepstop();
 
-	// 如果当前特权级(cpl)为 0(最高, 表示是内核程序在工作), 则将内核代码时间 stime 递增; 
-	// [Linus 把内核程序统称为超级用户(superviser)的程序. 
-	// 这种称呼来自 Intel CPU 手册.] 如果 cpl>0, 则表示是一般用户程序在工作, 增加 utime.
-	if (cpl)
+	// 如果当前特权级(cpl)为 0, 表示进程被中断时在执行内核态代码, 则将进程的内核代码时间 stime 递增; 
+	// 如果 cpl > 0, 则表示进程被中断时在执行用户态代码, 增加用户态代码执行时间 utime. 每 10ms 加 1.
+	// [Linus 把内核程序统称为超级用户(superviser)的程序. 这种称呼来自 Intel CPU 手册.] 
+	if (cpl) 										// CPL != 0 表示被中断时进程在运行用户态代码.
 		current->utime++;
-	else
+	else 											// 被中断时进程在运行内核态代码.
 		current->stime++;
 
 	// 如果有定时器存在, 则将链表第 1 个定时器的值减 1. 如果已等于 0, 则调用相应的处理程序, 并将该处理程序指针置空.
@@ -558,11 +557,11 @@ void do_timer(long cpl)
 	// 如果当前软盘控制器 FDC 的数字输出寄存器中马达启动位有置位的, 则执行软盘定时程序.
 	if (current_DOR & 0xf0)
 		do_floppy_timer();
-	// 如果进程运行时间还没完, 则退出. 否则置当前任务运行计数值为 0. 
-	// 并且若发生时钟中断时正在内核代码中运行则返回, 否则调用执行调试函数.
+	// 如果进程的 CPU 时间片还没用完, 则应该继续执行被中断进程, 退出. 否则置当前任务运行倒计时值为 0. 
+	// 并且若发生时钟中断时正在内核态运行则返回, 否则调用执行调度函数.
 	if ((--current->counter) > 0) return;
 	current->counter = 0;
-	if (!cpl) return;								// 对于内核态程序, 不信赖 counter 值进行调试.
+	if (!cpl) return;								// 对于内核态代码, 不根据 counter 值进行调度.
 	schedule();
 }
 

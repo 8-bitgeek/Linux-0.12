@@ -24,8 +24,8 @@ extern void unblank_screen(void);               // 恢复被黑屏的屏幕. (ke
 
 extern int beepcount;		                    // 蜂鸣时间滴答计数. (kernel/chr_drv/console.c)
 extern int hd_timeout;		                    // 硬盘超时滴答值. (kernel/blk_drv/blk.h)
-extern int blankinterval;	                    // 设定的屏幕黑屏间隔时间. 
-extern int blankcount;		                    // 黑屏时间计数. (kernel/chr_drv/console.c)
+extern int blankinterval;	                    // 设定的屏幕黑屏时间(不操作多久后黑屏), 如果为 0 表示不开启定时黑屏功能.
+extern int blankcount;		                    // 黑屏倒计时时间计数(倒计时结束[该值为 0]后黑屏). (kernel/chr_drv/console.c)
 
 // 打印信息的日志等级
 #define LOG_INFO_TYPE       0

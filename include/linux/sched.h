@@ -211,8 +211,8 @@ struct task_struct {
 	unsigned short sgid;				// 保存的组 id.
 	unsigned long timeout;				// 内核定时超时值(单位: 滴答数) ==> 应该是指明该任务在系统运行多长时间后超时.
 	unsigned long alarm;				// 报警定时值(单位: 滴答数) ==> 指明该任务在系统运行多长时间后时间到.
-	long utime;							// 当前进程用户态总运行时间(滴答数).
-	long stime;							// 当前进程系统态总运行时间(滴答数).
+	long utime;							// 当前进程用户态代码总运行时间(滴答数).
+	long stime;							// 当前进程系统态代码总运行时间(滴答数).
 	long cutime;						// 子进程用户态运行时间.
 	long cstime;						// 子进程系统态运行时间.
 	long start_time;					// 进程开始运行时刻.
