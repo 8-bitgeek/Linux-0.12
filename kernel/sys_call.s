@@ -286,8 +286,12 @@ device_not_available:
 # 定时芯片 8253/8254 是在(kernel/sched.c)处初始化的. 因此这里 jiffies 每 10 毫秒加 1. 
 # 这段代码将 jiffies 增加 1, 发送结束中断指令给 8259 控制器, 
 # 然后用当前特权级作为参数调用 C 函数 do_timer(long CPL). 当调用返回时转去检测并处理信号.
+# 触发中断时, 如果特权级(3 -> 0)发生变化会导致堆栈切换, 没变化时使用原堆栈, 所以压栈信息有区别: 
+# 堆栈切换时, 入栈的数据有 eflags/cs/eip/出错码(时钟中断不会有出错码), 不切换时, 入栈 ss/esp/eflags/cs/eip/出错码(没有).
+# 所以无论如何, 此时栈顶的数据都是: eflags/cs/eip.
 .align 4
 timer_interrupt:
+	# 在此之前中断触发时 CPU 已经入栈了进程的 eflags/cs/eip.
 	push %ds						# save ds, es and put kernel data space
 	push %es						# into them. %fs is used by _system_call
 	push %fs						# 保存 ds, es 并让其指向内核数据段. fs 将用于 system_call.
@@ -307,11 +311,12 @@ timer_interrupt:
 	# 由于初始化中断控制芯片时没有采用自动 EOI, 所以这里需要发指令结束该硬件中断(表示该中断已得到响应).
 	movb $0x20, %al					# EOI to interrupt controller #1
 	outb %al, $0x20
-	# 下面从堆栈中取出执行系统调用代码的选择符(CS 段寄存器值)中的当前特权级别(0 或 3)并压入堆栈, 作为 do_timer 的参数. 
-	# do_timer() 函数执行任务切换, 计时等工作, 在 kernel/sched.c 实现.
-	movl CS(%esp), %eax 			# CS(%esp) 表示取 %esp + CS(0x24) 内存地址处的数据(栈中保存的 CS 段寄存器的值).
-	andl $3, %eax					# %eax is CPL (0 or 3, 0 = supervisor) 只保留低两位, 即只保留 CPL.
+	# CS(%esp) 表示取 %esp + CS(0x24) 内存地址处的数据(栈中保存的被中断进程的 CS 寄存器).
+	# 然后 & $3 后得到被中断进程的 CPL, 作为参数传给 do_timer(long cpl) 的参数.
+	movl CS(%esp), %eax 			
+	andl $3, %eax					# %eax is CPL (0 or 3, 0 = supervisor) 只保留低两位, 即只保留进程的 CPL.
 	pushl %eax
+	# 调用 do_timer() 函数执行任务切换, 计时等工作, 在 kernel/sched.c 实现.
 	call do_timer					# 'do_timer(long CPL)' does everything from
 	addl $4, %esp					# task switching to accounting ...
 	jmp ret_from_sys_call
