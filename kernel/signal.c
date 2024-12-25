@@ -218,14 +218,15 @@ int do_signal(long signr, long eax,  											// signr 由 ret_from_sys_call �
 	// 返回码 -ERESTARTNOINTR 说明在处理完信号后一定会重启系统调用(不会受信号影响), 即系统调用不会被中断(NOINTR). 
 	// 如果当前是系统调用返回, 并且系统调用函数的返回值 eax 表明当前需要重新执行系统调用.
 	if ((orig_eax != -1) && ((eax == -ERESTARTSYS) || (eax == -ERESTARTNOINTR))) { 	// 判断要不要重启系统调用, 并做相应处理.
-		// 如果系统调用被信号中断(比如 kill 等)且允许重启系统调用, 但是信号不允许重启(SA_INTERRUPT)或者信号值是 xxx, 则不能重启系统调用.
+		// 如果系统调用被信号中断(一般是系统调用里主动判断有没有信号到来, 如果来了特定的信号则系统调用返回 ERESTARTSYS)且想要重启系统调用, 
+		// 但是信号不允许重启(SA_INTERRUPT)或者信号值是 xxx, 则不能重启系统调用.
 		// 信号值小于 SIGCONT 或者大于 SIGTTOU(即信号不是 SIGCONT, SIGSTOP, SIGTSTP, SIGTTIN 或 SIGTTOU), 
-		// 则修改系统调用的返回值为 eax = -EINTR, 即系统调用被信号中断.
+		// 则修改系统调用的返回值为 eax = -EINTR, 即系统调用被信号中断(由系统调用主动判断是否有某种信号到来, 比如 sys_waitpid()).
 		if ((eax == -ERESTARTSYS) && ((sa->sa_flags & SA_INTERRUPT) || signr < SIGCONT || signr > SIGTTOU)) { 		
 			*(&eax) = -EINTR;
-		// 否则(系统调用允许重启, 并且当前信号允许重启, 当前信号也不是 xxx）重启系统调用: 恢复进程寄存器 eax 在调用系统调用之前的值, 
+		// 否则(系统调用想重启, 并且当前信号允许重启, 当前信号也不是 xxx）重启系统调用: 恢复进程寄存器 eax 在调用系统调用之前的值, 
 		// 并且把用户态程序指令指针回调 2 个字节. 即当返回用户态时, 让程序重新启动执行被信号中断的系统调用. 
-		} else { 			// 如果返回值是 -ERESTARTNOINTR 则表示必须重启系统调用, 忽略信号的影响.
+		} else { 			// 如果返回值是 -ERESTARTNOINTR 则表示必须重启系统调用(只有 sys_sigsuspend使用了这个信号), 忽略信号的影响.
 			*(&eax) = orig_eax;     				// orig_eax: 用户态下指定的系统调用号.
 			// 系统调用返回到用户态的时候再次执行本次系统调用.
 			old_eip -= 2; 							// 'int 0x80' 占两个字节.

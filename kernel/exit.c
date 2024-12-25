@@ -639,7 +639,7 @@ repeat:
 		schedule();
 		current->blocked = oldblocked;
 		if (current->signal & ~(current->blocked | (1 << (SIGCHLD - 1))))
-			return -ERESTARTSYS;
+			return -ERESTARTSYS;			// 返回 ERESTARTSYS, 表示本次系统调用被信号中断, 并希望能重启本系统调用.
 		else
 			goto repeat;
 	}
