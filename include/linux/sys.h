@@ -119,4 +119,4 @@ fn_ptr sys_call_table[] = {
 
 /* So we don't have to do any more manual updating.... */
 /*　下面这样定义后, 我们就无需手工更新系统调用数目了　*/
-int NR_syscalls = sizeof(sys_call_table)/sizeof(fn_ptr);
+int NR_syscalls = sizeof(sys_call_table) / sizeof(fn_ptr);
