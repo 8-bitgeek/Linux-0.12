@@ -185,18 +185,18 @@ int core_dump(long signr)
 	return(0);	/* We didn't do a dump */
 }
 
-// 系统调用的中断处理程序中真正的信号预处理程序(在 kernel/sys_call.s). 
+// 系统调用或时钟中断的中断返回处理程序中真正的信号预处理程序(在 kernel/sys_call.s). 
 // 这段代码的主要作用是将信号处理句柄插入到用户程序堆栈中, 并在本系统调用结束返回后立刻执行信号句柄程序, 然后继续执行用户的程序. 
 // 函数的参数是进入系统调用处理程序 sys_call.s 开始, 直到调用本函数前逐步压入堆栈的值. 
 // 这些值包括：
-// 1: CPU 执行中断指令压入的用户栈地址 ss, esp, 标志寄存器 eflags, 返回地址 cs, eip; (见图 4-29)
-// 2: 刚进入 system_call 时压入栈的段寄存器 ds, es, fs, 寄存器 eax(orig_eax), edx, ecx, ebx;
-// 3: 第 148 行调用 sys_call_tables 后压入栈中的系统调用返回值(eax). 
-// 4: 执行本函数前压入栈中的当前处理的信号值(signr). 
-int do_signal(long signr, long eax,  											// system_call 执行完系统调用函数后压入栈中.
-	long ebx, long ecx, long edx, long orig_eax, long fs, long es, long ds, 	// system_call 执行系统调用前压入栈中的参数.
-	long eip, long cs, long eflags, unsigned long * esp, long ss)				// 执行中断时压入栈中的参数.
-{
+// 1. CPU 执行中断指令压入的用户栈地址 ss, esp(esp 和 ss 在特权级没发生变化时不会压入栈中), eflags, cs, eip; (见图 4-29)
+// 2. 刚进入 system_call 时压入栈的段寄存器 ds, es, fs, eax(orig_eax, 系统调用的功能号, 本次调用如果是由时钟中断返回时调用, 则该值为 -1), edx, ecx, ebx;
+// 3. system_call 压入栈中的 sys_call_tables 中的系统调用函数的返回值(eax). 
+// 4. 执行本函数前压入栈中的当前处理的信号值(signr). 
+int do_signal(long signr, long eax,  											// signr 由 ret_from_sys_call 入栈, eax 是系统调用返回值或时钟中断中入栈.
+	long ebx, long ecx, long edx, long orig_eax, long fs, long es, long ds, 	// system_call 执行系统调用前或 timer_interrupt 中断压入栈中的参数.
+	long eip, long cs, long eflags, unsigned long * esp, long ss)				// 执行中断时压入栈中的参数(如果中断时没有特权级变化, 则不会压入 esp 和 ss).
+{																				// 所以如果判断被中断时处于内核态, 则不应该使用这两个参数.
 	unsigned long sa_handler;
 	long old_eip = eip;
 	struct sigaction * sa = current->sigaction + signr - 1;			// 得到当前进程对应信号的处理函数.

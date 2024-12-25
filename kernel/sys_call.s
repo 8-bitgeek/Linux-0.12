@@ -293,10 +293,12 @@ device_not_available:
 .align 4
 timer_interrupt:
 	# 在此之前中断触发时 CPU 已经入栈了进程的 eflags/cs/eip.
+	# 下面的入栈操作是模拟与系统调用 system_call 时一样的入栈数据, 从而在中断返回(ret_from_sys_call)时调用其它函数(比如 do_signal())时可以有相同的参数格式.
+	# 但是为了与系统调用区分, 将 orig_eax 设置为 -1, 表明不是由系统调用执行中断返回.
 	push %ds						# save ds, es and put kernel data space
 	push %es						# into them. %fs is used by _system_call
 	push %fs						# 保存 ds, es 并让其指向内核数据段. fs 将用于 system_call.
-	pushl $-1						# fill in -1 for orig_eax	# 填 -1, 表明不是系统调用.
+	pushl $-1						# fill in -1 for orig_eax	# 填 -1, 表明不是系统调用(系统调用时保存的是功能号).
 	# 下面我们保存寄存器 eax, ecx 和 edx. 这是因为 gcc 编译器在调用函数时不会保存它们. 
 	# 这里也保存了 ebx 寄存器, 因为在后面 ret_from_sys_call 中会用到它.
 	pushl %edx						# we save %eax, %ecx, %edx as gcc doesn't
