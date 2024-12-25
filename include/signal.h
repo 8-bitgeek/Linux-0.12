@@ -38,7 +38,7 @@ typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号�
 // 上面原注释已经过时, 因为在 0.12 内核中已经实现了 sigaction(). 
 // 下面是 sigaction 结构 sa_flags 标志字段可取的符号常数值. 
 #define SA_NOCLDSTOP	1                          // 当子进程处于停止状态, 就不对 SIGCHLD 处理. 
-#define SA_INTERRUPT	0x20000000                 // 系统调用被信号中断后不重新执行系统调用. 
+#define SA_INTERRUPT	0x20000000                 // 系统调用被信号中断后不允许重新执行系统调用. 
 #define SA_NOMASK	    0x40000000                 // 不阻止在指定的信号处理程序中再收到该信号. 
 #define SA_ONESHOT	    0x80000000                 // 信号句柄一旦被调用过就恢复到默认处理句柄. 
 
@@ -68,6 +68,7 @@ typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号�
 // sa_flags 	指定改变信号处理过程的信号集. 它是由 40-43 行的位标志定义的. 
 // sa_restorer 	是恢复函数指针, 由函数库 Libc 提供, 用于清理用户态堆栈. (参见 kernel/signal.c)
 // 另外, 引起触发信号处理的信号也将被阻塞, 除非使用了 SA_NOMASK 标志. 
+// sa_flags 的主要作用是指定信号处理程序如何执行以及信号在处理过程中的特殊行为, 比如是否中断本次系统调用, 是否使用替代栈处理信号等.
 struct sigaction {
 	void (*sa_handler)(int);     // 此信号对应的处理函数. 
 								 // 可以用上面的 SIG_DEL 或 SIG_IGN 来忽略该信号, 

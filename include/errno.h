@@ -71,7 +71,7 @@ extern int errno;
 #define ENOTEMPTY	    39           // 目录不空.
 
 /* Should never be seen by user programs */
-#define ERESTARTSYS	    512         // 重新执行系统调用.
-#define ERESTARTNOINTR	513         // 重新执行系统调用, 无中断.
+#define ERESTARTSYS	    512         // 重新执行系统调用().
+#define ERESTARTNOINTR	513         // 表示系统调用不会被信号中断
 
 #endif
