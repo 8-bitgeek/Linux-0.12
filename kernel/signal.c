@@ -218,7 +218,7 @@ int do_signal(long signr, long eax,  											// signr 由 ret_from_sys_call �
 	// 返回码 -ERESTARTNOINTR 说明在处理完信号后一定会重启系统调用(不会受信号影响), 即系统调用不会被中断(NOINTR). 
 	// 如果当前是系统调用返回, 并且系统调用函数的返回值 eax 表明当前需要重新执行系统调用.
 	if ((orig_eax != -1) && ((eax == -ERESTARTSYS) || (eax == -ERESTARTNOINTR))) { 	// 判断要不要重启系统调用, 并做相应处理.
-		// 如果系统调用被信号中断(一般是系统调用里主动判断有没有信号到来, 如果来了特定的信号则系统调用返回 ERESTARTSYS)且想要重启系统调用, 
+		// 如果系统调用被信号中断(一般是**系统调用里主动判断有没有信号到来**, 如果来了特定的信号则系统调用返回 ERESTARTSYS)且想要重启系统调用, 
 		// 但是信号不允许重启(SA_INTERRUPT)或者信号值是 xxx, 则不能重启系统调用.
 		// 信号值小于 SIGCONT 或者大于 SIGTTOU(即信号不是 SIGCONT, SIGSTOP, SIGTSTP, SIGTTIN 或 SIGTTOU), 
 		// 则修改系统调用的返回值为 eax = -EINTR, 即系统调用被信号中断(由系统调用主动判断是否有某种信号到来, 比如 sys_waitpid()).

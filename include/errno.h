@@ -71,7 +71,11 @@ extern int errno;
 #define ENOTEMPTY	    39           // 目录不空.
 
 /* Should never be seen by user programs */
-#define ERESTARTSYS	    512         // 重新执行系统调用().
-#define ERESTARTNOINTR	513         // 表示系统调用不会被信号中断
+// 重新执行系统调用返回该错误码, 具体是否重启系统调用取决于信号等. 
+// 这个返回值是由系统调用在执行过程中主动判断有没有收到某个信号, 从而决定要不要中断本次调用并返回该返回码.
+#define ERESTARTSYS	    512
+// 如果系统调用返回该错误码, 则不管接收到的是什么信号, 都会重启系统调用. 
+// 这个返回值也是由系统调用主动判断是否收到某个信号, 从而主动中断本次系统调用.
+#define ERESTARTNOINTR	513
 
 #endif
