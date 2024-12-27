@@ -184,21 +184,20 @@ void schedule(void)
 	// 从任务列表中最后一个任务开始循环检测任务的 alarm, 跳过空任务.
 	for(p = &LAST_TASK; p > &FIRST_TASK; --p) {
 		if (*p) { 									// 判断任务是否存在.
-			// 如果任务设置了运行结束时间 timeout, 并且已经超时(jiffies > timeout), 则复位超时定时值; 
-			// 并且如果任务处于可中断睡眠状态 TASK_INTERRUPTIBLE 下, 将其置为就绪状态(TASK_RUNNING).
+			// 如果任务设置了超时时间 timeout(比如读超时), 并且已经超时(jiffies > timeout), 则清除超时时间; 
+			// 如果任务是可中断睡眠状态 TASK_INTERRUPTIBLE, 将其置为就绪状态(TASK_RUNNING), 将基恢复运行.
 			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
-			if ((*p)->timeout && jiffies > (*p)->timeout) { 	// jiffies > timeout 表示已经超时. TODO: 什么时候设置这个值.
-				(*p)->timeout = 0;
+			if ((*p)->timeout && jiffies > (*p)->timeout) { 	// jiffies > timeout 表示已经超时. TODO: sys_select() 函数会设置超时时间.
+				(*p)->timeout = 0; 								// 清除超时时间.
 				if ((*p)->state == TASK_INTERRUPTIBLE) { 		// 如果进程是可中断睡眠状态, 则打断其睡眠状态.
 					(*p)->state = TASK_RUNNING; 				// 置为可运行状态.
 				}
 			}
-			// 如果设置过任务的 alarm 定时值, 并且已经过期(alarm < jiffies), 
-			// 则在信号位图中置 SIGALRM 信号, 即向任务发送 SIGALARM 信号. 
-			// 然后清 alarm. 该信号的默认操作是终止进程. 
-			if ((*p)->alarm && (*p)->alarm < jiffies) {
+			// 如果设置过任务的定时器 alarm , 并且已经过时间了, 则向任务发送 SIGALRM 信号. 
+			// 然后清除定时值, 该信号的默认操作是终止进程. 
+			if ((*p)->alarm && jiffies > (*p)->alarm) {
 				(*p)->signal |= (1 << (SIGALRM - 1));
-				(*p)->alarm = 0;
+				(*p)->alarm = 0; 								// 清除定时值.
 			}
 			// 如果信号位图中除被阻塞的信号外还有其他信号, 并且任务处于可中断状态, 则置任务为就绪状态.
 			// 其中 '~(_BLOCKABLE & (*p)->blocked)' 用于忽略被阻塞的信号, 但 SIGKILL 和 SIGSTOP 不能被阻塞.

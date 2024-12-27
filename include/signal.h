@@ -39,8 +39,10 @@ typedef unsigned int sigset_t;		                /* 32 bits */			// 定义信号�
 // 下面是 sigaction 结构 sa_flags 标志字段可取的符号常数值. 
 #define SA_NOCLDSTOP	1                          // 当子进程处于停止状态, 就不对 SIGCHLD 处理. 
 #define SA_INTERRUPT	0x20000000                 // 系统调用被信号中断后不允许重新执行系统调用. 
-#define SA_NOMASK	    0x40000000                 // 不阻止在指定的信号处理程序中再收到该信号. 
-#define SA_ONESHOT	    0x80000000                 // 信号句柄一旦被调用过就恢复到默认处理句柄. 
+// 通过在信号处理期间, 褱了避免递归调用, 会屏蔽正在处理的信号(即再有相同信号到来时不处理), 即 sa_flags 中不设置该标志.
+#define SA_NOMASK	    0x40000000                 // 不屏蔽相同信号, 即如果在信号处理期间, 又来了一个相同信号还是会处理.
+// 调用过一次后就将信号处理程序移除, 后面再有相同的信号时, 对应的处理程序就变成 0 号句柄了.
+#define SA_ONESHOT	    0x80000000                 // 信号句柄一旦被调用过一次后就恢复到默认处理句柄(即 0 号句柄). 
 
 // 以下常量用于 sigprocmask(how, ) -- 改变阻塞信号集(屏蔽码). 用于改变该函数的行为. 
 #define SIG_BLOCK          0	                   /* for blocking signals */          // 在阻塞信号集中加上给定信号. 

@@ -209,8 +209,9 @@ struct task_struct {
 	unsigned short gid;					// 组标识号(级 id).
 	unsigned short egid;				// 有效级 id.
 	unsigned short sgid;				// 保存的组 id.
-	unsigned long timeout;				// 内核定时超时值(单位: 滴答数) ==> 应该是指明该任务在系统运行多长时间后超时.
-	unsigned long alarm;				// 报警定时值(单位: 滴答数) ==> 指明该任务在系统运行多长时间后时间到.
+	// 任务在等待资源释放或等待 I/O 完成, 在系统超过这一时间后, 会将等待的任务置为可运行状态.
+	unsigned long timeout;				// 超时时间(单位: 滴答数).
+	unsigned long alarm;				// 报警定时时间(单位: 滴答数) ==> 该任务在系统运行到哪一时刻触发 SIGALRM 信号.
 	long utime;							// 当前进程用户态代码总运行时间(滴答数).
 	long stime;							// 当前进程系统态代码总运行时间(滴答数).
 	long cutime;						// 子进程用户态运行时间.
