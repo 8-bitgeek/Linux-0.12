@@ -329,7 +329,7 @@ void wake_up(struct task_struct **p)
 			printk("wake_up: TASK_STOPPED");
 		if ((**p).state == TASK_ZOMBIE)							// 处于僵死状态.
 			printk("wake_up: TASK_ZOMBIE");
-		(**p).state = 0;										// 置为就绪状态 TASK_RUNNING.
+		(**p).state = TASK_RUNNING;										// 置为就绪状态 TASK_RUNNING.
 	}
 }
 
