@@ -175,8 +175,8 @@ struct task_struct {
 	/* these are hardcoded - don't touch */
 	// 下面这几个字段是硬编码字段
 	long state;							// 任务的运行状态(-1 不可运行, 0 可运行(就绪), >0 已停止).
-	long counter;						// 任务运行时间计数(递减)(滴答数), 运行时间片, 越大运行时间越长.
-	long priority;						// 优先级. 任务开始运行时 counter = priority, 越大运行越长.
+	long counter;						// 任务时间片倒计时(滴答数), 越大运行时间越长.
+	long priority;						// 优先级. 任务开始运行时 counter = priority, 越大运行时间越长.
 	long signal;						// 信号位图, 每个比特位代表一种信号, 信号值 = 位偏移值 + 1.
 	struct sigaction sigaction[32];		// 信号行为属性, 对应信号将要执行的操作和标志信息.
 	// 用于指明哪些信号不需要处理, 会在处理信号的时候用该字段(~blocked & signal)将其需要屏蔽的信号复位. (见: kernel/sys_call.s ret_from_sys_call)

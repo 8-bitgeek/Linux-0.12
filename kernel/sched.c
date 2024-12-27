@@ -184,60 +184,56 @@ void schedule(void)
 	// 从任务列表中最后一个任务开始循环检测任务的 alarm, 跳过空任务.
 	for(p = &LAST_TASK; p > &FIRST_TASK; --p) {
 		if (*p) { 									// 判断任务是否存在.
-			// 如果任务设置了超时时间 timeout(比如读超时), 并且已经超时(jiffies > timeout), 则清除超时时间; 
+			// 如果任务设置了超时时间 timeout(比如读超时, sys_select()), 并且已经超时(jiffies > timeout), 则清除超时时间; 
 			// 如果任务是可中断睡眠状态 TASK_INTERRUPTIBLE, 将其置为就绪状态(TASK_RUNNING), 将基恢复运行.
 			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
 			if ((*p)->timeout && jiffies > (*p)->timeout) { 	// jiffies > timeout 表示已经超时. TODO: sys_select() 函数会设置超时时间.
 				(*p)->timeout = 0; 								// 清除超时时间.
 				if ((*p)->state == TASK_INTERRUPTIBLE) { 		// 如果进程是可中断睡眠状态, 则打断其睡眠状态.
-					(*p)->state = TASK_RUNNING; 				// 置为可运行状态.
+					(*p)->state = TASK_RUNNING; 				// 置为可运行状态(TODO: 转为可运行状态就真的能运行了吗? 怎么实现的).
 				}
 			}
-			// 如果设置过任务的定时器 alarm , 并且已经过时间了, 则向任务发送 SIGALRM 信号. 
-			// 然后清除定时值, 该信号的默认操作是终止进程. 
+			// 如果设置过任务的定时器 alarm, 并且已经过时间了, 则向任务发送 SIGALRM 信号. 
+			// 然后清除定时值, 该信号的默认操作是终止进程(do_signal() 函数对 SIGALRM 的默认处理是调用 exit()). 
 			if ((*p)->alarm && jiffies > (*p)->alarm) {
 				(*p)->signal |= (1 << (SIGALRM - 1));
 				(*p)->alarm = 0; 								// 清除定时值.
 			}
-			// 如果信号位图中除被阻塞的信号外还有其他信号, 并且任务处于可中断状态, 则置任务为就绪状态.
-			// 其中 '~(_BLOCKABLE & (*p)->blocked)' 用于忽略被阻塞的信号, 但 SIGKILL 和 SIGSTOP 不能被阻塞.
+			// '(_BLOCKABLE & (*p)->blocked)' 得到可被屏蔽的信号, 取反得到不可被屏蔽的信号, 
+			// 即如果有不可被屏蔽的信号, 并且任务处于可中断状态, 则置任务为就绪状态. SIGKILL 和 SIGSTOP 不能被屏蔽.
+			// TODO: 让其可以处理信号? 目的是啥?
 			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) && (*p)->state == TASK_INTERRUPTIBLE) {
 				(*p)->state = TASK_RUNNING;
 			}
 		}
 	}
 
-	/* this is the scheduler proper: */
-	/* 这里是调度程序的主要部分 */
+	/* this is the scheduler proper: */ /* 这里是调度程序的主要部分: */
 	while (1) {
 		c = -1;
 		next = 0;
 		i = NR_TASKS;
 		p = &task[NR_TASKS];
-		// 这段代码是从任务数组的最后一个任务开始循环处理, 并跳过不含任务的数组糟. 
-		// 比较每个就绪状态任务的 counter(任务运行时间的递减滴答计数)值,
-		// 哪一个值大, 运行时间还不长, next 就指向哪个的任务号.
+		// 遍历任务列表, 获取时间片最长的就绪状态的任务.
 		while (--i) {
-			// 当前索引没有进程指针则跳过当前循环
-			if (!*--p) continue;
+			if (!*--p) continue; 									// 跳过空项.
 
+			// 任务处于就绪状态, 并且任务的时间片大于此前的最大时间片(c), 则 next 指向该任务(目前最应该被执行的任务).
 			if ((*p)->state == TASK_RUNNING && (*p)->counter > c) { // 找到 counter 更大的 RUNNING(正在运行或者已准备就绪)进程.
 				c = (*p)->counter, next = i;
 			}
 		}
-		// 如果比较得出有 counter 值不等于 0 的结果, 或者后方中没有一个可运行的任务存在(此时 c 仍然为 -1, next = 0), 
-		// 则退出开始的循环, 执行任务切换操作(下面的 switch_to()). 
-		// 否则就根据每个任务的优先权值, 更新每一个任务的 counter 值, 然后重新循环比较. 
-		// counter 值的计算方式为 counter = counter / 2 + priority.
-		// 注意, 这里计算过程不考虑进程的状态.
+		// 如果找到一个时间片大于 0 的就绪任务, 则退出循环, 并切换到这个任务上运行.
 		if (c) break; 													// 如果找到待运行的任务, 则跳出循环切换到其上执行.
-		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
+		// 如果没有找到时间片大于 0 的就绪任务, 则根据每个任务的优先值, 更新**所有任务**的 counter 值, 然后重新循环比较. 
+		// counter 值的计算方式为 counter = counter / 2 + priority. (即原来时间片不为 0 的, 则减半后加上优先值).
+		for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
 			if (*p) {
 				(*p)->counter = ((*p)->counter >> 1) + (*p)->priority; 	// 重置 counter 值.
 			}
 		}
 	}
-	// 用下面的宏(定义在 sched.h 中)把当前任务指针 current 指向任务号为 next 的任务, 并切换到该任务中运行. 
+	// 用下面的宏(定义在 sched.h 中)把 current 指向任务号为 next 的任务, 并切换到该任务中运行. 
 	// next 被初始化为 0. 因此若系统中没有任何其他任务可运行时, 则 next 始终为 0. 
 	// 因此调度函数会在系统空闲时去执行任务 0. 此时任务 0 仅执行 pause() 调用, 然后又会调用本函数(schedule).
 	switch_to(next);					// 切换到任务号为 next(任务项号 nr) 的任务, 并运行之.
