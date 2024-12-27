@@ -413,36 +413,24 @@ __asm__(\
 		"d" (_TSS(n)), "c" ((long) task[n]));  	/* 将任务 n 的 TSS 段选择符值放入 edx 中, 将 task[n] 的地址放入 ecx 中 */ \
 }
 
-// 页面地址对准(在内核代码中同有任何地方引用!!)
+// 页面地址对齐(在内核代码中没有任何地方引用!!)
 #define PAGE_ALIGN(n) (((n) + 0xfff) & 0xfffff000)
-
-/*
-#define _set_base(addr,base) \
-__asm__ __volatile__ ("movw %%dx,%0\n\t" \
-	"rorl $16,%%edx\n\t" \
-	"movb %%dl,%1\n\t" \
-	"movb %%dh,%2" \
-	::"m" (*((addr)+2)), \
-	  "m" (*((addr)+4)), \
-	  "m" (*((addr)+7)), \
-	  "d" (base) \
-	:)
-*/
 
 // 设置位于地址 addr 处描述符中的各基地址字段(基地址是 base).
 // %0 - 地址 addr 偏移 2; %1 - 地址 addr 偏移 4; %2 - 地址 addr 偏移 7; edx - 基地址 base.
-#define _set_base(addr, base) do { unsigned long __pr; \
-__asm__ __volatile__ (\
+#define _set_base(addr, base) \
+do { \
+	unsigned long __pr; \
+	__asm__ __volatile__ (\
 		"movw %%dx, %1\n\t"  			/* 基地址 base 低 16 位(位 15-0) -> [addr+2] */\
 		"rorl $16, %%edx\n\t"  			/* edx 中基址高 16 位(位 31-16) -> dx */\
 		"movb %%dl, %2\n\t"  			/* 基址高 16 位中的低 8 位(位 23-16) -> [addr+4] */\
 		"movb %%dh, %3\n\t"  			/* 基址高 16 位中的高 8 位(位 31-24) -> [addr+7] */\
 		:"=&d"(__pr) \
-		:"m"(*((addr) + 2)), \
-		"m"(*((addr) + 4)), \
-		"m"(*((addr) + 7)), \
-		"0"(base) \
-		); } while(0)
+		:"m"(*((addr) + 2)), "m"(*((addr) + 4)), \
+		"m"(*((addr) + 7)), "0"(base) \
+		); \
+} while(0)
 
 // 设置位于地址 addr 处描述符中的段限长字段(段长是 limit).
 // %0 - 地址 addr; %1 - 地址 addr 偏移 6 处; edx - 段长值 limit.
@@ -479,21 +467,6 @@ __asm__(\
 		  "m" (*((addr) + 7))); \
 	__base; \
 })
-
-/*
-static inline unsigned long _get_base(char * addr){
-	unsigned long __base;
-	__asm__("movb %3,%%dh\n\t" \
-			"movb %2,%%dl\n\t" \
-			"shll $16,%%edx\n\t" \
-			"movw %1,%%dx\n\t" \
-			:"=&d"(__base) \
-			:"m" (*((addr)+2)), \
-			 "m" (*((addr)+4)), \
-			 "m" (*((addr)+7)));
-	return __base;
-}
-*/
 
 // 取局部描述符表中 ldt 所指段描述符中的段基地址.
 #define get_base(ldt) _get_base(((char *) &(ldt)))
