@@ -403,9 +403,9 @@ __asm__(\
 		"cmpl %%ecx, current\n\t"  				/* 任务 n 是当前任务吗?(current == task[n]?) */\
 		"je 1f\n\t"  							/* 是, 则什么都不做退出 */\
 		"movw %%dx, %1\n\t"  					/* 将新任务 TSS 的 16 位选择符存入 __tmp.b 中 */\
-		"xchgl %%ecx, current\n\t"  			/* 寄存器交换操作, 将 current 指向要切换到的任务, 并将 ecx 指向要切出的任务 ==> current = task[n]; ecx = 被切换出的任务地址. */\
-		"ljmp *%0\n\t"  						/* 执行长跳转至 *&__tmp (数值是 task[n] 的 TSS 段选择符), 造成任务切换, 跳转到新任务中执行. 在任务切换回来后才会继续执行下面的语句 */\
-		"cmpl %%ecx, last_task_used_math\n\t"  	/* 当前任务上次使用过协处理器吗? */\
+		"xchgl %%ecx, current\n\t"  			/* 寄存器交换操作, 将 current 指向要切换到的任务, 同时 ecx 指向被切换出的任务. */\
+		"ljmp *%0\n\t"  						/* 执行长跳转至 *&__tmp (数值是 task[n] 的 TSS 段选择符), 造成任务切换, 跳转到新任务中执行. */\
+		"cmpl %%ecx, last_task_used_math\n\t"  	/* 任务切换回来后继续从这里运行; 当前任务上次使用过协处理器吗? */\
 		"jne 1f\n\t"  							/* 没有则跳转, 退出 */\
 		"clts\n"  								/* 原任务上次使用过协处理器, 则清 cr0 中的任务切换标志 TS */\
 		"1:"  									/* 宏返回, 返回后 schedule 随即返回 */\
