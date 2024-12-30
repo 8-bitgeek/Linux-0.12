@@ -118,7 +118,7 @@ extern int * blk_size[NR_BLK_DEV];
 #define DEVICE_REQUEST do_hd_request							// 设备请求项处理函数
 #define DEVICE_NR(device) (MINOR(device) / 5)					// 设备号
 #define DEVICE_ON(device)										// 开启设备
-#define DEVICE_OFF(device)										// 关闭设备
+#define DEVICE_OFF(device)										// 关闭设备(空, 即无操作)
 
 // 否则在编译预处理阶段显示出错信息: "未知块设备".
 #else
@@ -165,8 +165,8 @@ static inline void unlock_buffer(struct buffer_head * bh)
 // 并把当前请求项指针指向下一请求项.
 static inline void end_request(int uptodate)
 {
-	DEVICE_OFF(CURRENT->dev);							// 关闭设备. (实际上好像只有软盘有关闭设备的函数.)
-	if (CURRENT->bh) {									// CURRENT 为当前请求结构项指针
+	DEVICE_OFF(CURRENT->dev);							// 关闭设备. (实际上好像只有软盘有关闭设备的函数)
+	if (CURRENT->bh) {									// CURRENT 为当前请求结项指针
 		CURRENT->bh->b_uptodate = uptodate;				// 置更新标志.
 		unlock_buffer(CURRENT->bh);						// 解锁缓冲区.
 	}

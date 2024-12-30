@@ -370,6 +370,7 @@ hd_interrupt:
 	movl $0x17, %eax				# fs 当前进程的局部数据段.
 	mov %ax, %fs
 	# 由于初始化中断控制芯片时没有采用自己 EOI, 所以这里要发指令结束该硬件中断.
+	# 只有发送了 EOI(End of Interrupt) 信号, 中断控制器才能解除对该中断信号的屏蔽, 并允许处理其它中断.
 	movb $0x20, %al
 	outb %al, $0xA0					# EOI to interrupt controller #1	# 送从 8259A
 	jmp 1f							# give port chance to breathe		# 这里 jmp 起延时作用.

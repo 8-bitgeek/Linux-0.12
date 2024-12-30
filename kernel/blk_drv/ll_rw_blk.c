@@ -27,15 +27,13 @@ struct request request[NR_REQUEST];
 
 /*
  * used to wait on when there are no free requests
- */
-/*
  * 是用于在设备读写请求数组没有空闲项时进程的临时等待处.
  */
 struct task_struct * wait_for_request = NULL;
 
 /* blk_dev_struct is:
- *	do_request-address
- *	next-request
+ *		do_request-address
+ *		next-request
  */
 // 块设备数组. 该数组使用主设备号作为索引. 实际内容将在各块设备驱动程序初始化时填入.
 // 例如, 硬盘驱动程序初始化时(hd.c), 第一条语句即用于设备 blk_dev[3] 的内容.
