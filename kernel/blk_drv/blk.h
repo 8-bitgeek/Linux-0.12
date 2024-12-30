@@ -172,8 +172,7 @@ static inline void end_request(int uptodate)
 	}
 	if (!uptodate) {									// 若更新标志为 0 则显示出错信息.
 		printk(DEVICE_NAME " I/O error\n\r");
-		printk("dev %04x, block %d\n\r",CURRENT->dev,
-			CURRENT->bh->b_blocknr);
+		printk("dev %04x, block %d\n\r",CURRENT->dev, CURRENT->bh->b_blocknr);
 	}
 	wake_up(&CURRENT->waiting);							// 唤醒等待该请求完成的进程.
 	wake_up(&wait_for_request);							// 唤醒等待空闲请求项的进程.

@@ -36,7 +36,7 @@ int printk(const char *fmt, ...)
 	va_start(args, fmt);
 	i = vsprintf(buf, fmt, args);
 	va_end(args);
-	console_print(buf);						// chr_drv/console.c
+	console_print(buf);						// kernel/chr_drv/console.c
 	return i;
 }
 
@@ -63,6 +63,6 @@ inline void check_data32(int value, int pos)
 		"add	$0x02,%%ebx\n\t"
 		"cmpl	$0x0,%%eax\n\t"
 		"jnz	1b\n"
-		::"m"(value), "b"(pos));
+		:: "m"(value), "b"(pos));
 }
 
