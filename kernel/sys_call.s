@@ -352,8 +352,8 @@ sys_fork:
 
 # int 46 -- (int 0x2E) 硬盘中断处理程序, 响应硬盘中断请求 IRQ14.
 # 当请求的硬盘操作完成或出错就会发出此中断信号. (参见 kernel/blk_drv/hd.c).
-# 首先问 8259A 中断控制从芯片发送结束硬件中断指令(EOI), 然后取变量 do_hd 中的函数指针放入 edx 寄存器中, 
-# 并置 do_hd 为 NULL, 接着判断 edx 函数指针是否为空. 
+# 首先向 8259A 中断控制从芯片发送结束硬件中断指令(EOI), 然后取变量 do_hd 中的函数指针放入 edx 寄存器中, 
+# 并置 do_hd(在 kernel/blk_drv/blk.h 中定义 void (*DEVICE_INTR)(void) = NULL;) 为 NULL, 接着判断 edx 函数指针是否为空. 
 # 如果为空, 则给 edx 赋值指向 unexpected_hd_interrupt(), 用于显示出错信息. 
 # 随后向 8259A 主芯片送 EOI 指令, 并调用 edx 中指针指向的函数: 
 # read_intr(), write_intr() 或 unexpected_hd_interrupt().
@@ -364,17 +364,17 @@ hd_interrupt:
 	push %ds
 	push %es
 	push %fs
-	movl $0x10, %eax				# dx, es 置为内核数据段.
+	movl $0x10, %eax				# 使 ds, es 指向内核数据段.
 	mov %ax, %ds
 	mov %ax, %es
-	movl $0x17, %eax				# fs 置为调用程序的局部数据段.
+	movl $0x17, %eax				# fs 当前进程的局部数据段.
 	mov %ax, %fs
 	# 由于初始化中断控制芯片时没有采用自己 EOI, 所以这里要发指令结束该硬件中断.
 	movb $0x20, %al
 	outb %al, $0xA0					# EOI to interrupt controller #1	# 送从 8259A
 	jmp 1f							# give port chance to breathe		# 这里 jmp 起延时作用.
 1:	jmp 1f
-	# do_hd 定义为一个函数指针, 将被赋值 read_intr() 或 write_intr() 函数地址. 
+	# do_hd 定义为一个函数指针, 将被赋值为函数 read_intr() 或 write_intr() 的地址. 
 	# 放到 edx 寄存器后就将 do_hd 指针变量置为 NULL. 
 	# 然后测试得到的函数指针, 若该指针为空, 则赋予该指针指向 C 函数 unexpected_hd_interrupt(), 以处理未知硬盘中断.
 1:	xorl %edx, %edx
