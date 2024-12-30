@@ -37,11 +37,6 @@ struct task_struct * wait_for_request = NULL;
  *	do_request-address
  *	next-request
  */
-/*
- * blk_dev_struct 块设备结构是: (参见文件 kernel/blk_drv/blk.h)
- * do_request-address					// 对应主设备号的请求处理程序指针.
- * current-request						// 该设备的下一个请求.
- */
 // 块设备数组. 该数组使用主设备号作为索引. 实际内容将在各块设备驱动程序初始化时填入.
 // 例如, 硬盘驱动程序初始化时(hd.c), 第一条语句即用于设备 blk_dev[3] 的内容.
 // blk_dev_struct 在 kernel/blk_drv/blk.h 中, 结构体中有两个字段: request_fn, request.
