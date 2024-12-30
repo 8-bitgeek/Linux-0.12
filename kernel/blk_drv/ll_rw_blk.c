@@ -113,7 +113,7 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 	req->next = NULL;
 	cli();								// 关中断(可以屏蔽硬件中断, 比如硬盘中断等).
 	if (req->bh)
-		req->bh->b_dirt = 0;			// 清缓冲区 "脏" 标志.
+		req->bh->b_dirt = 0;			// 清除缓冲区 "脏" 标志.
 	// 然后查看指定设备当前是否有请求项, 即查看设备是否正忙. 
 	// 如果指定设备 dev 当前请求项(current_request)字段为空, 则表示目前该设备没有请求项, 
 	// 本次是第 1 个请求项, 也是唯一的一个. 因此可将块设备的当前请求指针直接指向该请求项, 并立刻执行相应设备的请求处理函数.

@@ -89,7 +89,7 @@ static void free_wait(select_table * p)
 	for (i = 0; i < p->nr ; i++) {
 		tpp = p->entry[i].wait_address;
 		while (*tpp && *tpp != current) {
-			(*tpp)->state = 0;
+			(*tpp)->state = TASK_RUNNING;
 			current->state = TASK_UNINTERRUPTIBLE;
 			schedule();
 		}
@@ -99,7 +99,7 @@ static void free_wait(select_table * p)
 		if (!*tpp)
 			printk("free_wait: NULL");
 		if (*tpp = p->entry[i].old_task)
-			(**tpp).state = 0;
+			(**tpp).state = TASK_RUNNING;
 	}
 	p->nr = 0;
 }
