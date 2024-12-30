@@ -113,7 +113,7 @@ extern int * blk_size[NR_BLK_DEV];
 #elif (MAJOR_NR == 3)
 /* harddisk */
 #define DEVICE_NAME "harddisk"									// 设备名称("硬盘")
-#define DEVICE_INTR do_hd										// 设备中断处理函数
+#define DEVICE_INTR do_hd										// 设备中断处理函数, 实际定义在 
 #define DEVICE_TIMEOUT hd_timeout								// 设备超时值
 #define DEVICE_REQUEST do_hd_request							// 设备请求项处理函数
 #define DEVICE_NR(device) (MINOR(device) / 5)					// 设备号
@@ -139,7 +139,7 @@ void (*DEVICE_INTR)(void) = NULL;
 // 如果定义了设备超时符号常数, 则令其值等于 0, 并定义 SET_INTR() 宏. 否则只定义宏.
 #ifdef DEVICE_TIMEOUT
 int DEVICE_TIMEOUT = 0;
-#define SET_INTR(x) (DEVICE_INTR = (x),DEVICE_TIMEOUT = 200)
+#define SET_INTR(x) (DEVICE_INTR = (x), DEVICE_TIMEOUT = 200)
 #else
 #define SET_INTR(x) (DEVICE_INTR = (x))
 #endif
@@ -175,7 +175,7 @@ static inline void end_request(int uptodate)
 		printk("dev %04x, block %d\n\r",CURRENT->dev,
 			CURRENT->bh->b_blocknr);
 	}
-	wake_up(&CURRENT->waiting);							// 唤醒等待该请求项的进程.
+	wake_up(&CURRENT->waiting);							// 唤醒等待该请求完成的进程.
 	wake_up(&wait_for_request);							// 唤醒等待空闲请求项的进程.
 	CURRENT->dev = -1;									// 释放该请求项.
 	CURRENT = CURRENT->next;							// 指向下一请求项.

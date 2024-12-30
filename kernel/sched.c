@@ -299,7 +299,7 @@ repeat:	schedule();
 	// 把等待该资源的任务设置为在本任务之前就已经在等待的任务(如果有的话, 如果没有的话 tmp 就是 NULL, *p 也会变为 NULL), 并使这个任务就绪.
 	if (*p = tmp)
 		// 如果在任务之前就已经有在等待的任务, 那么唤醒它.
-		tmp->state = 0;
+		tmp->state = TASK_RUNNING;
 }
 
 // 将当前任务置为可中断的等待状态(TASK_INIERRUPTIBLE), 并放入头指针 *p 指定的等待队列中.
@@ -329,7 +329,7 @@ void wake_up(struct task_struct **p)
 			printk("wake_up: TASK_STOPPED");
 		if ((**p).state == TASK_ZOMBIE)							// 处于僵死状态.
 			printk("wake_up: TASK_ZOMBIE");
-		(**p).state = TASK_RUNNING;										// 置为就绪状态 TASK_RUNNING.
+		(**p).state = TASK_RUNNING;								// 置为就绪状态 TASK_RUNNING.
 	}
 }
 

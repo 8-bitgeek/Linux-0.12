@@ -268,9 +268,7 @@ int main(void)										/* This really IS void, no error here. */
 	hd_init();										// 硬盘初始化: 设置硬盘读写请求处理函数并设置硬盘中断. (blk_drv/hd.c)
 	floppy_init();									// 软盘初始化. (blk_drv/floppy.c)
 	sti();											// 所有初始化工作都完了, 于是开启中断(注意, 只能屏蔽硬件中断而不能屏蔽软件中断).
-	// 打印内核初始化完毕
-	// Log(LOG_INFO_TYPE, "<<<<< Linux0.12 Kernel Init Finished, Ready Start Process0 >>>>>\n");
-	// 下面过程通过在堆栈中构建 IRET 指令的返回参数, 利用中断返回指令切换到任务 0 中执行(在用户特权级下执行).
+	// 下面通过在堆栈中构建 IRET 指令的返回参数, 利用中断返回指令切换到任务 0 中执行(在用户特权级下执行).
 	// NOTE: 并不是通过任务切换来实现的, 只是通过 iret 来自动加载用户态下的各个段描述符来实现特权级的切换.
 	// cs 由 0x8 切换成 0xf 即由 0b-0000-1000 切换成 0b-0000-1111 即由 GDT 中的代码段切换为 LDT 中的代码段. 
 	// 特权级 CPL 由 0 切换成 3, 在用户态下执行.

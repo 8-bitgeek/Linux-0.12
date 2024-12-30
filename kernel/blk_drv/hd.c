@@ -95,11 +95,11 @@ static int hd_sizes[5 * MAX_HD] = {0, };
 
 // 读端口嵌入汇编宏. 读端口 port, 共读 nr 字, 保存在 buf 中.
 #define port_read(port, buf, nr) \
-__asm__("cld;rep;insw"::"d" (port), "D" (buf), "c" (nr):)
+__asm__("cld; rep; insw" : : "d" (port), "D" (buf), "c" (nr):)
 
 // 写端口嵌入汇编宏. 写端口 port, 共写 nr 字, 从 buf 中取数据.
 #define port_write(port, buf, nr) \
-__asm__("cld;rep;outsw"::"d" (port), "S" (buf), "c" (nr):)
+__asm__("cld; rep; outsw" : : "d" (port), "S" (buf), "c" (nr):)
 
 extern void hd_interrupt(void);		// 硬盘中断过程(sys_call.s)
 extern void rd_load(void);			// 虚拟盘创建加载函数(ramdik.c)
@@ -269,11 +269,11 @@ static int controller_ready(void)
 }
 
 // 检测硬盘执行命令后的状态. (win 表示温切斯特硬盘的缩写)
-// 读取状态寄存器中的命令执行结果状态. 返回 0 表示正常; 1 表示出错. 
+// 读取硬盘状态寄存器中的命令执行结果状态. 返回 0 表示正常; 1 表示出错. 
 // 如果执行命令错, 则需要再读错误寄存器 HD_ERROR(0x1f1).
 static int win_result(void)
 {
-	int i = inb_p(HD_STATUS);							// 读取硬盘状态信息.
+	int i = inb_p(HD_STATUS);							// 读取硬盘状态寄存器中的状态信息.
 
 	if ((i & (BUSY_STAT | READY_STAT | WRERR_STAT | SEEK_STAT | ERR_STAT))
 		== (READY_STAT | SEEK_STAT))
@@ -302,11 +302,11 @@ static void hd_out(unsigned int drive, unsigned int nsect, unsigned int sect,
 		panic("Trying to write bad sector");
 	if (!controller_ready())
 		panic("HD controller not ready");
-	// 接着我们设置硬盘中断发生时将调用的 C 函数指针 do_hd(该函数指针定义在 kernel/blk_drv/blk.h 文件). 
+	// 接着我们设置硬盘中断发生时将调用的 C 函数指针 do_hd(该函数指针定义在 kernel/blk_drv/blk.h 中). 
 	// 然后在向硬盘控制器发送参数和命令之前, 规定要先向控制器命令端口(0x3f6)发送指定硬盘的控制字节, 
 	// 以建立相应的硬盘控制方式. 
 	// 该控制字节即是硬盘信息结构数组中的 ctl 字节. 然后向控制器端口 0x1f1 - 0x1f7 发送 7 字节的参数命令块.
-	SET_INTR(intr_addr);								// do_hd = intr_addr 在硬盘触发中断时被调用.
+	SET_INTR(intr_addr);								// 设置 do_hd = intr_addr 在硬盘触发中断时被调用.
 	outb_p(hd_info[drive].ctl, HD_CMD);					// 向控制寄存器输出控制字节
 	port = HD_DATA;										// 置 dx 为数据寄存器端口(0x1f0)
 	outb_p(hd_info[drive].wpcom >> 2, ++port);			// 参数: 写预补偿柱面号(需除 4)
@@ -411,8 +411,7 @@ static void bad_rw_intr(void)
 }
 
 // 读操作中断调用函数.
-// 该函数将在硬盘读命令结束时引发的硬盘中断过程中调用.
-// 在读命令执行后会产生硬盘中断信号, 并执行硬盘中断处理程序, 
+// 在硬盘读命令执行完成后会产生硬盘中断信号, 并执行硬盘中断处理程序(hd_interrupt), 
 // 此时在硬盘中断处理程序调用的 C 函数指针 do_hd 已经指向 read_intr(), 
 // 因此会在一次读扇区操作完成(或出错)后就会执行该函数.
 static void read_intr(void)
@@ -427,17 +426,15 @@ static void read_intr(void)
 		do_hd_request();								// 再次请求硬盘作相应(复位)处理.
 		return;
 	}
-	// 如果读命令没有出错, 则从数据寄存器端口把 1 扇区的数据读到请求项的缓冲区中, 并且递减请求项所需读取的扇区数值. 
-	// 若递减后不等于 0, 表示本项请求还有数据没取完, 于是再次置中断调用 C 函数指针 do_hd 为 read_intr() 并直接返回, 
-	// 等待硬盘在读出另 1 个扇区数据后发出中断并再次调用本函数. 注意: 下面的 256 是指内存字(words), 即 512 字节. 
-	// 注意: 262 行再次置 do_hd 指针指向 read_intr() 是因为硬盘中断处理程序每次调用 do_hd 时都会将该函数指针置空.
-	port_read(HD_DATA, CURRENT->buffer, 256);			// 读 256 字(2bytes)数据到请求结构数据缓冲区.
+	// 如果读命令没有出错, 则从数据寄存器端口把 1 扇区的数据(512B)读到请求项的缓冲区中, 并且递减请求项所需读取的扇区数值. 
+	// 再次设置 do_hd 指针指向 read_intr(), 因为硬盘中断处理程序每次都会将函数指针 do_hd 置空.
+	port_read(HD_DATA, CURRENT->buffer, 256);			// 每次从硬盘中读取一个扇区的数据(512B)到缓冲块中.
 	CURRENT->errors = 0;								// 清出错次数.
 	CURRENT->buffer += 512;								// 数据缓冲区指针, 指向新的待读入数据缓冲区.
 	CURRENT->sector++;									// 起始扇区号加 1.
-	if (--CURRENT->nr_sectors) {						// 如果所需读出的扇区数还没读完, 则再置硬盘调用 C 函数指针为 read_intr().
+	if (--CURRENT->nr_sectors) {						// 如果所需数据还没读完, 则再次设置硬盘中断调用函数为 read_intr().
 		SET_INTR(&read_intr);
-		return;
+		return; 										// 直接返回等待下次硬盘中断时再次读取数据.
 	}
 	// 执行到此, 说明本次请求项的全部扇区数据已经读完, 则调用 end_request() 函数去处理请求项结束事宜. 
 	// 最后再次调用 do_hd_request(), 去处理其他硬盘请求项. 执行其他硬盘请求操作.
@@ -556,8 +553,8 @@ void do_hd_request(void)
 	// 			 所得整数商值在 eax 中, 余数在 edx 中. 
 	// 			 其中 eax 中是到指定位置的对应总磁道数(所有磁头面) block, edx 中是当前磁道上的扇区号(sec). 
 	__asm__("divl %4"                   \
-	     	:"=a"(block), "=d"(sec) 	\
-			:"0"(block), "1"(0), "r"(hd_info[dev].sect));
+	     	: "=a"(block), "=d"(sec) 	\
+			: "0"(block), "1"(0), "r"(hd_info[dev].sect));
 	// 代码初始时 eax 是上面计算出的对应总磁道数, edx 中置 0. 
 	// divl 指令把 edx:eax 的对应总磁道数除以硬盘总磁头数(hd_info[dev].head),
 	// 在 eax 中得到的整除值是柱面号(cyl), edx 得到的余数就是对应得当前磁头号(head).
@@ -596,8 +593,8 @@ void do_hd_request(void)
 	// 于是跳转去处理出现的问题或继续执行下一个硬盘请求, 
 	// 否则我们可以向硬盘控制器数据寄存器端口 HD_DATA 写入 1 个扇区的数据.
 	if (CURRENT->cmd == WRITE) {
-		hd_out(dev, nsect, sec, head, cyl, WIN_WRITE, &write_intr);
-		for(i = 0 ; i < 10000 && !(r = inb_p(HD_STATUS) & DRQ_STAT) ; i++)
+		hd_out(dev, nsect, sec, head, cyl, WIN_WRITE, &write_intr);  // 如果是写操作, 则将中断处理函数设置为 write_intr(). 
+		for(i = 0; i < 10000 && !(r = inb_p(HD_STATUS) & DRQ_STAT); i++)
 			/* nothing */ ;
 		if (!r) {
 			bad_rw_intr();
@@ -606,7 +603,7 @@ void do_hd_request(void)
 		port_write(HD_DATA, CURRENT->buffer, 256);
 	// 如果当前请求是读硬盘数据, 则向硬盘控制器发送读扇区命令. 若命令无效则停机.
 	} else if (CURRENT->cmd == READ) {
-		hd_out(dev, nsect, sec, head, cyl, WIN_READ, &read_intr);
+		hd_out(dev, nsect, sec, head, cyl, WIN_READ, &read_intr); 	// 如果是读操作, 则将中断处理函数设置为 read_intr().
 	} else
 		panic("unknown hd-command");
 }
