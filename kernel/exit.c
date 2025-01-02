@@ -562,7 +562,7 @@ int sys_exit(int error_code)
 int sys_waitpid(pid_t pid, unsigned long * stat_addr, int options)
 {
 	int flag;               				// 该标志用于后面所选出的子进程处于就绪或睡眠态. 
-	struct task_struct *p;
+	struct task_struct * p;
 	unsigned long oldblocked;
 
 	// 首先验证将在存放状态信息的位置处内在空间足够. 然后复位标志 flag. 
@@ -570,7 +570,7 @@ int sys_waitpid(pid_t pid, unsigned long * stat_addr, int options)
 	verify_area(stat_addr, 4);
 repeat:
 	flag = 0;
-	for (p = current->p_cptr ; p ; p = p->p_osptr) {
+	for (p = current->p_cptr; p; p = p->p_osptr) {
 		// 如果等待的子进程号 pid > 0, 但与被扫描子进程 p 的 pid 不相等, 
 		// 说明它是当前进程另外的子进程, 于是跳过该进程, 接着扫描下一个进程. 
 		if (pid > 0) {

@@ -83,7 +83,7 @@ int sys_sync(void)
 	// 对已被修改的缓冲块产生写盘请求, 将缓冲中数据写入盘中, 做到高速缓冲中的数据与设备中的同步.
 	sync_inodes();							/* write out inodes into buffers */
 	bh = start_buffer;      				// bh 指向缓冲开始处.
-	for (i = 0 ; i < NR_BUFFERS ; i++, bh++) {
+	for (i = 0; i < NR_BUFFERS; i++, bh++) {
 		wait_on_buffer(bh);             	// 等待缓冲区解锁(如果已上锁的话).
 		if (bh->b_dirt)
 			ll_rw_block(WRITE, bh);  		// 产生写设备块请求.
@@ -105,7 +105,7 @@ int sync_dev(int dev)
 	// 因为在我们睡眠期间该缓冲块有可能已被释放或者被挪作它用, 
 	// 所以在继续执行前需要再次判断一下该缓冲块是否还是指定设备的缓冲块.
 	bh = start_buffer;                      		// bf 指向缓冲区开始处.
-	for (i = 0 ; i < NR_BUFFERS ; i++, bh++) {
+	for (i = 0; i < NR_BUFFERS; i++, bh++) {
 		if (bh->b_dev != dev)           			// 不是设备 dev 的缓冲块则继续.
 			continue;
 		wait_on_buffer(bh);             			// 等待缓冲区解锁(如果已上锁的话).
@@ -118,7 +118,7 @@ int sync_dev(int dev)
 	// 第一遍缓冲区同步操作可以让内核中许多 "脏块" 变干净, 使得 i 节点的同步操作能够高效执行. 
 	// 本次缓冲区同步操作则把那些由于 i 节点同步操作而又变脏的缓冲块与设备中数据同步.
 	bh = start_buffer;
-	for (i = 0 ; i < NR_BUFFERS ; i++, bh++) {
+	for (i = 0; i < NR_BUFFERS; i++, bh++) {
 		if (bh->b_dev != dev)
 			continue;
 		wait_on_buffer(bh);
@@ -136,7 +136,7 @@ void invalidate_buffers(int dev)
 	struct buffer_head * bh;
 
 	bh = start_buffer;
-	for (i = 0 ; i < NR_BUFFERS ; i++, bh++) {
+	for (i = 0; i < NR_BUFFERS; i++, bh++) {
 		if (bh->b_dev != dev)           // 如果不是指定设备的缓冲块, 则继续扫描下一块.
 			continue;
 		wait_on_buffer(bh);             // 等待该缓冲区解锁(如果已被上锁).
@@ -182,7 +182,7 @@ void check_disk_change(int dev)
 		return;
 	// 软盘已更换, 所以释放对应设备的 i 节点位图和逻辑位图所占的高速缓冲区; 
 	// 并使该设备的 i 节点和数据块信息所占据的高速缓冲块无效.
-	for (i = 0 ; i < NR_SUPER ; i++)
+	for (i = 0; i < NR_SUPER; i++)
 		if (super_block[i].s_dev == dev)
 			put_super(super_block[i].s_dev);
 	invalidate_inodes(dev);         // 释放设备 dev 在内存 i 节点表中的所有 i 节点
