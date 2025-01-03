@@ -552,7 +552,7 @@ int sys_exit(int error_code)
 // 或者信号是需要调用一个信号句柄(信号处理程序). 
 // 如果 pid 所指的子进程早已退出(已成所谓的僵死进程), 则本调用将立刻返回. 子进程使用的所有资源将释放. 
 // 如果 pid > 0, 表示等待进程号等于 pid 的子进程. 
-// 如果 pid = 0, 表示等待进程组号等于当前进程组号的任何子进程. 
+// 如果 pid = 0, 表示等待同一个进程组的子进程. 
 // 如果 pid < -1, 表示等待进程组号等于 pid 绝对值的任务子进程. 
 // 如果 pid = -1, 表示等待任何子进程. 
 // 若 options = WUNTRACED, 表示如果子进程是停止的, 也马上返回(无须跟踪). 
@@ -570,40 +570,39 @@ int sys_waitpid(pid_t pid, unsigned long * stat_addr, int options)
 	verify_area(stat_addr, 4);
 repeat:
 	flag = 0;
-	for (p = current->p_cptr; p; p = p->p_osptr) {
+	for (p = current->p_cptr; p; p = p->p_osptr) { 	// osptr 指向兄弟进程, 即遍历当前进程的子进程.
 		// 如果等待的子进程号 pid > 0, 但与被扫描子进程 p 的 pid 不相等, 
-		// 说明它是当前进程另外的子进程, 于是跳过该进程, 接着扫描下一个进程. 
+		// 说明它是当前进程另外的子进程, 于是跳过该进程, 接着扫描下一个子进程. 
 		if (pid > 0) {
-			if (p->pid != pid)
+			if (p->pid != pid) 						// 如果指定了一个正常的 pid, 则要获取对应的子进程.
 				continue;
-		// 否则, 如果指定等待进程的 pid = 0, 表示正在等待进程组号等于当前进程组号的任何子进程. 
-		// 如果此时被扫描进程 p 的进程组号与当前进程的组号不等, 则跳过. 
+		// 如果指定等待的 pid = 0, 表示等待同一个进程组的所有子进程. 如果此时被扫描进程 p 的不是同一个进程组, 则跳过. 
 		} else if (!pid) {
-			if (p->pgrp != current->pgrp)
+			if (p->pgrp != current->pgrp) 			// 如果 pid = 0, 则要获取同一个进程组的子进程.
 				continue;
 		// 否则, 如果指定的 pid < -1, 表示正在等待进程组号等于 pid 绝对值的任何子进程. 
 		// 如果此时被扫描进程 p 的组号与 pid 的绝对值不等, 则跳过. 
-		} else if (pid != -1) {
-			if (p->pgrp != -pid)
+		} else if (pid < -1) {
+			if (p->pgrp != -pid) 					// 如果 pid < -1, 则表示获取进程组号为 -pid 下的子进程.
 				continue;
 		}
-		// 如果前 3 个对 pid 的判断都不符合, 则表示当前进程正在等待其任何子进程, 即 pid = -1 的情况. 
-		// 此时所选择到的进程 p 或者是其进程号等于指定 pid, 或者是当前进程组中的任何子进程, 
-		// 或者是进程号组等于指定 pid 绝对值的子进程, 或者是任何子进程(此时指定的 pid 等于 -1). 
-		// 接下来根据这个子进程 p 所处的状态来处理. 
-		// 当子进程 p 停止状态时, 如果此时参数选项 options 中 WUNTRACED 标志没有置位, 表示程序无须立刻返回, 
-		// 或者子进程此时的退出码等于 0, 于是继续扫描处理其他子进程. 如果 WUNTRACED 置位且子进程退出码不为 0, 
-		// 则把退出码移入高字节, 同状态信息 0x7f 进行或运算后放入 *stat_addr, 在复位子进程退出码后立刻返回子进程号 pid. 
-		// 这里 0x7f 表示的返回状态使 WIFSTOPPED() 宏为值. (参见 include/sys/wait.h)
-		switch (p->state) {
+		// 代码执行到这里时获取到符合条件的子进程, 也可能不会执行到这里, 表示没有找到符合的子进程.
+		// 如果 pid > 0, 则此时 p 是进程号 = pid 的子进程, 
+		// 如果 pid == 0, 则此时 p 是与当前进程同一进程组的子进程.
+		// 如果 pid = -1 则此时 p 是任意子进程.
+		// 如果 pid < -1, 则此时 p 是进程组号 = -pid 的子进程.
+		switch (p->state) { 						// 根据子进程的状态来处理.
+			// 当子进程 p 停止状态时, 如果此时参数选项 options 中 WUNTRACED 标志没有置位, 
+			// 或者子进程的退出码为 0, 则表示程序无须立刻返回, 继续扫描处理其他子进程. 
+			// 如果 WUNTRACED 置位并且子进程退出码不为 0, 则把退出码移入高字节, 
+			// 同状态信息 0x7f 进行或运算后放入 *stat_addr, 在复位子进程退出码后立刻返回子进程号 pid. 
+			// 这里 0x7f 表示的返回状态使 WIFSTOPPED() 宏为值. (参见 include/sys/wait.h)
 			case TASK_STOPPED:
-				if (!(options & WUNTRACED) ||
-				    !p->exit_code)
+				if (!(options & WUNTRACED) || !p->exit_code) 	// 如果没有设置 WUNTRACED 或者 exit_code == 0, 则继续处理下一子进程.
 					continue;
-				put_fs_long((p->exit_code << 8) | 0x7f,
-					stat_addr);
+				put_fs_long((p->exit_code << 8) | 0x7f, stat_addr); 
 				p->exit_code = 0;
-				return p->pid;
+				return p->pid; 									// 立刻返回, 当前进程不会挂起.
 			// 如果子进程 p 处于僵死状态, 则首先把它在用户态和内核态运行的时间分别累计到当前进程(父进程)中, 
 			// 然后取出子进程 pid 和退出码, 把退出码放入返回状态位置 stat_addr 处并释放该子进程. 
 			// 最后返回子进程的退出码和 pid. 若定义了调试进程树符号, 则调用进程树检测显示函数. 
@@ -618,7 +617,7 @@ repeat:
 				audit_ptree();
 #endif
 				return flag;
-			// 如果这个子进程 p 的状态即是不停止也不是僵死, 那么就置 flag = 1. 
+			// 如果这个子进程 p 的状态既是不停止也不是僵死, 那么就置 flag = 1. 
 			// 表示找到一个符合要求的子进程, 但是它处于运行态或睡眠态. 
 			default:
 				flag = 1;
@@ -627,21 +626,22 @@ repeat:
     }
 	// 在上面对任务数组扫描结束后, 如果 flag 被置位, 说明了有符合等待要求的子进程并没有处于停止或僵死状态. 
 	// 此时如果已设置 WNOHANG 选项(表示若没有子进程处于退出或终止态就返回), 就立刻返回 0, 退出. 
-	// 否则把当前进程置为可中断等待状态, 保留并修改当前进程信号阻塞位图, 允许其接收 SIGCHLD 信号. 
-	// 然后执行调度程序. 当系统又开始执行本进程时, 如果本进程收到除 SIGCHLD 以外的其他未屏蔽信号, 
+	// 否则把当前进程置为可中断等待状态, 保留并修改当前进程信号屏蔽位图, 允许其接收 SIGCHLD 信号. 
+	// 然后执行调度程序让出 cpu. 当系统又开始执行本进程时, 如果本进程收到除 SIGCHLD 以外的其他未屏蔽信号, 
 	// 则以退出码 "重新启动系统调用" 返回. 否则跳转到函数开始处 repeat 标号处重复处理. 
 	if (flag) {
 		if (options & WNOHANG)
 			return 0;
 		current->state = TASK_INTERRUPTIBLE;
 		oldblocked = current->blocked;
-		current->blocked &= ~(1 << (SIGCHLD - 1));
+		current->blocked &= ~(1 << (SIGCHLD - 1)); 			// 不屏蔽 SIGCHLD 信号(屏蔽码中的该位置 0).
 		schedule();
 		current->blocked = oldblocked;
+		// 如果屏蔽后(包括 SIGCHLD)还有其它信号, 则尝试重启本系统调用, 以实现处理(在 ret_from_sys_call 时)当前进程收到的其它信号.
 		if (current->signal & ~(current->blocked | (1 << (SIGCHLD - 1))))
 			return -ERESTARTSYS;			// 返回 ERESTARTSYS, 表示本次系统调用被信号中断, 并希望能重启本系统调用.
 		else
-			goto repeat;
+			goto repeat; 					// 如果当前进程没有要处理的信号, 则继续
 	}
 	// 若 flag = 0, 表示没有找到符合要求的子进程, 则返回出错码(子进程不存在). 
 	return -ECHILD;

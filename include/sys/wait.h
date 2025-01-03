@@ -8,7 +8,7 @@
 
 // 以下常数符号是函数 waitpid(pit_t pid, long *stat_addr, int options) 中 options 使用的选项. 
 #define WNOHANG		1       // 如果没有状态也不要挂起, 并立刻返回. 
-#define WUNTRACED	2       // 报告停止执行的子进程状态. 
+#define WUNTRACED	2       // 需要报告已停止执行的子进程状态. 
 
 // 以下宏定义用于判断 waitpid() 函数返回的状态字. 
 #define WIFEXITED(s)	(!((s)&0xFF))           // 如果子进程正常退出, 则为真. 
