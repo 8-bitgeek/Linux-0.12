@@ -203,7 +203,7 @@ ret_from_sys_call:
 	movl %ebx, signal(%eax)			# 重新将 signal 位图信息保存到 current -> signal.
 	incl %ecx						# 将信号调整为从 1 开始的数(1--32).
 	pushl %ecx						# 信号值入栈作为调用 do_signal 的参数之一.
-	call do_signal					# 调用 C 函数信号处理程序(kernel/signal.c)
+	call do_signal					# 调用 do_signal() 信号处理程序(kernel/signal.c).
 	popl %ecx						# 弹出入栈的信号值.
 	testl %eax, %eax				# 测试返回值, 若不为 0 则跳转到前面标号 2 处.
 	jne 2b							# see if we need to switch tasks, or do more signals.
