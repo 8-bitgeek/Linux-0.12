@@ -370,14 +370,13 @@ int sys_getpgrp(void)
 	return current->pgrp;
 }
 
-// 创建一个会话(session)(即设置其 leader = 1), 并且设置其会话号 = 其组号 = 其进程号. 
-// 如果当前进程已是会话首领并且不是超级用户, 则出错返回. 
-// 否则设置当前进程为新会话首领(leader = 1), 
-// 并且设置当前进程会话号 session 和组号 pgrp 都等于进程号 pid, 
-// 而且设置当前进程没有控制终端. 最后系统调用返回会话号. 
+// 创建一个会话(session)(即设置其 leader = 1), 并且设置会话号 = 组号 = 进程号. 
+// 如果当前进程已是会话首领但是宿主并不是超级用户, 则出错返回. 
+// 否则设置首领标志, 当前进程会话号 session 和组号 pgrp 都等于进程号 pid, 
+// 清除当前进程的控制终端. 最后系统调用返回会话号. 
 int sys_setsid(void)
 {
-	if (current->leader && !suser())
+	if (current->leader && !suser()) 		// 如果当前进程已经是 leader, 但是宿主并不是超级用户, 则出错.
 		return -EPERM;
 	current->leader = 1;
 	current->session = current->pgrp = current->pid;
@@ -389,7 +388,7 @@ int sys_setsid(void)
  * Supplementary group ID's
  */
 /*
- * 进程的其他用户组号. 
+ * 获取进程的其他用户组号. 
  */
 // 取当前进程其他辅助用户组号. 
 // 任务数据结构中 groups[] 数组保存着进程同时所属的多个用户组号. 

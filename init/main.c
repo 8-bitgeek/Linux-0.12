@@ -369,7 +369,7 @@ void init(void)
 		}
 		if (!pid) {                             					// 新的子进程.
 			close(0); close(1); close(2);
-			setsid();                       						// 创建一新的会话期, 见后面说明.
+			setsid();                       						// 创建新的会话, 见后面说明.
 			(void) open("/dev/tty1", O_RDWR, 0);
 			(void) dup(0);
 			(void) dup(0);
