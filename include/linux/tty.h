@@ -36,9 +36,9 @@ struct tty_queue {
 
 #define IS_A_CONSOLE(min)			(((min) & 0xC0) == 0x00)	// 是一个控制终端.
 #define IS_A_SERIAL(min)			(((min) & 0xC0) == 0x40)	// 是一串行终端.
-#define IS_A_PTY(min)				((min) & 0x80)				// 是一个伪终端.
-#define IS_A_PTY_MASTER(min)		(((min) & 0xC0) == 0x80)	// 是一个主伪终端.
-#define IS_A_PTY_SLAVE(min)			(((min) & 0xC0) == 0xC0)	// 是一个辅伪终端.
+#define IS_A_PTY(min)				((min) & 0x80)				// 子设备号高两位为 0b1x 则表示是一个伪终端.
+#define IS_A_PTY_MASTER(min)		(((min) & 0xC0) == 0x80)	// 子设备号高两位是 0b10 则表示是一个主伪终端.
+#define IS_A_PTY_SLAVE(min)			(((min) & 0xC0) == 0xC0)	// 子设备号高两位是 0b11 则表示是一个从伪终端.
 #define PTY_OTHER(min)				((min) ^ 0x40)				// 其他伪终端.
 
 // 以下定义了 tty 等待队列中缓冲区操作宏函数. (tail 在前, head 在后)
@@ -73,13 +73,13 @@ struct tty_struct {
 	int session;								// 会话号.
 	int stopped;								// 停止标志.
 	void (*write)(struct tty_struct * tty);		// tty 写函数指针.
-	struct tty_queue *read_q;					// tty 读队列. 用于临时存放从键盘或串行终端输入的原始(raw)字符序列.
-	struct tty_queue *write_q;					// tty 写队列. 用于存放写到控制台显示屏或串行终端去的数据.
-	struct tty_queue *secondary;				// tty 辅助队列(存放规范模式字符序列). 可称为规范(熟)模式队列.
+	struct tty_queue * read_q;					// tty 读队列. 用于临时存放从键盘或串行终端输入的原始(raw)字符序列.
+	struct tty_queue * write_q;					// tty 写队列. 用于存放写到控制台显示屏或串行终端去的数据.
+	struct tty_queue * secondary;				// tty 辅助队列(存放规范模式字符序列). 可称为规范(熟)模式队列.
 	// tty_read() 就从 secondary 中读取数据	      // secondary 用于存放从 read_q 中取出的经过行规则程序处理(过滤)过的数据, 或称为熟(cooked)模式数据.
 };
 
-extern struct tty_struct tty_table[];			// tty 终端结构数组.
+extern struct tty_struct tty_table[];			// tty 终端结构数组(256 项).
 extern int fg_console;							// 前台控制台号.
 
 // 根据终端类型在 tty_table[] 中取对应终端号 nr 的 tty 结构指针. 

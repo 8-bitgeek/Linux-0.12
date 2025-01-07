@@ -209,31 +209,26 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 	struct tty_struct * tty;
 	int min;										// 子设备号.
 
-	// 只处理主设备号是 4(/dev/ttyxx 文件) 或 5(/dev/tty 文件) 的情况. /dev/tty 的子设备号是 0. 
-	// 如果一个进程有控制终端, 则它是进程控制终端设备的同义名. 
-	// 即 /dev/tty 设备是一个虚拟设备, 它对应到进程实际使用的 /dev/ttyxx 设备之一. 
-	// 对于一个进程来说, 若其有控制终端, 那么它的任务结构中的 tty 字段将是 4 号设备的某一个子设备号.
-	// 如果打开操作的文件是 /dev/tty(即 MAJOR(dev) = 5), 那么我们令 min = 进程任务结构中的 tty 字段, 
-	// 即取 4 号设备的子设备号. 否则如果打开的是某个 4 号设备, 则直接取其子设备号. 
-	// 如果得到的 4 号设备子设备号小于 0, 那么说明进程没有控制终端, 或者设备号错误, 
-	// 则返回 -1, 表示由于进程没有控制终端或者不能打开这个设备.
-	if (MAJOR(dev) == 4 || MAJOR(dev) == 5) { 		// 只检查主设备是 ttyxx 或者 tty 的设备.
-		if (MAJOR(dev) == 5)
-			min = current->tty; 					// 如果主设备是 tty, 则子设备号是当前任务的 tty(-1 表示没有).
+	// 对于一个进程来说, 如果 tty 字段不为 -1, 则表示有对应的 tty 终端, tty 字段即子设备号.
+	// 如果打开操作的文件是 /dev/tty(即 MAJOR(dev) = 5), 那么我们令 min = 进程的 tty, 
+	// 如果打开的是 ttyx 设备, 则直接取其子设备号. 如果得到的子设备号小于 0, 
+	// 那么说明进程没有控制终端, 或者设备号错误, 则返回 -1, 表示进程没有控制终端或者设备号错误.
+	if (MAJOR(dev) == 4 || MAJOR(dev) == 5) { 		// 只检查主设备是 ttyx 或者 tty 的设备.
+		if (MAJOR(dev) == 5) 						// 5 - tty, 4 - ttyx.
+			min = current->tty; 					// 如果设备号是 tty, 则子设备号为当前任务的 tty(-1 表示没有).
 		else
 			min = MINOR(dev);
-		if (min < 0)
+		if (min < 0) 								// 出错.
 			return -1;
 		// 主伪终端设备文件只能被进程独占使用, 即设备文件的 inode->i_count 不能大于 1, 如果 > 1 则出错. 
-		if ((IS_A_PTY_MASTER(min)) && (inode->i_count > 1)) 	// 如果引用次数 > 1 则表示被两个地方引用, 不是独占的.
+		if (IS_A_PTY_MASTER(min) && inode->i_count > 1) 	// 如果引用次数 > 1 则表示被两个地方引用, 不是独占的.
 			return -1;
 		// 我们让 tty 结构指针指向 tty 表中对应结构项.
-		tty = TTY_TABLE(min);
-		// Log(LOG_INFO_TYPE, "<<<<< tty index = %d>>>>>\n", min);
+		tty = TTY_TABLE(min); 								// /dev/tty1 对应 tty_table[0].
 		// 若文件访问标志 flag 中没有表明不需要分配终端(O_NOCTTY), 并且当前进程是进程组首领, 
 		// 并且当前进程还没有控制终端, 并且 tty 中 session 字段为 0(表示该终端还没分配给其它进程), 
 		// 那么就将这个 tty 设置为当前进程的终端(current->tty = min).
-		// 并且将该 tty 的会话号 session 和进程组号 pgrp 分别设置为当前进程的会话号和进程组号(关系绑定).
+		// 并且将该 tty 的 session 和 pgrp 分别设置为当前进程的会话号和进程组号(绑定).
 		if (!(flag & O_NOCTTY) && current->leader && current->tty < 0 && tty->session == 0) {
 			current->tty = min; 								// 设置当前进程的终端号.
 			tty->session = current->session; 					// 将 tty 的会话号设置为当前进程的会话号.
@@ -263,7 +258,6 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 // 如果调用操作成功, 则返回文件句柄(文件描述符 fd), 否则返回出错码. 参见(include/sys/stat.h include/fcntl.h).
 int sys_open(const char * filename, int flag, int mode)
 {
-	// Log(LOG_INFO_TYPE, "<<<<< sys_open: filename = %s, flag = %d, mode = %d >>>>>\n", filename, flag, mode);
 	struct m_inode * inode;
 	struct file * f;
 	int i, fd;
@@ -300,26 +294,23 @@ int sys_open(const char * filename, int flag, int mode)
 		f->f_count = 0;
 		return i;
 	}
-	// 根据已打开文件 i 节点的属性字段, 我们可以知道文件的类型. 对于不同类型的文件, 我们需要作一些特别处理. 
-	// 如果打开的是字符设备文件, 那么我们就要调用 check_char_dev() 函数来检查当前进程是否能打开这个字符设备文件. 
-	// 如果允许(函数返回 0), 那么在 check_char_dev() 中会根据具体文件打开标志为进程设置控制终端. 
+	// 根据文件 inode 的属性字段, 可以判断文件的类型. 对于特殊类型的文件作一些特殊处理. 
+	// 如果打开的是字符设备文件, 则尝试为该进程绑定这个字符设备(current->tty 指向该设备)(如果允许的话).
 	// 如果不允许打开使用该字符设备文件, 那么我们只能释放上面申请的文件项和句柄资源. 返回出错码.
-	/* ttys are somewhat special (ttyxx major==4, tty major==5) */
-	if (S_ISCHR(inode->i_mode)) 					// 如果是字符设备文件(比如 /dev/tty1 等, 终端设备, 内存设备, 网络设备).
+	/* ttys are somewhat special (ttyx major==4, tty major==5) */
+	if (S_ISCHR(inode->i_mode)) 					// 如果是字符设备文件(比如 /dev/tty1 等: 终端设备, 内存设备, 网络设备).
 		if (check_char_dev(inode, inode->i_zone[0], flag)) { 	// 设备文件的 zone[0] 中存放的是设备号.
 			iput(inode);
 			current->filp[fd] = NULL;
 			f->f_count = 0;
-			return -EAGAIN;         				// 出错号: 资源暂不可用.
+			return -EAGAIN;         							// 出错号: 资源暂不可用.
 		}
-	// 如果打开的是块设备文件, 则检查盘片是否更换过. 若更换过则需要让高速缓冲区中该设备的所有缓冲块失效.
 	/* Likewise with block-devices: check for floppy_change */
-	/* 同样对于块设备文件: 需要检查盘片是否被更换 */
+	// 如果打开的是块设备文件, 则检查盘片是否更换过. 若更换过则需要让高速缓冲区中该设备的所有缓冲块失效.
 	if (S_ISBLK(inode->i_mode))
 		check_disk_change(inode->i_zone[0]);
-	// 现在我们初始化打开文件的文件结构. 
-	// 设置文件结构属性和标志, 置句柄引用计数为 1, 并设置 i 节点字段为打开文件的 i 节点, 初始化文件读写指针为 0. 
-	// 最后返回文件句柄号.
+	// 初始化打开文件的文件结构: 设置文件结构属性和标志, 置句柄引用计数为 1, 
+	// 并设置 i 节点字段为打开文件的 i 节点, 初始化文件读写指针为 0. 最后返回文件句柄号.
 	f->f_mode = inode->i_mode;
 	f->f_flags = flag;
 	f->f_count = 1;
