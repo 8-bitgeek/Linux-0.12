@@ -380,7 +380,7 @@ int sys_setsid(void)
 		return -EPERM;
 	current->leader = 1;
 	current->session = current->pgrp = current->pid;
-	current->tty = -1;      				// 表示当前进程没有控制终端. 
+	current->tty = -1;      				// 删除进程的终端设备.
 	return current->pgrp;
 }
 

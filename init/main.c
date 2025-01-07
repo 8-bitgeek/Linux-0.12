@@ -367,14 +367,16 @@ void init(void)
 			printf("Fork failed in init %c\r\n", ' ');
 			continue;
 		}
-		if (!pid) {                             					// 新的子进程.
+		if (!pid) {                             					// 新的子进程, 加载执行 /bin/sh.
 			close(0); close(1); close(2);
-			setsid();                       						// 创建新的会话, 见后面说明.
-			(void) open("/dev/tty1", O_RDWR, 0);
-			(void) dup(0);
+			// 设置为进程组 leader, 删除绑定的终端设备(tty), 设置新会话(会话号和进程组 = pid), 见后面说明.
+			setsid();                       						// 系统调用 sys_setsid() (kernel/sys.c).
+			(void) open("/dev/tty1", O_RDWR, 0); 					// 为当前进程绑定字符设备 /dev/tty1.
+			(void) dup(0); 											// 复制文件句柄, 0, 1, 2 都指向 /dev/tty1.
 			(void) dup(0);
 			_exit(execve("/bin/sh", argv, envp));
 		}
+		// 等待子进程结束, 在 shell 里执行 exit 子进程会结束, 此时循环退出, 打印日志并重新创建子进程执行 /bin/sh.
 		while (1)
 			if (pid == wait(&i))
 				break;
