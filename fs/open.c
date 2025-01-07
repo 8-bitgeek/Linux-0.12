@@ -316,7 +316,7 @@ int sys_open(const char * filename, int flag, int mode)
 	f->f_count = 1;
 	f->f_inode = inode;
 	f->f_pos = 0;
-	return (fd);
+	return fd;
 }
 
 // 创建文件系统调用. 
