@@ -217,9 +217,6 @@ int main(void)										/* This really IS void, no error here. */
 	 */
 	// 首先保存根文件系统设备和交换文件设备号, 并根据 setup.s 程序中获取的信息设置控制台终端屏幕行, 列数环境变量 TERM, 
 	// 并用其设置初始 init 进程中执行 etc/rc 文件和 shell 程序使用的环境变量, 以及复制内存 0x90080 处的硬盘表.
-	// 其中 ROOT_DEV 已在前面包含进的 include/linux/fs.h 文件上被声明为 extern_int, 
-	// 而 SWAP_DEV 在 include/linux/mm.h 文件内也作了相同声明.
-	// 这里 mm.h 文件并没有显式地列在本程序前部, 因为前面包含进的 include/linux/sched.h 文件中已经含有它.
 	// ROOT_DEV = 0x301(769): 表示第一个硬盘(0x300)的第一个分区(0x001). SWAP_DEV = 0x304(772): 第一个硬盘的第四个分区.
  	ROOT_DEV = ORIG_ROOT_DEV;										// ROOT_DEV 定义在 fs/super.c; 
  	SWAP_DEV = ORIG_SWAP_DEV;										// SWAP_DEV 定义在 mm/swap.c;
@@ -292,10 +289,10 @@ int main(void)										/* This really IS void, no error here. */
 	 * 如果没有的话我们就回到这里, 一直循环执行 'pause()'.
 	 */
 	// pause() 系统调用(kernel/sched.c)会把任务 0 转换成可中断等待状态, 再执行调度函数. 
-	// 但是调度函数只要发现系统中没有其他任务可以运行时就会切换到任务 0, 是不信赖于任务 0 的状态.
+	// 但是调度函数只要发现系统中没有其他任务可以运行时就会切换到任务 0, 而不依赖于任务 0 的状态.
+	// sys_pause() 会调用 schedule() 来执行调度程序.
 	for( ; ; )
-		__asm__("int $0x80" : : "a" (__NR_pause) :);	// 即执行系统调用 pause() ==> include/linux/sys.h #sys_call_table[29].
-	// pause() 函数会调用 schedule() 函数来执行调度程序.
+		__asm__("int $0x80" : : "a" (__NR_pause));	// 即执行系统调用 pause() ==> include/linux/sys.h #sys_call_table[29].
 }
 
 // 下面函数产生格式化信息并输出到标准输出设备 stdout(1), 这里是指屏幕上显示. 参数 '*fmt' 指定输出将采用的格式, 参见标准 C 语言书籍.
