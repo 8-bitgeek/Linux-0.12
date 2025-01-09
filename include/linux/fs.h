@@ -246,8 +246,8 @@ extern void free_inode(struct m_inode * inode);                 // 释放一个 
 extern int sync_dev(int dev);                                   // 刷新指定设备缓冲区块.
 extern struct super_block * get_super(int dev);                 // 读取指定设备的超级块.
 extern int ROOT_DEV;
-extern void put_super(int dev);									// 释放超级块
-extern void invalidate_inodes(int dev);							// 释放设备 dev 在内存 i 节点表中的所有 i 节点
+extern void put_super(int dev);									// 释放超级块.
+extern void invalidate_inodes(int dev);							// 释放设备 dev 在内存 i 节点表中的所有 i 节点.
 
 extern void mount_root(void);                                   // 安装根文件系统.
 
