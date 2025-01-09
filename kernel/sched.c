@@ -180,8 +180,6 @@ void schedule(void)
 
 	/* check alarm, wake up any interruptible tasks that have got a signal */
 	/* 检测 alarm(进程的报警定时值), 唤醒任何已得到信号的可中断任务 */
-
-	// 从任务列表中最后一个任务开始循环检测任务的 alarm, 跳过空任务.
 	for(p = &LAST_TASK; p > &FIRST_TASK; --p) {
 		if (*p) { 									// 判断任务是否存在.
 			// 如果任务设置了超时时间 timeout(比如读超时, sys_select()), 并且已经超时(jiffies > timeout), 则清除超时时间; 
@@ -189,8 +187,8 @@ void schedule(void)
 			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
 			if ((*p)->timeout && jiffies > (*p)->timeout) { 	// jiffies > timeout 表示已经超时. TODO: sys_select() 函数会设置超时时间.
 				(*p)->timeout = 0; 								// 清除超时时间.
-				if ((*p)->state == TASK_INTERRUPTIBLE) { 		// 如果进程是可中断睡眠状态, 则打断其睡眠状态.
-					(*p)->state = TASK_RUNNING; 				// 置为可运行状态(TODO: 转为可运行状态就真的能运行了吗? 怎么实现的).
+				if ((*p)->state == TASK_INTERRUPTIBLE) { 		// 如果进程是可中断睡眠状态, 则唤醒它.
+					(*p)->state = TASK_RUNNING; 				// 置为可运行状态, 让其可以被调度执行.
 				}
 			}
 			// 如果设置过任务的定时器 alarm, 并且已经过时间了, 则向任务发送 SIGALRM 信号. 
@@ -251,12 +249,12 @@ int sys_pause(void)
 
 // 把当前任务置为指定的睡眠状态(可中断的或不可中断的), 并让睡眠队列头指针指向当前任务. 
 // 函数参数 p 是等待任务指针队列头指针. 指针是含有一个变量地址的变量.
-// 这里参数 p 使用了指针的指针形式 '**p', 这是因为** C 函数参数只能传值**, 
+// 这里参数 p 使用了指针的指针形式 '**p', 这是因为 **C 函数参数只能传值**, 
 // 没有直接的方式让被调用函数改变调用该函数程序中变量的值. 
 // 但是指针 '*p' 指向的目标(这里是任务结构)会改变, 
 // 因此为了能修改调用该函数程序中原来就是指针变量的值, 就需要传递指针 '*p' 的指针, 即 '**p'.
 // 参数 state 是任务睡眠使用的状态: TASK_INTERRUPTIBLE 或 TASK_INTERRUPTIBLE. 
-// 处于不可中断睡眠状态(TASK_UNINTERRUPTIBLE)的任务需要内核程序利用 wake_up() 函数明确唤醒. 
+// 处于不可中断睡眠状态(TASK_UNINTERRUPTIBLE)的任务需要内核程序利用 wake_up() 函数明确唤醒(比如在硬盘中断时调用). 
 // 处于可中断睡眠状态(TASK_INTERRUPTIBLE)可以通过信号, 任务超时等手段唤醒(置为就绪状态 TASK_RUNNING).
 // *** 注意, 由于本内核代码不是很成熟, 因此下列与睡眠相关的代码存在一些问题, 不宜深究.
 static inline void __sleep_on(struct task_struct **p, int state)
@@ -279,7 +277,7 @@ repeat:	schedule();
 	// 只有当任务被唤醒时, 程序才会返回到这里, 表示进程已被明确地唤醒(state 更新为 TASK_RUNNING)并执行. 
 	// 这里要唤醒最后一个等待这个资源的任务, 如果当前资源不是最后一个等待资源的任务, 则继续睡眠等待, 并等着由最新的任务开始链式唤醒.
 	// TODO: 这里有个问题, 这个 *p 不会被其它进程更新, 也就是说之前就已经等待的进程里再执行 (*p != current) 时永远成立, 也即永远不会被唤醒.
-	if (*p && *p != current) { 									// 如果当前任务不是最后一个等待该资源的任务, 则唤醒最后的等待任务, 自己先进入睡眠状态.
+	if (*p && (*p != current)) { 								// 如果当前任务不是最后一个等待该资源的任务, 则唤醒最后的等待任务, 自己先进入睡眠状态.
 		(**p).state = TASK_RUNNING; 							// 将最新等待资源的任务更新为就绪状态.
 		current->state = TASK_UNINTERRUPTIBLE; 					// 当前任务先继续睡眠, 等待被唤醒.
 		goto repeat;											// 重新调度, 让出 CPU 让其它进程先运行.
@@ -297,7 +295,7 @@ repeat:	schedule();
 }
 
 // 将当前任务置为可中断的等待状态(TASK_INIERRUPTIBLE), 并放入头指针 *p 指定的等待队列中.
-void interruptible_sleep_on(struct task_struct **p)
+void interruptible_sleep_on(struct task_struct ** p)
 {
 	__sleep_on(p, TASK_INTERRUPTIBLE);
 }
@@ -305,7 +303,7 @@ void interruptible_sleep_on(struct task_struct **p)
 // 把当前任务置为不可中断的等待状态(TASK_UNINTERRUPTIBLE). 
 // 并更新等待资源的任务为当前任务. 只有明确地被唤醒(wake_up())时才会被重新调度执行. 
 // 参数 p 是资源(比如缓存块 buffer_head)结构体中的 wait 成员(比如 bh->b_wait)的地址, 该成员用于保存等待该资源的任务指针.
-void sleep_on(struct task_struct **p)
+void sleep_on(struct task_struct ** p)
 {
 	// 将进程设置为不可中断的等待状态, 此时进程不会被信号中断, 包括 KILL 信号.
 	__sleep_on(p, TASK_UNINTERRUPTIBLE);
@@ -314,7 +312,7 @@ void sleep_on(struct task_struct **p)
 // 唤醒 *p(任务指针)指向的不可中断等待的任务. *p 是(最后进入等待队列)等待资源的任务指针. 
 // 若该任务已经处于停止或僵死状态, 则显示警告信息.
 // 参数 p 是资源(比如缓存块 buffer_head)结构体中的 wait 成员(比如 bh->b_wait)的地址, 该成员用于保存等待该资源的任务指针.
-void wake_up(struct task_struct **p)
+void wake_up(struct task_struct ** p)
 {
 	if (p && *p) {
 		if ((**p).state == TASK_STOPPED)						// 处于停止状态.
