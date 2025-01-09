@@ -344,7 +344,7 @@ void init(void)
 		if (open("/etc/rc", O_RDONLY, 0))
 			_exit(1);									// 若文件打开失败, 则退出(lib/_exit.c).
 		// 调用 int $0x80 中断, __NR_execve. (lib/execve.c) (kernel/sys_call.s sys_execve())
-		execve("/bin/sh", argv_rc, envp_rc);			// 替换成 /bin/sh 程序并执行.
+		execve("/bin/sh", argv_rc, envp_rc);			// 加载 /bin/sh 程序并执行.
 		// _exit(execve("/usr/root/hello", argv, envp));
 		_exit(2);										// 若 execve() 执行失败则退出.
     }
