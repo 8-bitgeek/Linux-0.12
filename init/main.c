@@ -316,12 +316,10 @@ void init(void)
 	int pid, i, fd;
 	// setup() 是 sys_setup() 系统调用. 用于读取硬盘参数和分区表信息并加载虚拟盘(若存在的话)以及安装根文件系统. 
 	// 该函数用上面的 _syscall1() 宏定义, 对应函数是 sys_setup(), 在块设备子目录 (kernel/blk_drv/hd.c).
-	setup((void *) &drive_info);
-	// 下面以读写访问方式打开设备 "/dev/tty1", 它对应终端控制台. 
-	// 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0, 即作为标准输入.
-	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 
+	setup((void *)&drive_info);
+	// 以读写访问方式打开字符设备 "/dev/tty1", 作为当前进程的控制终端, 也即输入输出设备, 对应当前进程的 0, 1, 2 号文件句柄 fd.
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
-	// 这里把它以读和写(O_RDWR)的方式打开是为了复制产生标准输出句柄 stdout(1) 和标准错误输出句柄 stderr(2).
+	// 以读和写(O_RDWR)的方式打开是为了可以输入输出, 标准输入 stdin(0), 标准输出 stdout(1), 标准错误输出 stderr(2).
 	(void) open("/dev/tty1", O_RDWR, 0); 				// sys_open 系统调用(fs/open.c)
 	// 复制 0 号文件句柄: 当前进程的打开文件列表(filp[])中的三个句柄(0, 1, 2)都指向同一个文件(/dev/tty1).
 	(void) dup(0);										// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c sys_dup())

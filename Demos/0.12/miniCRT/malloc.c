@@ -16,11 +16,11 @@ typedef struct _heap_header {
 
 static heap_header * list_head = NULL;
 
-#define ADDR_ADD(a, o) (((char *) (a)) + o)
+#define ADDR_ADD(a, o) (((char *)(a)) + o)
 #define HEADER_SIZE (sizeof(heap_header))
 
 void free(void * ptr) {
-    heap_header * header = (heap_header *) ADDR_ADD(ptr, -HEADER_SIZE);
+    heap_header * header = (heap_header *)ADDR_ADD(ptr, -HEADER_SIZE);
 
     if (header->type != HEAP_BLOCK_USED) { 
         return;
@@ -64,8 +64,7 @@ void * malloc(unsigned size) {
             return header;
         }
         if (header->size > size + HEADER_SIZE * 2) {
-            
-            heap_header * next = (heap_header *) ADDR_ADD(header, size + HEADER_SIZE);
+            heap_header * next = (heap_header *)ADDR_ADD(header, size + HEADER_SIZE);
             next->prev = header;
             next->next = header->next;
             next->type = HEAP_BLOCK_FREE;
@@ -82,10 +81,7 @@ void * malloc(unsigned size) {
 
 static int brk(void * end_data_segment) {
     int ret = 0;
-    
-    
-    
-    
+
     asm volatile (
         "movl $45, %%eax    \n\t"
         "movl %1, %%ebx     \n\t"

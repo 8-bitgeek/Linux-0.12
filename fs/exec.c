@@ -364,7 +364,7 @@ int do_execve(unsigned long * eip, long tmp, char * filename,
 		}
 	}
 	*(filename1 + index + 1) = '\0'; 							// 填充字符串结束符.
-	Log(LOG_INFO_TYPE, "<<<<< process pid = %d, do_execve: %s >>>>>\n", current->pid, filename1);
+	Log(LOG_INFO_TYPE, "<<<<< pid = %d, do_execve: %s >>>>>\n", current->pid, filename1);
 
 	// 在正式设置可执行文件的运行环境之前, 让我们先干些杂事. 
 	// 参数 eip[1] 是调用进程的代码段寄存器 CS 值(特权级变化导致堆栈切换时压入内核态堆栈的内容, 见 CLK 图 4-29, p123), 
