@@ -199,9 +199,8 @@ void schedule(void)
 				(*p)->signal |= (1 << (SIGALRM - 1));
 				(*p)->alarm = 0; 								// 清除定时值.
 			}
-			// '(_BLOCKABLE & (*p)->blocked)' 得到可被屏蔽的信号, 取反得到不可被屏蔽的信号, 
-			// 即如果有不可被屏蔽的信号, 并且任务处于可中断状态, 则置任务为就绪状态. SIGKILL 和 SIGSTOP 不能被屏蔽.
-			// TODO: 让其可以处理信号? 目的是啥?
+			// 唤醒所有接收到不可屏蔽信号的可中断睡眠的进程(因为这里会遍历任务列表), 让其可以继续运行来处理信号.
+			// '(_BLOCKABLE & (*p)->blocked)' 得到可被屏蔽的信号, 取反得到不可被屏蔽的信号, SIGKILL 和 SIGSTOP 不能被屏蔽.
 			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) && (*p)->state == TASK_INTERRUPTIBLE) {
 				(*p)->state = TASK_RUNNING;
 			}

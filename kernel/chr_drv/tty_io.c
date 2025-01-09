@@ -507,9 +507,9 @@ int tty_read(unsigned channel, char * buf, int nr)
 // 返回已写字节数.
 int tty_write(unsigned channel, char * buf, int nr)
 {
-	static int cr_flag=0;
+	static int cr_flag = 0;
 	struct tty_struct * tty;
-	char c, *b = buf;
+	char c, * b = buf;
 
 	// 首先判断参数有效性并取终端的 tty 结构指针. 
 	// 如果 tty 终端的三个缓冲队列指针都是 NULL, 则返回 EIO 出错信息.
@@ -522,8 +522,7 @@ int tty_write(unsigned channel, char * buf, int nr)
 	// 如果当前进程使用的是这里正在处理的 tty 终端, 但该终端的进程组号却与当前进程组号不同, 
 	// 即表示当前进程是后台进程组中的一个进程, 即进程不在前台, 于是我们要停止当前进程组的所有进程. 
 	// 因此这里就需要向当前进程组发送 SIGTTOU 信号, 并返回等待成为前台进程组后再执行写操作.
-	if (L_TOSTOP(tty) &&
-	    (current->tty == channel) && (tty->pgrp != current->pgrp))
+	if (L_TOSTOP(tty) && (current->tty == channel) && (tty->pgrp != current->pgrp))
 		return(tty_signal(SIGTTOU, tty));
 	// 现在我们开始从用户缓冲区 buf 中循环取出字符并放到写队列缓冲区中. 
 	// 当欲写字节数大于 0, 则执行以下循环操作. 
