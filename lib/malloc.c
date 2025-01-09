@@ -172,9 +172,9 @@ static inline void init_bucket_desc()
 // 返回: 指向被分配内在的指针. 如果失败则返回NULL. 
 void * malloc(unsigned int len)
 {
-	struct _bucket_dir	*bdir;
-	struct bucket_desc	*bdesc;
-	void				*retval;
+	struct _bucket_dir * bdir;
+	struct bucket_desc * bdesc;
+	void * retval;
 
 	/*
 	 * First we search the bucket_dir to find the right bucket change
@@ -190,8 +190,7 @@ void * malloc(unsigned int len)
 	// 如果搜索完整个目录都没有找到合适大小的目录项, 则表明所请求的内存块大小太大, 超出了该程序的分配限制(最长为1个页面). 
 	// 于是显示出错信息, 死机. 
 	if (!bdir->size) {
-		printk("malloc called with impossibly large argument (%d)\n",
-			len);
+		printk("malloc called with impossibly large argument (%d)\n", len);
 		panic("malloc: bad arg");
 	}
 	/*
