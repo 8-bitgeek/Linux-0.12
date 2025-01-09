@@ -170,7 +170,7 @@ static inline void init_bucket_desc()
 // 分配动态内存函数. 
 // 参数: len - 请求的内在块长度. 
 // 返回: 指向被分配内在的指针. 如果失败则返回NULL. 
-void *malloc(unsigned int len)
+void * malloc(unsigned int len)
 {
 	struct _bucket_dir	*bdir;
 	struct bucket_desc	*bdesc;
@@ -214,8 +214,8 @@ void *malloc(unsigned int len)
      * 如果没有找到具有空闲空间的桶描述符, 那么我们就要新建立一个该目录项的描述符. 
      */
 	if (!bdesc) {
-		char	*cp;
-		int		i;
+		char * cp;
+		int	i;
 
 		// 若 free_bucket_desc 还为空时, 表示第一次调用该程序, 或者链表中所有空桶描述符都已用完. 
 		// 此时就需要申请一个页面并在其上建立初始化空闲描述符链表. free_bucket_desc 会指向第一个空闲桶描述符. 
@@ -272,13 +272,13 @@ void *malloc(unsigned int len)
 // 参数: obj - 对应对象指针; size - 大小. 
 void free_s(void *obj, int size)
 {
-	void				*page;
-	struct _bucket_dir	*bdir;
-	struct bucket_desc	*bdesc, *prev;
+	void * page;
+	struct _bucket_dir * bdir;
+	struct bucket_desc * bdesc, * prev;
 
 	/* Calculate what page this object lives in */
     /* 计算该对象所在页面 */
-	page = (void *)  ((unsigned long) obj & 0xfffff000);
+	page = (void *) ((unsigned long) obj & 0xfffff000);
 	/* Now search the buckets looking for that page */
     /* 现在搜索存储桶目录项所链接的桶描述符, 寻找该页面 */
 	for (bdir = bucket_dir; bdir->size; bdir++) {
@@ -300,7 +300,7 @@ void free_s(void *obj, int size)
 found:
 	// 找到对应的桶描述符后, 首先关中断. 然后将该对象内存块链入空闲块对象链表中, 并使该描述符的对象引用计数减 1. 
 	cli(); 								/* To avoid race conditions */   /* 为了避免竞争条件 */
-	*((void **)obj) = bdesc->freeptr;
+	*((void **) obj) = bdesc->freeptr;
 	bdesc->freeptr = obj;
 	bdesc->refcnt--;
 	// 如果引用计数已等于 0, 则我们就要以释放对应的内存页面和该桶描述符. 
