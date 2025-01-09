@@ -27,7 +27,7 @@
 // 时区结构 timezone 第 1 个字段(tz_minuteswest)表示距格林尼治标准时间 GMT 以西的分钟数; 
 // 第 2 个字段(tz_dsttime)是夏令时 DST(Daylight Savings Time) 调整类型. 
 // 该结构定义在 include/sys/time.h 中. 
-struct timezone sys_tz = { 0, 0};
+struct timezone sys_tz = {0, 0};
 
 extern int session_of_pgrp(int pgrp);
 
@@ -99,20 +99,18 @@ int sys_prof()
 int sys_setregid(int rgid, int egid)
 {
 	if (rgid > 0) {
-		if ((current->gid == rgid) ||
-		    suser())
+		if ((current->gid == rgid) || suser())
 			current->gid = rgid;
 		else
 			return(-EPERM);
 	}
 	if (egid > 0) {
-		if ((current->gid == egid) ||
-		    (current->egid == egid) ||
-		    suser()) {
+		if ((current->gid == egid) || (current->egid == egid) || suser()) {
 			current->egid = egid;
 			current->sgid = egid;
-		} else
+		} else {
 			return(-EPERM);
+		}
 	}
 	return 0;
 }
@@ -130,12 +128,13 @@ int sys_setregid(int rgid, int egid)
 // 如果任务有超级用户特权, 则实际 gid, 有效 gid 和保留 gid 都被设置成参数指定的 gid. 
 int sys_setgid(int gid)
 {
-	if (suser())
+	if (suser()) {
 		current->gid = current->egid = current->sgid = gid;
-	else if ((gid == current->gid) || (gid == current->sgid))
+	} else if ((gid == current->gid) || (gid == current->sgid)) {
 		current->egid = gid;
-	else
+	} else {
 		return -EPERM;
+	}
 	return 0;
 }
 
@@ -176,8 +175,8 @@ int sys_time(long * tloc)
 
 	i = CURRENT_TIME;
 	if (tloc) {
-		verify_area(tloc,4);            				// 验证内存容量是否够(这里是 4 字节). 
-		put_fs_long(i,(unsigned long *)tloc);   		// 放入用户数据段 tloc 处. 
+		verify_area(tloc, 4);            				// 验证内存容量是否够(这里是 4 字节). 
+		put_fs_long(i, (unsigned long *)tloc);   		// 放入用户数据段 tloc 处. 
 	}
 	return i;
 }
@@ -252,8 +251,8 @@ int sys_setreuid(int ruid, int euid)
  * 并且能通过交换实际的和有效的 uid 而再次获得特权. 
  */
 // 设置任务用户 ID(uid). 如果任务没有超级用户特权, 
-// 它可以使用 setuid() 将其有效的 uid(effective uid) 设置成
-// 其保存的 uid(saved uid) 或其实际的 uid(real uid). 
+// 它可以使用 setuid()将其有效的 uid(effective uid)设置成
+// 其保存的 uid(saved uid)或其实际的 uid(real uid). 
 // 如果用户有超级用户特权, 则实际的 uid, 有效的 uid 和保存的 uid 都会被设置成参数指定的 uid. 
 int sys_setuid(int uid)
 {
@@ -266,7 +265,7 @@ int sys_setuid(int uid)
 	return(0);
 }
 
-// 设置系统开机时间. 参数 tptr 是从 1970 年 1 月 1 日 00：00：00 GMT 开始计时的时间值(秒). 
+// 设置系统开机时间. 参数 tptr 是从 1970 年 1 月 1 日 00:00:00 GMT 开始计时的时间值(秒). 
 // 调用进程必须具有超级用户权限. 其中 HZ = 100, 是内核系统运行频率. 
 // 由于参数是一个指针, 而其所指位置在用户空间, 因此需要使用函数 get_fs_long() 来访问该值. 
 // 在进入内核中运行时, 段寄存器 fs 被默认地指向当前用户数据空间. 
@@ -288,11 +287,11 @@ int sys_stime(long * tptr)
 int sys_times(struct tms * tbuf)
 {
 	if (tbuf) {
-		verify_area(tbuf,sizeof *tbuf);
-		put_fs_long(current->utime,(unsigned long *)&tbuf->tms_utime);
-		put_fs_long(current->stime,(unsigned long *)&tbuf->tms_stime);
-		put_fs_long(current->cutime,(unsigned long *)&tbuf->tms_cutime);
-		put_fs_long(current->cstime,(unsigned long *)&tbuf->tms_cstime);
+		verify_area(tbuf, sizeof *tbuf);
+		put_fs_long(current->utime, (unsigned long *)&tbuf->tms_utime);
+		put_fs_long(current->stime, (unsigned long *)&tbuf->tms_stime);
+		put_fs_long(current->cutime, (unsigned long *)&tbuf->tms_cutime);
+		put_fs_long(current->cstime, (unsigned long *)&tbuf->tms_cstime);
 	}
 	return jiffies;
 }
@@ -350,13 +349,11 @@ int sys_setpgid(int pid, int pgid)
 	// 或者指定的进程组号 pgid 与 pid 不同并且 pgid 进程组所属会话号与当前进程所属会话号不同, 
 	// 则也出错返回. 否则把查找到的进程的 pgrp 设置为 pgid, 并返回 0. 
 	// 若没有找到指定 pid 的进程, 则返回进程不存在出错码. 
-	for (i = 0 ; i < NR_TASKS ; i++)
+	for (i = 0; i < NR_TASKS; i++)
 		if (task[i] && (task[i]->pid == pid) && ((task[i]->p_pptr == current) || (task[i] == current))) {
 			if (task[i]->leader)
 				return -EPERM;
-			if ((task[i]->session != current->session) ||
-			    ((pgid != pid) &&
-			     (session_of_pgrp(pgid) != current->session)))
+			if ((task[i]->session != current->session) || ((pgid != pid) && (session_of_pgrp(pgid) != current->session)))
 				return -EPERM;
 			task[i]->pgrp = pgid;
 			return 0;
@@ -415,7 +412,7 @@ int sys_getgroups(int gidsetsize, gid_t *grouplist)
 			put_fs_word(current->groups[i], (short *) grouplist);
 		}
 	}
-	return(i);              				// 返回实际含有的用户组号个数. 
+	return i;              				// 返回实际含有的用户组号个数. 
 }
 
 // 设置当前进程同时所属的其他辅助用户组号. 
@@ -477,9 +474,9 @@ int sys_uname(struct utsname * name)
 	int i;
 
 	if (!name) return -ERROR;
-	verify_area(name,sizeof *name);
+	verify_area(name, sizeof *name);
 	for(i = 0; i < sizeof *name; i++)
-		put_fs_byte(((char *) &thisname)[i], i + (char *) name);
+		put_fs_byte(((char *)&thisname)[i], i + (char *)name);
 	return 0;
 }
 
@@ -491,7 +488,7 @@ int sys_uname(struct utsname * name)
  */
 // 设置系统主机名(系统的网络节点名). 
 // 参数 name 指针指向用户数据区中含有主机名字符串的缓冲区; len 是主机名字符串长度. 
-int sys_sethostname(char *name, int len)
+int sys_sethostname(char * name, int len)
 {
 	int	i;
 
@@ -524,7 +521,7 @@ int sys_sethostname(char *name, int len)
 // 请参考头文件 include/sys/resource.h 说明. 
 // 参数 resource 指定我们咨询的资源名称, 实际上它是任务结构中 rlim[] 数组的索引项值. 
 // 参数 rlim 是指向 rlimit 结构的用户缓冲区指针, 用于存放取得的资源界限信息. 
-int sys_getrlimit(int resource, struct rlimit *rlim)
+int sys_getrlimit(int resource, struct rlimit * rlim)
 {
 	// 所咨询的资源 resource 实际上是进程任务结构中 rlim[] 数组的索引项值. 
 	// 该索引值当然不能大于数组的最大项数 RLIM_NLIMITS. 在验证过 rlim 指针所指用户缓冲足够以后, 
@@ -532,10 +529,8 @@ int sys_getrlimit(int resource, struct rlimit *rlim)
 	if (resource >= RLIM_NLIMITS)
 		return -EINVAL;
 	verify_area(rlim, sizeof *rlim);
-	put_fs_long(current->rlim[resource].rlim_cur,           // 当前(软)限制值. 
-		    (unsigned long *) rlim);
-	put_fs_long(current->rlim[resource].rlim_max,           // 系统(硬)限制值. 
-		    ((unsigned long *) rlim) + 1);
+	put_fs_long(current->rlim[resource].rlim_cur, (unsigned long *)rlim);          // 当前(软)限制值. 
+	put_fs_long(current->rlim[resource].rlim_max, ((unsigned long *)rlim) + 1);    // 系统(硬)限制值. 
 	return 0;
 }
 
@@ -544,7 +539,7 @@ int sys_getrlimit(int resource, struct rlimit *rlim)
 // 参数 rlim 是指向 rlimit 结构的用户缓冲区指针, 用于内核读取新的资源界限信息. 
 int sys_setrlimit(int resource, struct rlimit *rlim)
 {
-	struct rlimit new, *old;
+	struct rlimit new, * old;
 
 	// 首先判断参数 resource(任务结构 rlim[] 项索引值)有效性. 
 	// 然后先让 rlimit 结构指针 old 指向进程任务结构中指定资源的当前 rlimit 结构信息. 
@@ -555,8 +550,8 @@ int sys_setrlimit(int resource, struct rlimit *rlim)
 	if (resource >= RLIM_NLIMITS)
 		return -EINVAL;
 	old = current->rlim + resource;
-	new.rlim_cur = get_fs_long((unsigned long *) rlim);
-	new.rlim_max = get_fs_long(((unsigned long *) rlim) + 1);
+	new.rlim_cur = get_fs_long((unsigned long *)rlim);
+	new.rlim_max = get_fs_long(((unsigned long *)rlim) + 1);
 	if (((new.rlim_cur > old->rlim_max) || (new.rlim_max > old->rlim_max)) && !suser())
 		return -EPERM;
 	*old = new;
@@ -582,10 +577,10 @@ int sys_setrlimit(int resource, struct rlimit *rlim)
 // 如果参数 who 等于 RUSAGE_SELF, 则返回当前进程的资源利用信息. 
 // 如果指定进程 who 是 RUSAGE_CHILDREN, 则返回当前进程的已终止和等待着的子进程资源利用信息. 
 // 符号常数 RUSAGE_SELF 和 RUSAGE_CHILDREN 以及 rusage 结构都定义在 include/sys/resource.h 文件中. 
-int sys_getrusage(int who, struct rusage *ru)
+int sys_getrusage(int who, struct rusage * ru)
 {
 	struct rusage r;
-	unsigned long	*lp, *lpend, *dest;
+	unsigned long * lp, * lpend, * dest;
 
 	// 首先判断参数指定进程的有效性. 如果 who 即不是 RUSAGE_SELF(指定当前进程), 
 	// 也不是 RUSAGE_CHILDREN(指定子进程), 则以无效参数码返回. 
@@ -593,7 +588,7 @@ int sys_getrusage(int who, struct rusage *ru)
 	if (who != RUSAGE_SELF && who != RUSAGE_CHILDREN)
 		return -EINVAL;
 	verify_area(ru, sizeof *ru);
-	memset((char *) &r, 0, sizeof(r));
+	memset((char *)&r, 0, sizeof(r));
 	// 若参数 who 是 RUSAGE_SELF, 则复制当前进程资源利用信息到 r 结构中. 
 	// 若指定进程 who 是 RUSAGE_CHILDREN, 
 	// 则复制当前进程的已终止和等待着的子进程资源利用信息到临时 rusage 结构 r 中. 
@@ -613,9 +608,9 @@ int sys_getrusage(int who, struct rusage *ru)
 	// 然后让 lp 指针指向 r 结构, lpend 指向 r 结构末尾处, 
 	// 而 dest 指针指向用户空间中的 ru 结构. 
 	// 最后把 r 中信息复制到用户空间 ru 结构中, 并返回 0. 
-	lp = (unsigned long *) &r;
-	lpend = (unsigned long *) (&r + 1);
-	dest = (unsigned long *) ru;
+	lp = (unsigned long *)&r;
+	lpend = (unsigned long *)(&r + 1);
+	dest = (unsigned long *)ru;
 	for (; lp < lpend; lp++, dest++)
 		put_fs_long(*lp, dest);
 	return(0);
@@ -626,7 +621,7 @@ int sys_getrusage(int who, struct rusage *ru)
 // timeval 结构含有秒和微秒(tv_sec 和 tv_usec)两个字段. 
 // timezone 结构含有本地距格林尼治标准时间以西的分钟数(tz_minuteswest)
 // 和夏令时间调整类型(tz_dsttime)两个字段. (dst -- Daylight Savings Time)
-int sys_gettimeofday(struct timeval *tv, struct timezone *tz)
+int sys_gettimeofday(struct timeval * tv, struct timezone * tz)
 {
 	// 如果参数给定的 timeval 结构指针不空, 则在该结构中返回当前时间(秒值和微秒值);
 	// 如果参数给定的用户数据空间中 timezone 结构的指针不空, 则也返回该结构的信息. 
@@ -635,15 +630,13 @@ int sys_gettimeofday(struct timeval *tv, struct timezone *tz)
 	// 它们定义在 include/linux/sched.h 文件中. jiffies_offset 是系统嘀嗒数误差调整数. 
 	if (tv) {
 		verify_area(tv, sizeof *tv);
-		put_fs_long(startup_time + CT_TO_SECS(jiffies + jiffies_offset),
-			    (unsigned long *) tv);
-		put_fs_long(CT_TO_USECS(jiffies + jiffies_offset),
-			    ((unsigned long *) tv) + 1);
+		put_fs_long(startup_time + CT_TO_SECS(jiffies + jiffies_offset), (unsigned long *)tv);
+		put_fs_long(CT_TO_USECS(jiffies + jiffies_offset), ((unsigned long *)tv) + 1);
 	}
 	if (tz) {
 		verify_area(tz, sizeof *tz);
-		put_fs_long(sys_tz.tz_minuteswest, (unsigned long *) tz);
-		put_fs_long(sys_tz.tz_dsttime, ((unsigned long *) tz) + 1);
+		put_fs_long(sys_tz.tz_minuteswest, (unsigned long *)tz);
+		put_fs_long(sys_tz.tz_dsttime, ((unsigned long *)tz) + 1);
 	}
 	return 0;
 }
@@ -667,10 +660,10 @@ int sys_gettimeofday(struct timeval *tv, struct timezone *tz)
 // 参数 tv 是指向用户数据区中 timeval 结构信息的指针. 
 // 参数 tz 是用户数据区中 timezone 结构的指针. 该操作需要超级用户权限. 
 // 如果两者皆为空, 则什么也不做, 函数返回 0. 
-int sys_settimeofday(struct timeval *tv, struct timezone *tz)
+int sys_settimeofday(struct timeval * tv, struct timezone * tz)
 {
-	static int	firsttime = 1;
-	void 		adjust_clock();
+	static int firsttime = 1;
+	void adjust_clock();
 
 	// 设置系统当前时间需要超级用户权限. 如果 tz 指针不空, 则设置系统时区信息. 
 	// 即复制用户 timezone 结构信息到系统中的 sys_tz 结构中. 
@@ -678,8 +671,8 @@ int sys_settimeofday(struct timeval *tv, struct timezone *tz)
 	if (!suser())
 		return -EPERM;
 	if (tz) {
-		sys_tz.tz_minuteswest = get_fs_long((unsigned long *) tz);
-		sys_tz.tz_dsttime = get_fs_long(((unsigned long *) tz)+1);
+		sys_tz.tz_minuteswest = get_fs_long((unsigned long *)tz);
+		sys_tz.tz_dsttime = get_fs_long(((unsigned long *)tz) + 1);
 		if (firsttime) {
 			firsttime = 0;
 			if (!tv)
@@ -748,9 +741,9 @@ int sys_umask(int mask)
 
 // 用于捕获未实现的 System Call 调用. 
 int sys_default(unsigned long arg1, unsigned long arg2, unsigned long arg3, unsigned long code){
-    printk("System Call Number:%d\r\n",code);
-    printk("Arg1:%X\r\n",arg1);
-    printk("Arg2:%X\r\n",arg2);
-    printk("Arg3:%X\r\n",arg3);
+    printk("System Call Number: %d\r\n", code);
+    printk("Arg1: %X\r\n", arg1);
+    printk("Arg2: %X\r\n", arg2);
+    printk("Arg3: %X\r\n", arg3);
     for(;;);
 }
