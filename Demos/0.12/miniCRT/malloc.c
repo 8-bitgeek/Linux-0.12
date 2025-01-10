@@ -14,7 +14,7 @@ typedef struct _heap_header {
     struct _heap_header * prev;
 } heap_header;
 
-static heap_header * list_head = NULL;
+static heap_header * head_list = NULL;
 
 #define ADDR_ADD(a, o) (((char *)(a)) + o)
 #define HEADER_SIZE (sizeof(heap_header))
@@ -51,7 +51,7 @@ void * malloc(unsigned size) {
         return NULL;
     }
 
-    header = list_head;
+    header = head_list;
 
     while (header != 0) {
         if (header->type == HEAP_BLOCK_USED) {
@@ -109,6 +109,6 @@ int mini_crt_heap_init() {
     header->next = NULL;
     header->prev = NULL;
 
-    list_head = header;
+    head_list = header;
     return 1;
 }
