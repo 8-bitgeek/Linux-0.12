@@ -71,3 +71,48 @@ static int seek(int fd, int offset, int mode) {
     return ret;
 }
 
+FILE * fopen(const char * filename, const char * mode) {
+    int fd = -1;
+    int flags = 0;
+    int access = 00700;                         /* permission flag to create file */
+
+    #define O_RDONLY    00
+    #define O_WRONLY    01
+    #define O_RDWR      02
+    #define O_CREAT     0100
+    #define O_TRUNC     01000
+    #define O_APPEND    02000
+
+    if (strcmp(mode, "w") == 0) {
+        flags |= O_WRONLY | O_CREAT | O_TRUNC;
+    }
+    if (strcmp(mode, "w+") == 0) {
+        flags |= O_RDWR | O_CREAT | O_TRUNC;
+    }
+    if (strcmp(mode, "r") == 0) {
+        flags |= O_RDONLY;
+    }
+    if (strcmp(mode, "r+") == 0) {
+        flags |= O_RDWR | O_CREAT;
+    }
+
+    fd = open(filename, flags, access);
+
+    return (FILE *)fd;
+}
+
+int fread(void * buffer, int size, int count, FILE * stream) {
+    return read((int)stream, buffer, size * count);
+}
+
+int fwrite(const void * buffer, int size, int count, FILE * stream) {
+    return write((int)stream, buffer, size * count);
+}
+
+int fclose(FILE * fp) {
+    return close((int)fp);
+}
+
+int fseek(FILE * fp, int offset, int set) {
+    return seek((int)fp, offset, set);
+}
