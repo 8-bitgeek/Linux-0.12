@@ -198,6 +198,7 @@ void schedule(void)
 				(*p)->alarm = 0; 								// 清除定时值.
 			}
 			// 唤醒所有接收到不可屏蔽信号的可中断睡眠的进程(因为这里会遍历任务列表), 让其可以继续运行来处理信号.
+			// **所以可以说进程是被信号唤醒的!!!**, 而不可中断睡眠的进程不会被唤醒, 即不响应信号.
 			// '(_BLOCKABLE & (*p)->blocked)' 得到可被屏蔽的信号, 取反得到不可被屏蔽的信号, SIGKILL 和 SIGSTOP 不能被屏蔽.
 			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) && (*p)->state == TASK_INTERRUPTIBLE) {
 				(*p)->state = TASK_RUNNING;
