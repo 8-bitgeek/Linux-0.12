@@ -64,3 +64,23 @@ char * itoa(int n, char * str, int radix) {
 
     return str;
 }
+
+char * strcpy(char * src, const char * dest) {
+    char * ret = dest;
+    while (*src) {
+        *dest++ = *src++;
+    }
+    *dest = '\0';
+    return ret;
+}
+
+unsigned strlen(const char * str) {
+    int cnt = 0;
+    if (!str) {
+        return 0;
+    }
+    for (; *str != '\0'; ++str) {
+        cnt++;
+    }
+    return cnt;
+}
