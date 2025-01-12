@@ -27,6 +27,7 @@ int main(int argc, char * argv[]) {
         fread(buf, 1, len, fp);
         buf[len] = '\0';
         printf("%d %s\n", len, buf);
+        printf("hello world!\n");
         free(buf);
         free(v[i]);
     }

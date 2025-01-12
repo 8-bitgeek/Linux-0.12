@@ -22,7 +22,8 @@
             },
             "setupCommands": [                                  // 指定启动调试器后要执行的初始化命令
                 {"text": "-enable-pretty-printing"}
-            ]
+            ],
+            "preLaunchTask": "Build and debug Linux"
         },
         {
             "name": "Debug MiniCRT",
@@ -40,8 +41,14 @@
                     "description": "Enable pretty-printing for gdb",
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
+                }, 
+                {
+                    "description": "Disable controlling terminal warning",
+                    "text": "set inferior-tty /dev/null",
+                    "ignoreFailures": true
                 }
-            ]
+            ],
+            "preLaunchTask": "Build Test Program with GCC",         // 指定编译前的执行的任务
         }
     ]
 }
