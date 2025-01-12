@@ -20,7 +20,8 @@ void mini_crt_entry(void) {
     int argc;
     char ** argv;
     char * ebp_reg = 0;
-    asm("movl %%ebp, %0 \n" : "=r" (ebp_reg));      
+    asm("movl %%ebp, %0;" 
+        : "=r" (ebp_reg));      
 
     /* since do_execve() does not use a call instruction, 
        the return address is not pushed onto the stack, 
@@ -36,7 +37,7 @@ void mini_crt_entry(void) {
         crt_fatal_error("IO initialize failed!");
     }
     ret = main(argc, argv);
-    exit();
+    exit(ret);
     /* pop %ebp */
     /* ret */
 }

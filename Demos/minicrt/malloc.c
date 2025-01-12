@@ -51,7 +51,7 @@ void * malloc(unsigned size) {
     header = head_list;
     while (header != 0) {
         /* if not free, skip it */
-        if (hader->type == HEAP_BLOCK_USED) {
+        if (header->type == HEAP_BLOCK_USED) {
             header = header->next;
             continue;
         }
@@ -65,7 +65,7 @@ void * malloc(unsigned size) {
         /* if too large then we should split it */
         if (header->size > size + (HEADER_SIZE * 2)) {
             /* split it: |<--header----- used -----)|<--next----- free ----- | */
-            header_header * next = (header *)ADDR_ADD(header, size + HEADER_SIZE);  /* new smaller block */
+            heap_header * next = (heap_header *)ADDR_ADD(header, size + HEADER_SIZE);  /* new smaller block */
             next->type = HEAP_BLOCK_FREE;
             /* header->size = 128b - (10b + 2b) == 126b == next->size */
             next->size = header->size - (HEADER_SIZE + size);                       /* TODO: is this right? */
@@ -97,10 +97,10 @@ static int brk(void * end_data_segment) {
 
 int mini_crt_heap_init() {
     void * base = NULL;                                         /* heap space start addr */
-    heap_header * heap_header = NULL;
+    heap_header * header = NULL;
 
     base = (void *) brk(0);
-    void * end = ADDR_ADD(base, heap_size);                     /* heap space end addr*/
+    void * end = ADDR_ADD(base, HEAP_SIZE);                     /* heap space end addr*/
     end = (void *)brk(end);
     if (!end) {
         return 0;

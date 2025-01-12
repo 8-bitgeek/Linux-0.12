@@ -65,7 +65,7 @@ char * itoa(int n, char * str, int radix) {
     return str;
 }
 
-char * strcpy(char * src, const char * dest) {
+char * strcpy(const char * src, char * dest) {
     char * ret = dest;
     while (*src) {
         *dest++ = *src++;

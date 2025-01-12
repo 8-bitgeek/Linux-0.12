@@ -12,7 +12,7 @@ int mini_crt_heap_init();
 
 /* stdio.c */
 typedef int FILE;
-#define EOF     (-1)
+#define EOF     -1
 
 #define stdin   ((FILE *)0)
 #define stdout  ((FILE *)1)
@@ -35,7 +35,6 @@ unsigned strlen(const char * str);
 /* printf.c */
 int fputc(int c, FILE * stream);
 int fputs(const char * str, FILE * stream);
-int vfprint(FILE * stream, const char * format, va_list arg_list);
 int printf(const char * format, ...);
 int fprintf(FILE * stream, const char * format, ...);
 
