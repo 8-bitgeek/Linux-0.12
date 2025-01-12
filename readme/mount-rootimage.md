@@ -2,6 +2,7 @@
 
 ## 1. Get rootimage-0.12-hd's partition info
 ```shell
+# losetup -f --show rootimage-0.12-hd   自动查找一个空闲的环回设备并将文件与之关联, 并返回设备名
 losetup /dev/loop1 rootimage-0.12-hd
 fdisk /dev/loop1
 # 以下命令在 fdisk 控制台执行
