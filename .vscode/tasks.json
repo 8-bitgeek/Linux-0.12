@@ -1,0 +1,112 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Compile MiniCRT Library",
+        "type": "shell",
+        "command": "gcc",
+        "args": [
+          "-c",
+          "-m32",
+          "-fno-builtin",
+          "-nostdlib",
+          "-fno-stack-protector",
+          "entry.c",
+          "malloc.c",
+          "stdio.c",
+          "string.c",
+          "printf.c"
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/minicrt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "detail": "Compile the MiniCRT source files into object files."
+      },
+      {
+        "label": "Archive MiniCRT Library",
+        "type": "shell",
+        "command": "ar",
+        "args": [
+          "-rcs",
+          "minicrt.a",
+          "malloc.o",
+          "printf.o",
+          "stdio.o",
+          "string.o"
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/minicrt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        },
+        "detail": "Archive the MiniCRT object files into a static library."
+      },
+      {
+        "label": "Build Test Program with GCC",
+        "type": "shell",
+        "command": "gcc",
+        "args": [
+          "-m32",
+          "-ggdb",
+          "-g3",
+          "-O0",
+          "-fno-omit-frame-pointer",
+          "-fno-builtin",
+          "-nostdlib",
+          "-fno-stack-protector",
+          "-static",
+          "-e",
+          "mini_crt_entry",
+          "entry.o",
+          "test.c",
+          "minicrt.a",
+          "-o",
+          "test"
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/minicrt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        },
+        "detail": "Build and link the MiniCRT library and test program using GCC."
+      }, 
+      {
+        "label": "Build Test Program with LD",
+        "type": "shell",
+        "command": "ld",
+        "args": [
+          "-m",
+          "elf_i386",
+          "-static",
+          "-e",
+          "mini_crt_entry",
+          "entry.o",
+          "test.o",
+          "minicrt.a",
+          "-o",
+          "test"
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/minicrt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        },
+        "detail": "Link the MiniCRT library and test program using LD."
+      },
+    ]
+  }
+  

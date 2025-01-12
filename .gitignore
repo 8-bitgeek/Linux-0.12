@@ -13,7 +13,7 @@ kernel/chr_drv/keyboard.s
 kernel/math/math.a
 lib/lib.a
 Images/**
-.vscode
+.vscode/c_cpp_properties.json
 gshell/**
 Demos/**/test
 Demos/**/minicrt.a
