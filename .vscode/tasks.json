@@ -175,11 +175,29 @@
         "options": {
           "cwd": "${workspaceFolder}"
         },
-        "problemMatcher": [],
+        // 由于这个任务不会结束, 所以需要自己定义开始及结束的标志, 防止任务不结束导致 debug 阻塞
+        "problemMatcher": {
+          "owner": "custom",
+          "fileLocation": ["relative", "."],
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,                                    // 任务启动后立即进入后台
+            "beginsPattern": "rm -rf release System_s.map tmp_make",  // 定义任务开始
+            "endsPattern":  "char device redirected to "              // 定义任务结束
+          }   
+        },
         "group": {
           "kind": "build",
           "isDefault": true
         },
+        "isBackground": true,
         "detail": "Build and Run debug task of Linux 0.12"
       },
     ]
