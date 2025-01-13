@@ -11,7 +11,7 @@ ifneq ($(V), 2)
 CC_FLAG = -c -m32 -ggdb -O0 -fno-builtin -nostdlib -fno-stack-protector -I include
 BUILD_FLAG = -m32 -ggdb -g3 -O0 -fno-omit-frame-pointer -fno-builtin -nostdlib -fno-stack-protector -static -e mini_crt_entry 
 else
-CC_FLAG = -c -nostdlib
+CC_FLAG = -c -nostdlib -I include
 BUILD_FLAG = -nostdlib -e _mini_crt_entry 
 endif
 
