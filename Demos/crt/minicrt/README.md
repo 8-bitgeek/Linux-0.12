@@ -3,8 +3,9 @@
 # How to compile this project
 
 ```shell
-gcc -c -m32 -fno-builtin -nostdlib -fno-stack-protector entry.c malloc.c stdio.c string.c printf.c
-ar -rcs minicrt.a malloc.o printf.o stdio.o string.o
+cd minicrt
+gcc -c -m32 -fno-builtin -nostdlib -fno-stack-protector src/entry.c src/malloc.c src/stdio.c src/string.c src/printf.c
+ar -rcs lib/libminicrt.a malloc.o printf.o stdio.o string.o
 ```
 gcc 参数说明: 
 
@@ -21,8 +22,9 @@ ar 参数说明:
 # How to use MiniCRT
 
 ```shell
-gcc -c -m32 -ggdb -g3 -O0 -fno-omit-frame-pointer -fno-builtin -nostdlib -fno-stack-protector test.c
-ld -m elf_i386 -static -e mini_crt_entry entry.o test.o minicrt.a -o test
+cd test
+gcc -c -m32 -ggdb -g3 -O0 -fno-omit-frame-pointer -fno-builtin -nostdlib -fno-stack-protector -I ../minicrt/include test.c
+ld -m elf_i386 -static -e mini_crt_entry -L ../minicrt/lib/ -l minicrt test.o -o test
 ```
 
 gcc 参数说明: 
@@ -31,8 +33,11 @@ gcc 参数说明:
 - `-g3`: 生成最详细的调试信息, 包含宏定义.
 - `-O0`: 关闭优化, 避免编译器对代码优化导致调试信息不准确.
 - `-fno-omit-frame-pointer`: 保留帧指针寄存器, 便于调试栈帧.
+- `-I`: 指定 .h 头文件查找目录.
 
 ld 参数说明: 
 
 - `-e`: 用于指定入口函数.
-`-m elf_i386`: 生成 32 位的可执行文件.
+- `-m elf_i386`: 生成 32 位的可执行文件.
+- `-L`: 指定库文件查找目录.
+- `-l minicrt`: 指定依赖的库文件.
