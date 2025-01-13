@@ -9,7 +9,7 @@ build: archive test.c
 	$(CC) -m32 -ggdb -g3 -O0 -fno-omit-frame-pointer -fno-builtin -nostdlib -fno-stack-protector -static -e mini_crt_entry entry.o test.c minicrt.a -o test
 
 compile: entry.c malloc.c stdio.c string.c printf.c
-	$(CC) -c -m32 -fno-builtin -nostdlib -fno-stack-protector entry.c malloc.c stdio.c string.c printf.c 
+	$(CC) -c -m32 -ggdb -O0 -fno-builtin -nostdlib -fno-stack-protector entry.c malloc.c stdio.c string.c printf.c 
 
 archive: $(objects) compile 
 	$(AR) -rcs minicrt.a $(objects)

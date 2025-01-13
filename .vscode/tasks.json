@@ -6,8 +6,10 @@
         "type": "shell",                                // 指定任务的执行方式: shell(在 shell 中执行一个命令)/process(直接运行一个进程)
         "command": "gcc",                               // 要执行的命令
         "args": [                             
-          "-c",
           "-m32",
+          "-c",
+          "-ggdb",
+          "-O0",
           "-fno-builtin",
           "-nostdlib",
           "-fno-stack-protector",
