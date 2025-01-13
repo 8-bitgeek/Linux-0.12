@@ -1,4 +1,4 @@
-objects = malloc.o printf.o stdio.o string.o
+objects = malloc.o printf.o stdio.o string.o entry.o
 archive_obj = minicrt.a
 aout = test
 
@@ -6,7 +6,7 @@ CC = gcc
 AR = ar
 ld = LD
 
-ifneq ($(V), 1)
+ifneq ($(V), 2)
 CC_FLAG = -c -m32 -ggdb -O0 -fno-builtin -nostdlib -fno-stack-protector
 BUILD_FLAG = -m32 -ggdb -g3 -O0 -fno-omit-frame-pointer -fno-builtin -nostdlib -fno-stack-protector -static -e mini_crt_entry 
 else
@@ -16,25 +16,25 @@ endif
 
 
 build: archive test.c 
-	$(CC) $(BUILD_FLAG) entry.o test.c minicrt.a -o test
+	$(CC) $(BUILD_FLAG) test.c minicrt.a -o test
 
 compile: entry.c malloc.c stdio.c string.c printf.c
 	$(CC) $(CC_FLAG) entry.c malloc.c stdio.c string.c printf.c 
 
-archive: $(objects) compile 
+archive: compile 
 	$(AR) -rcs minicrt.a $(objects)
 
 debug:
 	@if command -v cgdb >/dev/null 2>&1; then \
 		echo "cgdb found, using cgdb..."; \
-		cgdb ./test; \
+		cgdb ./$(aout); \
 	else \
 		echo "cgdb not found, falling back to gdb..."; \
-		gdb ./test; \
+		gdb ./$(aout); \
 	fi
 
 run: build
-	./test
+	./$(aout)
 
 clean: 
 	rm -rf *.o minicrt.a test temp.txt
