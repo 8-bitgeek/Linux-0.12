@@ -2,8 +2,8 @@
 
 typedef struct _heap_header {
     enum {
-        HEAP_BLOCK_FREE = 0XABABABAB,   /* magic number of free block */
-        HEAP_BLOCK_USED = 0XCDCDCDCD    /* magic number of used block */
+        HEAP_BLOCK_FREE = 0XABAB,       /* magic number of free block */
+        HEAP_BLOCK_USED = 0XCDCD        /* magic number of used block */
     } type;                             /* block type: FREE/USED */
 
     unsigned size;                      /* block size including header */
@@ -96,12 +96,11 @@ static int brk(void * end_data_segment) {
 }
 
 int mini_crt_heap_init() {
-    void * base = NULL;                                         /* heap space start addr */
     heap_header * header = NULL;
 
-    base = (void *) brk(0);
-    void * end = ADDR_ADD(base, HEAP_SIZE);                     /* heap space end addr*/
-    end = (void *)brk(end);
+    char * base = (char *)brk(0);                               /* heap space start addr */
+    char * end = ADDR_ADD(base, HEAP_SIZE);                     /* heap space end addr */
+    end = (char *)brk(end);
     if (!end) {
         return 0;
     }
