@@ -136,7 +136,7 @@ debug: Image
 
 start: Image
 	$(Q)dd if=release/Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
-	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/boota.img -fdb Images/rootimage-0.12-fd -hda Images/rootimage-0.12-hd
+	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/boota.img -fdb Images/rootimage-0.12-fd -hda Images/rootimage-0.12-hd -usb
 
 dep:
 	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make

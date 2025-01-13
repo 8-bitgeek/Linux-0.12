@@ -49,6 +49,31 @@
                 }
             ],
             "preLaunchTask": "Build Test Program with GCC",         // 指定编译前的执行的任务
+        }, 
+        {
+            "name": "Debug MiniCRT on Linux-0.12",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Demos/minicrt/test",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}/Demos/minicrt",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }, 
+                {
+                    "description": "Disable controlling terminal warning",
+                    "text": "set inferior-tty /dev/null",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build Test Program with GCC",         // 指定编译前的执行的任务
         }
     ]
 }
