@@ -18,7 +18,7 @@ typedef struct _heap_header {
 static heap_header * head_list = NULL;
 
 void free(void * ptr) {
-    heap_header * header = (heap_header *)(ptr, -HEADER_SIZE);
+    heap_header * header = (heap_header *)ADDR_ADD(ptr, -HEADER_SIZE);
 
     if (header->type == HEAP_BLOCK_FREE) {
         return;
@@ -36,8 +36,8 @@ void free(void * ptr) {
     }
     /* if next is free, merge it to header */
     if (header->next != NULL && header->next->type == HEAP_BLOCK_FREE) {
-        header->next = header->next->next;
         header->size += header->next->size;
+        header->next = header->next->next;
     }
 }
 

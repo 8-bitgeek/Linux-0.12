@@ -8,7 +8,7 @@ int main(int argc, char * argv[]) {
 
     for (i = 0; i < argc; i++) {
         v[i] = malloc(strlen(argv[i]) + 1);
-        strcpy(v[i], argv[i]);
+        strcpy(argv[i], v[i]);
     }
     fp = fopen("temp.txt", "w");
     for (i = 0; i < argc; ++i) {
