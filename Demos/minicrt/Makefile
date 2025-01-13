@@ -14,8 +14,14 @@ compile: entry.c malloc.c stdio.c string.c printf.c
 archive: $(objects) compile 
 	$(AR) -rcs minicrt.a $(objects)
 
-debug: build
-	cgdb ./test
+debug:
+	@if command -v cgdb >/dev/null 2>&1; then \
+		echo "cgdb found, using cgdb..."; \
+		cgdb ./test; \
+	else \
+		echo "cgdb not found, falling back to gdb..."; \
+		gdb ./test; \
+	fi
 
 run: build
 	./test
