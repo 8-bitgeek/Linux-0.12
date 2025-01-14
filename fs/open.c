@@ -310,11 +310,11 @@ int sys_open(const char * filename, int flag, int mode)
 	if (S_ISBLK(inode->i_mode))
 		check_disk_change(inode->i_zone[0]);
 	// 初始化打开文件的文件结构: 设置文件结构属性和标志, 置句柄引用计数为 1, 
-	// 并设置 i 节点字段为打开文件的 i 节点, 初始化文件读写指针为 0. 最后返回文件句柄号.
+	// 并设置 inode 字段为打开的 inode, 初始化文件读写指针为 0. 最后返回文件句柄号.
 	f->f_mode = inode->i_mode;
 	f->f_flags = flag;
 	f->f_count = 1;
-	f->f_inode = inode;
+	f->f_inode = inode;											// 文件与 inode 关联.
 	f->f_pos = 0;
 	return fd;
 }

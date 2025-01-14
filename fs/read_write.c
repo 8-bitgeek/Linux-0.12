@@ -129,7 +129,6 @@ int sys_write(unsigned int fd, char * buf, int count)
 	// 则返回出错码并退出. 如果需读取的字节数 count 等于 0, 则返回 0 退出.
 	if (fd >= NR_OPEN || count < 0 || !(file = current->filp[fd]))
 		return -EINVAL;
-	// Log(LOG_INFO_TYPE, "<<<<< sys_write : fd = %d>>>>>\n", fd);
 	if (!count)
 		return 0;
 	// 然后验证存放数据的缓冲区内存限制. 并取文件的 i 节点. 根据该 i 节点的属性, 分别调用相应的写操作函数. 

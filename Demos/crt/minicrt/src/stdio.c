@@ -34,6 +34,7 @@ static int read(int fd, void * buffer, unsigned size) {
 
 static int write(int fd, const void * buffer, unsigned size) {
     int ret = 0;
+    /* syscall __NR_write = 4: sys_write */
     asm("movl $4, %%eax     \n\t"
         "movl %1, %%ebx     \n\t"
         "movl %2, %%ecx     \n\t"
