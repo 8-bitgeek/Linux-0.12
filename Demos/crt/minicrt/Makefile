@@ -1,3 +1,9 @@
+SYSTEM := $(shell uname -a | grep " 0.12 " >/dev/null 2>&1 && echo "Linux-0.12" || echo "MintLinux")
+ifeq ($(SYSTEM), Linux-0.12)
+V = 2
+else
+V = 1
+endif
 
 CC = gcc
 AR = ar
@@ -15,7 +21,7 @@ CC_FLAG = -c -nostdlib -I include
 BUILD_FLAG = -nostdlib -e _mini_crt_entry 
 endif
 
-all: archive
+all: env-info archive
 	rm -rf *.o
 
 compile: $(SRC_FILES)
@@ -24,6 +30,9 @@ compile: $(SRC_FILES)
 archive: compile 
 	@mkdir -p lib
 	$(AR) -rcs $(ARCH_OBJ) $(OBJ_FILES)
+
+env-info:
+	@echo "OS TYPE: $(SYSTEM)"
 
 clean: 
 	rm -rf *.o lib
