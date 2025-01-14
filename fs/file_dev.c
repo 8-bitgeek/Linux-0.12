@@ -65,7 +65,7 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 }
 
 // 文件写函数 - 根据 i 节点和文件结构信息, 将用户数据写入文件中. 
-// 由 i 节点我们可以知道设备号, 而由 file 结构可以知道文件中当前读写指针位置. buf 指定用户态中缓冲区的位置, count 为需要写入的字节数. 
+// 由 inode 我们可以知道设备号, 而由 file 结构可以知道文件中当前读写指针位置. buf 指定用户态中缓冲区的位置, count 为需要写入的字节数. 
 // 返回值是实际写入的字节数, 或出错号(小于 0).
 int file_write(struct m_inode * inode, struct file * filp, char * buf, int count)
 {
@@ -79,9 +79,7 @@ int file_write(struct m_inode * inode, struct file * filp, char * buf, int count
 	 * ok, append may not work when many processes are writing at the same time
 	 * but so what. That way leads to madness anyway.
 	 */
-	/*
-	 * OK, 当许多进程同时写时, append 操作可能不行, 但那又怎样. 不管怎样那样做会导致混乱一团. 
-	 */
+	/* OK, 当多进程同时写时, append 操作可能不行, 但那又怎样. 不管怎样那样做会导致混乱一团. */
 	// 首先确定数据写入文件的位置. 如果是要向文件后添加数据, 则将文件读写指针移到文件尾部. 否则就将在文件当前读写指针处写入. 
 	if (filp->f_flags & O_APPEND)
 		pos = inode->i_size;
