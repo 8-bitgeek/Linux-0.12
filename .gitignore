@@ -15,7 +15,7 @@ lib/lib.a
 Images/**
 .vscode/c_cpp_properties.json
 gshell/**
-Demos/**/test
+Demos/**/test/test
 Demos/**/libminicrt.a
 Demos/**/temp.txt
 Demos/**/minicrt.h.gch

@@ -1,4 +1,4 @@
-SYSTEM := $(shell uname -a | grep " 0.12 " >/dev/null 2>&1 && echo "Linux-0.12" || echo "MintLinux")
+SYSTEM := $(shell uname -a | grep " 0.12 " >/dev/null 2>&1 && echo "Linux-0.12" || echo "Modern Linux")
 ifeq ($(SYSTEM), Linux-0.12)
 V = 2
 else
