@@ -11,6 +11,7 @@ p                               # print the partition table
 ```
 
 以下是 fdisk 中执行 `p` 命令的输出: 
+```
 Disk /dev/loop1: 239.7 MiB, 251338752 bytes, 490896 sectors
 Units: sectors of 1 * 512 = 512 bytes
 Sector size (logical/physical): 512 bytes / 512 bytes
@@ -23,6 +24,7 @@ Device       Boot  Start    End Sectors Id Type                 Start-C/H/S End-
 /dev/loop1p2      132048 264095  132048 81 Minix / old Linux        131/0/1 261/15/63 
 /dev/loop1p3      264096 396143  132048 81 Minix / old Linux        262/0/1 392/15/63 
 /dev/loop1p4      396144 478799   82656 82 Linux swap / Solaris     393/0/1 474/15/63 
+```
 
 从上面的 fdisk 输出的分区信息可以看出, 该 Images 文件中含有 3 个 Minix 分区(ID = 81)和 1 个交换分区(ID = 82), 如果要访问第一个分区, 则记录起始扇区号(Start-C/H/S) S = 1, 
 
