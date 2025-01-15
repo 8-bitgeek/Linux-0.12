@@ -112,11 +112,12 @@ static int _bmap(struct m_inode * inode, int block, int create)
 	// 并且将盘上逻辑块号(盘块号)填入逻辑块字段中. 然后设置 inode 改变时间, 置 inode 已修改标志. 
 	// 最后返回逻辑块号. 函数 new_block() 定义在 bitmap.c 程序中.
 	if (block < 7) {
-		if (create && !inode->i_zone[block])
+		if (create && !inode->i_zone[block]) {
 			if (inode->i_zone[block] = new_block(inode->i_dev)) {
 				inode->i_ctime = CURRENT_TIME;
 				inode->i_dirt = 1;
 			}
+		}
 		return inode->i_zone[block];
 	}
 	// 如果该块号 >= 7, 且小于 7 + 512, 则说明使用的是一次间接块. 下面对一次间接块进行处理. 

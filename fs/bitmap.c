@@ -136,7 +136,7 @@ int new_block(int dev)
 	// 然后在高速缓冲区中为该设备上指定的逻辑块号取得一个缓冲块, 并返回缓冲块头指针.
 	if (!(bh = getblk(dev, j)))
 		panic("new_block: cannot get block");
-	// 因为刚取得的逻辑块其引用次数一定为 1 (getblk() 中会设置), 因此若不为 1 则停机. 
+	// 因为刚取得的逻辑块其引用次数一定为 1(getblk() 中会设置), 因此若不为 1 则出错停机. 
 	// 最后将新逻辑块的数据缓冲区清空, 并设置已更新和已修改标志. 然后释放对应缓冲块, 返回逻辑块号.
 	if (bh->b_count != 1)
 		panic("new block: count is != 1");
