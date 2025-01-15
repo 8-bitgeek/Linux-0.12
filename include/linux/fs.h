@@ -2,9 +2,6 @@
  * This file has definitions for some important file table
  * structures etc.
  */
-/*
- * 本文件含有某些重要文件表结构的定义等.
- */
 
 #ifndef _FS_H
 #define _FS_H
@@ -24,7 +21,7 @@
  * 7 - unnamed pipes
  */
 /*
- * 系统所含的设备如下: (与 minix 系统的一样, 所以我们可以使用 minix 的文件系统. 以下这些是主设备号.)
+ * 系统所含的设备如下: (与 minix 系统的一样, 所以我们可以使用 minix 的文件系统. 以下这些是主设备号)
  *
  * 0 - unused (nodev)	没有用到
  * 1 - /dev/mem			内存设备
