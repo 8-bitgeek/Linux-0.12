@@ -85,7 +85,7 @@ void sync_inodes(void)
 	// 针对其中每个 inode, 先等待该 inode 解锁可用(若目前正被上锁的话), 然后判断该 inode 是否已被修改并且不是管道节点. 
 	// 若是这种情况则将该 inode 写入高速缓冲区中, 缓冲区管理程序 buffer.c 会在适当时机将它们写入盘中. 
 	inode = 0 + inode_table;                          				// 让指针首先指向 inode 表指针数组首项. 
-	for(i = 0; i < NR_INODE; i++, inode++) {           				// 扫描 inode 表指针数组. 
+	for (i = 0; i < NR_INODE; i++, inode++) {           				// 扫描 inode 表指针数组. 
 		wait_on_inode(inode);                   					// 等待该 inode 可用(解锁). 
 		if (inode->i_dirt && !inode->i_pipe)    					// 若 inode 已修改且不是管道节点, 
 			write_inode(inode);             						// 则写盘(实际是写入缓冲区中). 
@@ -216,10 +216,9 @@ int create_block(struct m_inode * inode, int block)
 	return _bmap(inode, block, 1);
 }
 
-// 放回(放置)一个 inode (并将 inode 元数据写入设备).
-// 该函数主要用于把 inode 引用计数值递减 1, 并且若是管道 inode, 则唤醒等待的进程. 
-// 若是块设备文件 inode 则刷新设备, 并且若 inode 的链接计数(i_nlinks)为 0, 
-// 则释放该 inode 占用的所有磁盘逻辑块, 并释放该 inode.
+// 放回(放置)一个 inode (并将 inode 元数据写入设备). 主要是把 inode 的引用计数 -1.
+// 若是管道 inode, 则唤醒等待的进程.若是块设备文件 inode 则刷新设备. 
+// 如果 inode 的链接计数(i_nlinks)为 0, 则释放该 inode 占用的所有磁盘逻辑块, 并释放该 inode.
 void iput(struct m_inode * inode)
 {
 	// 首先判断参数给出的 inode 的有效性, 并等待 inode 节点解锁(如果已经上锁的话). 
@@ -265,9 +264,9 @@ repeat:
 	}
 	// 当前引用计数为 1.
 	if (!inode->i_nlinks) {
-		// 释放该 inode 对应的所有逻辑块
+		// 释放该 inode 对应的所有逻辑块.
 		truncate(inode);
-		// 从该设备的超级块中删除该 inode 
+		// 从该设备的超级块中删除该 inode.
 		free_inode(inode);      								// bitmap.c
 		return;
 	}
