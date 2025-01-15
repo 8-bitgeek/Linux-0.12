@@ -201,7 +201,7 @@
         },
         "isBackground": true,
         "detail": "Build and Run debug task of Linux 0.12"
-      },
+      }
     ]
   }
   

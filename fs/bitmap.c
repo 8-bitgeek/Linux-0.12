@@ -110,7 +110,7 @@ int new_block(int dev)
 	struct super_block * sb;
 	int i, j;
 
-	// 首先获取设备 dev 的超级块. 如果指定设备的超级块不存在, 则出错停机. 然后扫描文件系统的 8 块逻辑块位图, 寻找首个0值位,
+	// 首先获取设备 dev 的超级块. 如果指定设备的超级块不存在, 则出错停机. 然后扫描文件系统的 8 块逻辑块位图, 寻找首个 0 值位,
 	// 以寻找空闲逻辑块, 获取设置该逻辑块的块号. 
 	// 如果全部扫描完 8 块逻辑块位图的所有位(i >= 8 或 j >= 8192)还没有找到 0 值位或者位图所在的缓冲块指针无效(bn = NULL)则返回 0 退出(没有空闲逻辑块).
 	if (!(sb = get_super(dev)))
@@ -156,12 +156,12 @@ void free_inode(struct m_inode * inode)
 	struct buffer_head * bh;
 
 	// 首先判断参数给出的需要释放的 inode 有效性或合法性. 如果 inode 指针 = NULL, 则退出. 
-	// 如果 inode 上的设备号字段为 0, 说明该节点没有使用. 于是用 0 清空对应 inode 所占内存区并返回 memset()定义在 include/string.h 处. 
+	// 如果 inode 上的设备号字段为 0, 说明该节点没有使用. 于是用 0 清空对应 inode 所占内存区并返回. 
 	// 这里表示用 0 填写 inode 指针指定处, 长度是 sizeof(*inode) 的内存块. 
 	if (!inode)
 		return;
 	if (!inode->i_dev) {
-		memset(inode, 0, sizeof(*inode));
+		memset(inode, 0, sizeof(*inode));										// memset() 定义在 include/string.h 处. 
 		return;
 	}
 	// 如果此 inode 还有其他程序引用, 则不释放, 说明内核有问题, 停机. 
