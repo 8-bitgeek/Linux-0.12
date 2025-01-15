@@ -5,7 +5,7 @@
  */
 
 /* bitmap.c contains the code that handles the inode and block bitmaps */
-/* bitmap.c 程序含有处理 i 节点和磁盘块位图的代码 */
+/* bitmap.c 程序含有处理 inode 和磁盘块位图的代码 */
 #include <string.h>
 #include <linux/sched.h>							// 调度程序头文件, 定义任务结构 task_struct, 任务 0 数据.
 #include <linux/kernel.h>
@@ -16,30 +16,28 @@
 __asm__("cld\n\t"               		/* 清方向位 */\
 		"rep\n\t" 						/* 重复执行存储数据(0) */\
 		"stosl" \
-		::"a" (0), "c" (BLOCK_SIZE / 4), "D" ((long) (addr)):)
+		: : "a" (0), "c" (BLOCK_SIZE / 4), "D" ((long)(addr)))
 
 // 把指定地址开始的第 nr 个位偏移处的位置位(nr 可大于 32). 返回原位值.
 // 输入: %0 - eax(返回值); %1 - eax(0); %2 - nr, 位偏移值; %3 - (addr), addr 的内容.
-// 第 20 行定义了一个局部寄存器变量 res. 该变量将被保存在指定的 eax 寄存器中, 以便于高效访问和操作. 
+// 定义了一个局部寄存器变量 res, 该变量将被保存在指定的 eax 寄存器中, 以便于高效访问和操作. 
 // 这种定义变量的方法主要用于内嵌汇编程序中. 整个宏定义是一个语句表达式, 该表达式值是最后 res 的值. 
-// 第 21 行上的 btsl 指令用于测试并设置位(Bit Test and Set). 
+// btsl 指令用于测试并设置位(Bit Test and Set). 
 // 把基地址(%3)和位偏移值(%2)所指定的位值先保存到进位标志 CF 中, 然后设置该位为 1.
 // 指令 setb 用于根据进位标志 CF 设置操作数(%al). 如果 CF = 1 则 %al = 1, 否则 %al = 0.
 #define set_bit(nr, addr) ({\
-register int res __asm__("ax"); \
-__asm__ __volatile__("btsl %2, %3\n\tsetb %%al": \
-"=a" (res):"0" (0),"r" (nr),"m" (*(addr))); \
-res;})
+	register int res __asm__("ax"); \
+	__asm__ __volatile__("btsl %2, %3\n\tsetb %%al" : "=a" (res) : "0" (0), "r" (nr), "m" (*(addr))); res;\
+})
 
 // 复位指定地址开始的第 nr 位偏移处的位. 返回原位值的反码. 
 // 输入: %0 - eax(返回值); %1 - eax(0); %2 - nr, 位偏移值; %3 - (addr), addr 的内容. 
 // btrl 指令用与测试并复位该位(Bit Test and Reset). 其作用与上面的 btsl 类似, 但是复位指定位. 
 // 指令 setnb 用于根据进位标志 CF 设置操作数(%al). 如果 CF = 1 则 %al = 0, 否则 %al = 1. 
-#define clear_bit(nr, addr) ({\
-register int res __asm__("ax"); \
-__asm__ __volatile__("btrl %2, %3\n\tsetnb %%al": \
-"=a" (res):"0" (0), "r" (nr), "m" (*(addr))); \
-res;})
+#define clear_bit(nr, addr) ({ \
+	register int res __asm__("ax"); \
+	__asm__ __volatile__("btrl %2, %3\n\tsetnb %%al" : "=a" (res) : "0" (0), "r" (nr), "m" (*(addr))); res; \
+})
 
 // 从 addr 开始寻找第 1 个 0 值位.
 // 输入: %0 - ecx(返回值); %1 - ecx(0); %2 - esi(addr).
@@ -59,8 +57,8 @@ __asm__(\
 	"cmpl $8192, %%ecx\n\t"          				/* 已经扫描了 8192 位(1024 字节)了吗? */\
 	"jl 1b\n"                       				/* 若还没有扫描完 1 块数据, 则向前跳转到标号 1 处结束. */\
 	"3:"                            				/* 此时 ecx 中是位偏移量 */\
-	:"=c" (__res):"c" (0), "S" (addr):"ax", "dx"); \
-__res;})
+	: "=c" (__res) : "c" (0), "S" (addr) : "ax", "dx"); \
+	__res;})
 
 // 释放设备 dev 上数据区中的逻辑块 block. 
 // 复位指定逻辑块 block 对应的逻辑块位图位. 成功则返回 1, 否则返回 0.
@@ -94,7 +92,7 @@ int free_block(int dev, int block)
 	// 因此 block/8192 即可计算出指定块 block 在逻辑位图中的哪个块上. 而 block & 8191 可以得到 block 在逻辑块位图当前块中的位偏移位置. 
 	block -= sb->s_firstdatazone - 1 ;
 	if (clear_bit(block & 8191, sb->s_zmap[block / 8192]->b_data)) {
-		printk("block (%04x:%d) ", dev, block + sb->s_firstdatazone - 1);
+		printk("block (%04x:%d)", dev, block + sb->s_firstdatazone - 1);
 		printk("free_block: bit already cleared\n");
 	}
 	// 最后置相应逻辑块位图所在缓冲区已修改标志. 
@@ -110,7 +108,7 @@ int new_block(int dev)
 {
 	struct buffer_head * bh;
 	struct super_block * sb;
-	int i,j;
+	int i, j;
 
 	// 首先获取设备 dev 的超级块. 如果指定设备的超级块不存在, 则出错停机. 然后扫描文件系统的 8 块逻辑块位图, 寻找首个0值位,
 	// 以寻找空闲逻辑块, 获取设置该逻辑块的块号. 
@@ -118,10 +116,11 @@ int new_block(int dev)
 	if (!(sb = get_super(dev)))
 		panic("trying to get new block from nonexistant device");
 	j = 8192;
-	for (i = 0 ; i < 8 ; i++)
+	for (i = 0; i < 8; i++) {
 		if (bh = sb->s_zmap[i])
 			if ((j = find_first_zero(bh->b_data)) < 8192)
 				break;
+	}
 	if (i >= 8 || !bh || j >= 8192)
 		return 0;
 	// 接着设置找到的新逻辑块 j 对应逻辑块位图中的位. 若对应位已经置位, 则出错停机. 否则置存在位图的对应缓冲区块已修改标志. 
@@ -148,16 +147,16 @@ int new_block(int dev)
 	return j;
 }
 
-// 释放指定的 i 节点. 
-// 该函数首先判断参数给出的 i 节点号的有效性和可释放性. 若 i 节点仍然在使用中则不能被释放. 
-// 然后利用超级块信息对 i 节点位图进行操作, 复位 i 节点号对应的 i 节点位图中位, 并清空 i 节点结构. 
+// 释放指定的 inode. 
+// 该函数首先判断参数给出的 inode 号的有效性和可释放性. 若 inode 仍然在使用中则不能被释放. 
+// 然后利用超级块信息对 inode 位图进行操作, 复位 inode 号对应的 inode 位图中位, 并清空 inode 结构. 
 void free_inode(struct m_inode * inode)
 {
 	struct super_block * sb;
 	struct buffer_head * bh;
 
-	// 首先判断参数给出的需要释放的 i 节点有效性或合法性. 如果 i 节点指针 = NULL, 则退出. 
-	// 如果 i 节点上的设备号字段为 0, 说明该节点没有使用. 于是用 0 清空对应 i 节点所占内存区并返回 memset()定义在 include/string.h 处. 
+	// 首先判断参数给出的需要释放的 inode 有效性或合法性. 如果 inode 指针 = NULL, 则退出. 
+	// 如果 inode 上的设备号字段为 0, 说明该节点没有使用. 于是用 0 清空对应 inode 所占内存区并返回 memset()定义在 include/string.h 处. 
 	// 这里表示用 0 填写 inode 指针指定处, 长度是 sizeof(*inode) 的内存块. 
 	if (!inode)
 		return;
@@ -165,7 +164,7 @@ void free_inode(struct m_inode * inode)
 		memset(inode, 0, sizeof(*inode));
 		return;
 	}
-	// 如果此 i 节点还有其他程序引用, 则不释放, 说明内核有问题, 停机. 
+	// 如果此 inode 还有其他程序引用, 则不释放, 说明内核有问题, 停机. 
 	// 如果文件连接数不为 0, 则表示还有其他文件目录项在使用该节点, 因此也不应释放, 而应该放回等. 
 	if (inode->i_count > 1) {
 		printk("trying to free inode with count=%d\n", inode->i_count);
@@ -173,27 +172,27 @@ void free_inode(struct m_inode * inode)
 	}
 	if (inode->i_nlinks)
 		panic("trying to free inode with links");
-	// 在判断完 i 节点的合理性之后, 我们开始利用其超级块信息对其 i 节点位图进行操作. 
-	// 首先取 i 节点所在设备的超级块, 测试设备是否存在. 
-	// 然后判断 i 节点号的范围是否正确, 如果 i 节点号等于 0 或大于该设备上 i 节点总数, 则出错(0 号 i 节点保留没有使用). 
-	// 如果该 i 节点对应的节点位图不存在, 则出错. 因为一个缓冲块的 i 节点位图有 8192 比特位. 
-	// 因此 i_num >> 13(即 i_num/8192)可以得到当前 i 节点号所在的 s_imap[] 项, 即所在盘块. 
+	// 在判断完 inode 的合理性之后, 我们开始利用其超级块信息对其 inode 位图进行操作. 
+	// 首先取 inode 所在设备的超级块, 测试设备是否存在. 
+	// 然后判断 inode 号的范围是否正确, 如果 inode 号等于 0 或大于该设备上 inode 总数, 则出错(0 号 inode 保留没有使用). 
+	// 如果该 inode 对应的节点位图不存在, 则出错. 因为一个缓冲块的 inode 位图有 8192 比特位. 
+	// 因此 i_num >> 13(即 i_num/8192)可以得到当前 inode 号所在的 s_imap[] 项, 即所在盘块. 
 	if (!(sb = get_super(inode->i_dev)))
 		panic("trying to free inode on nonexistent device");
 	if (inode->i_num < 1 || inode->i_num > sb->s_ninodes)
 		panic("trying to free inode 0 or nonexistant inode");
 	if (!(bh = sb->s_imap[inode->i_num >> 13]))
 		panic("nonexistent imap in superblock");
-	// 现在我们复位 i 节点对应的节点位图中的位. 如果该位已经等于 0, 则显示出错警告信息. 
-	// 最后置 i 节点位图所在缓冲区已修改标志, 并清空该 i 节点结构所占内存区. 
+	// 现在我们复位 inode 对应的节点位图中的位. 如果该位已经等于 0, 则显示出错警告信息. 
+	// 最后置 inode 位图所在缓冲区已修改标志, 并清空该 inode 结构所占内存区. 
 	if (clear_bit(inode->i_num & 8191, bh->b_data))
 		printk("free_inode: bit already cleared.\n\r");
 	bh->b_dirt = 1;
 	memset(inode, 0, sizeof(*inode));
 }
 
-// 为设备 dev 建立一个新 i 节点. 初始化并返回该新 i 节点的指针. 
-// 在内存 i 节点表中获取一个空闲 i 节点表项, 并从 i 节点位图中找一个空闲 i 节点. 
+// 为设备 dev 建立一个新 inode. 初始化并返回该新 inode 的指针. 
+// 在内存 inode 表中获取一个空闲 inode 表项, 并从 inode 位图中找一个空闲 inode. 
 struct m_inode * new_inode(int dev)
 {
 	struct m_inode * inode;
@@ -201,16 +200,16 @@ struct m_inode * new_inode(int dev)
 	struct buffer_head * bh;
 	int i, j;
 
-	// 首先从内在 i 节点表(inode_table)中获取一个空闲 i 节点项, 并读取指定设备的超级块结构. 
-	// 然后扫描超级块中8块i节点位图, 寻找第 1 个 0 位, 寻找空闲节点, 获取放置该 i 节点的节点号. 
-	// 如果全部扫描完还没找到, 或者位图所在的缓冲块无效(bh = NULL)则放回先前申请的 i 节点表中的 i 节点, 
-	// 并返回空指针退出(没有空闲 i 节点). 
+	// 首先从内在 inode 表(inode_table)中获取一个空闲 inode 项, 并读取指定设备的超级块结构. 
+	// 然后扫描超级块中8块i节点位图, 寻找第 1 个 0 位, 寻找空闲节点, 获取放置该 inode 的节点号. 
+	// 如果全部扫描完还没找到, 或者位图所在的缓冲块无效(bh = NULL)则放回先前申请的 inode 表中的 inode , 
+	// 并返回空指针退出(没有空闲 inode ). 
 	if (!(inode = get_empty_inode()))
 		return NULL;
 	if (!(sb = get_super(dev)))
 		panic("new_inode with unknown device");
 	j = 8192;
-	for (i = 0 ; i < 8 ; i++)
+	for (i = 0; i < 8; i++)
 		if (bh = sb->s_imap[i])
 			if ((j = find_first_zero(bh->b_data)) < 8192)
 				break;
@@ -218,18 +217,18 @@ struct m_inode * new_inode(int dev)
 		iput(inode);
 		return NULL;
 	}
-	// 现在我们已经找到了还未使用的 i 节点号 j. 于是置位 i 节点 j 对应的 i 节点位图相应比特位(如果已经置位, 则出错). 
-	// 然后置 i 节点位图所在缓冲块已修改标志. 最后初始化该 i 节点结构(i_ctime 是 i 节点内容改变时间). 
+	// 现在我们已经找到了还未使用的 inode 号 j. 于是置位 inode  j 对应的 inode 位图相应比特位(如果已经置位, 则出错). 
+	// 然后置 inode 位图所在缓冲块已修改标志. 最后初始化该 inode 结构(i_ctime 是 inode 内容改变时间). 
 	if (set_bit(j, bh->b_data))
 		panic("new_inode: bit already set");
 	bh->b_dirt = 1;
 	inode->i_count = 1;               										// 引用计数. 
 	inode->i_nlinks = 1;              										// 文件目录项链接数. 
 	inode->i_dev = dev;               										// i节点所在的设备号. 
-	inode->i_uid = current->euid;     										// i 节点所属用户 id. 
+	inode->i_uid = current->euid;     										// inode 所属用户 id. 
 	inode->i_gid = current->egid;     										// 组 id. 
 	inode->i_dirt = 1;                										// 已修改标志置位. 
-	inode->i_num = j + i * 8192;      										// 对应设备中的 i 节点号. 
+	inode->i_num = j + i * 8192;      										// 对应设备中的 inode 号. 
 	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;        // 设置时间. 
-	return inode;                   										// 返回该 i 节点指针. 
+	return inode;                   										// 返回该 inode 指针. 
 }
