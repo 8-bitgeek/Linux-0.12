@@ -85,7 +85,7 @@ void sync_inodes(void)
 	// 针对其中每个 inode, 先等待该 inode 解锁可用(若目前正被上锁的话), 然后判断该 inode 是否已被修改并且不是管道节点. 
 	// 若是这种情况则将该 inode 写入高速缓冲区中, 缓冲区管理程序 buffer.c 会在适当时机将它们写入盘中. 
 	inode = 0 + inode_table;                          				// 让指针首先指向 inode 表指针数组首项. 
-	for(i = 0; i < NR_INODE; i++, inode++) {           			// 扫描 inode 表指针数组. 
+	for(i = 0; i < NR_INODE; i++, inode++) {           				// 扫描 inode 表指针数组. 
 		wait_on_inode(inode);                   					// 等待该 inode 可用(解锁). 
 		if (inode->i_dirt && !inode->i_pipe)    					// 若 inode 已修改且不是管道节点, 
 			write_inode(inode);             						// 则写盘(实际是写入缓冲区中). 
@@ -93,7 +93,7 @@ void sync_inodes(void)
 }
 
 // 文件数据块映射到盘块的处理操作. (block 位图处理函数, bmap - block map)
-// 参数: inode - 文件的 inode 指针; block - 文件中的数据块号; create - 创建块标志. 
+// 参数: inode - 文件的 inode 指针; block - 文件的数据块号; create - 创建块标志. 
 // 该函数把指定的文件数据块 block 对应到设备上逻辑块上, 并返回逻辑块号.
 // 如果创建标志置位, 则在设备上对应逻辑块不存在时就申请新磁盘块, 返回文件数据块 block 对应在设备上的逻辑块号(盘块号).
 static int _bmap(struct m_inode * inode, int block, int create)
@@ -106,7 +106,7 @@ static int _bmap(struct m_inode * inode, int block, int create)
 	if (block < 0)
 		panic("_bmap: block < 0");
 	if (block >= 7 + 512 + 512 * 512)
-		panic("_bmap: block > big");
+		panic("_bmap: block > (7 + 512 + 512 * 512)");
 	// 然后根据文件块号的大小值和是否设置了创建标志分别进行处理. 如果该块号小于 7, 则使用直接块表示. 
 	// 如果创建标志置位, 并且 inode 中对应该块的逻辑块(区段)字段为 0, 则向相应设备申请一磁盘块(逻辑块),
 	// 并且将盘上逻辑块号(盘块号)填入逻辑块字段中. 然后设置 inode 改变时间, 置 inode 已修改标志. 
@@ -127,11 +127,12 @@ static int _bmap(struct m_inode * inode, int block, int create)
 	block -= 7;
 	if (block < 512) {
 		// 如果创建标志置位, 同时索引 7 这个位置没有绑定到对应的逻辑块, 则申请一个逻辑块
-		if (create && !inode->i_zone[7])
+		if (create && !inode->i_zone[7]) {
 			if (inode->i_zone[7] = new_block(inode->i_dev)) {
 				inode->i_dirt = 1;
 				inode->i_ctime = CURRENT_TIME;
 			}
+		}
 		if (!inode->i_zone[7])
 			return 0;
 		// 现在读取设备上该 inode 的一次间接块. 并取该间接块上第 block 项中的逻辑块号(盘块号)i. 

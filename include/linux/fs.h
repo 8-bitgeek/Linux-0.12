@@ -238,7 +238,7 @@ extern void ll_rw_page(int rw, int dev, int nr, char * buffer); // 读/写数据
 extern void brelse(struct buffer_head * buf);                   // 释放指定缓冲块.
 extern struct buffer_head * bread(int dev, int block);          // 读取指定的数据块.
 extern void bread_page(unsigned long addr, int dev, int b[4]);  // 读取设备上一个页面(4 个缓冲块)的内容到指定内存地址处。
-extern struct buffer_head * breada(int dev, int block,...);     // 读取头一个指定的数据块, 并标记后续将要读的块.
+extern struct buffer_head * breada(int dev, int block, ...);    // 读取头一个指定的数据块, 并标记后续将要读的块.
 extern int new_block(int dev);                                  // 向设备 dev 申请一个磁盘块(区段, 逻辑块). 返回逻辑块号.
 extern int free_block(int dev, int block);                      // 释放设备数据区中的逻辑块(区段, 逻辑块) block.
 extern struct m_inode * new_inode(int dev);                     // 为设备 dev 建立一个新 i 节点, 返回 i 节点号.
