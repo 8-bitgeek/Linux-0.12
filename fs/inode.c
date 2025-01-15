@@ -9,12 +9,11 @@
 
 #include <linux/sched.h>
 #include <linux/kernel.h>
-// #include <linux/mm.h>
 #include <asm/system.h>
 
 // 设置数据块总数指针数组. 每个指针项指向指定主设备号的总块数数组 hd_sizes[]. 
 // 该总块数数组每一项对应子设备号确定的一个子设备上所拥有的数据块总数(1 块大小 = 1KB).
-extern int *blk_size[];
+extern int * blk_size[];
 
 struct m_inode inode_table[NR_INODE]={{0, }, };   					// 内存中 inode 表(NR_INODE = 64 项)
 
@@ -32,7 +31,7 @@ static inline void wait_on_inode(struct m_inode * inode)
 	sti();
 }
 
-// 对 inode 上锁(锁定指定的 inode )
+// 对 inode 上锁(锁定指定的 inode)
 // 如果 inode 已被锁定, 则将当前任务置为不可中断的等待状态, 并添加到该 inode 的等待队列 i_wait 中.
 // 直到该 inode 解锁并明确地唤醒本任务. 然后对其上锁.
 static inline void lock_inode(struct m_inode * inode)
@@ -86,7 +85,7 @@ void sync_inodes(void)
 	// 针对其中每个 inode, 先等待该 inode 解锁可用(若目前正被上锁的话), 然后判断该 inode 是否已被修改并且不是管道节点. 
 	// 若是这种情况则将该 inode 写入高速缓冲区中, 缓冲区管理程序 buffer.c 会在适当时机将它们写入盘中. 
 	inode = 0 + inode_table;                          				// 让指针首先指向 inode 表指针数组首项. 
-	for(i = 0 ; i < NR_INODE ; i++, inode++) {           			// 扫描 inode 表指针数组. 
+	for(i = 0; i < NR_INODE; i++, inode++) {           			// 扫描 inode 表指针数组. 
 		wait_on_inode(inode);                   					// 等待该 inode 可用(解锁). 
 		if (inode->i_dirt && !inode->i_pipe)    					// 若 inode 已修改且不是管道节点, 
 			write_inode(inode);             						// 则写盘(实际是写入缓冲区中). 
@@ -191,7 +190,7 @@ static int _bmap(struct m_inode * inode, int block, int create)
 	// 并让二级块中的第 block 项等于该新逻辑块块号(i). 然后置位二级块的已修改标志.
 	if (create && !i)
 		if (i = new_block(inode->i_dev)) {
-			((unsigned short *) (bh->b_data))[block & 511] = i;
+			((unsigned short *)(bh->b_data))[block & 511] = i;
 			bh->b_dirt = 1;
 		}
 	// 最后释放该二次间接块的二级块, 返回磁盘上新申请的或原有的对应 block 的逻辑块块号.
