@@ -1,7 +1,11 @@
 MAKE = make
 SUBDIRS := minicrt test
 
-all: 
+.PHONY: all clean minicrt test
+
+all: $(SUBDIRS)
+
+$(SUBDIRS):
 	$(MAKE) -C $@
 
 clean:

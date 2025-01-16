@@ -16,10 +16,11 @@ else
 BUILD_FLAG = -nostdlib -e _mini_crt_entry -I $(INC_DIR) -L $(LIB_DIR)
 endif
 
-build: env-info test.c 
+build: env-info clean test.c elfreader.c
 	$(CC) $(BUILD_FLAG) test.c -l minicrt -o $(out)
+	$(CC) $(BUILD_FLAG) elfreader.c -l minicrt -o elfreader
 
-debug: build
+debug: clean build
 	@if command -v cgdb >/dev/null 2>&1; then \
 		echo "cgdb found, using cgdb..."; \
 		cgdb ./$(aout); \
