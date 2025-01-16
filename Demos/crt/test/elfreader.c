@@ -23,5 +23,11 @@ struct exec {
 };
 
 int main() {
-    FILE * = fopen("./test", "r+");
+    printf("size of struct exec: %d\n", sizeof(struct exec));
+    FILE * fd = fopen("./test", "r+");
+    char * exec_ptr = malloc(sizeof(struct exec));
+    int readed = fread(exec_ptr, sizeof(struct exec), 1, fd);
+    printf("readed %d bytes.\n", readed);
+    free(exec_ptr);
+    return 0;
 }

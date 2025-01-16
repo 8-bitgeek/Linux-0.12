@@ -247,7 +247,7 @@ static int check_char_dev(struct m_inode * inode, int dev, int flag)
 	return 0;
 }
 
-// 打开(或创建)文件的系统调用(实际就是从硬盘中读取或创建这个文件名对应的 inode, 并在进程的文件列表中添加一个文件项来指向这个 inode).
+// 打开(或创建)文件的系统调用(实际就是从硬盘中读取或创建这个文件名对应的 inode, 并在进程的文件指针列表中添加一个指针项指向这个 inode).
 // 参数 filename 是文件名, flag 是文件访问标志, 它可取值: O_RDONLY(00, 只读), O_WRONLY(01, 只写), 
 // O_RDWR(02, 读写), 以及 O_CREAT(00100, 不存在则创建), O_EXCL(00200, 被创建文件必须不存在), 
 // O_APPEND(在文件尾添加数据) 等其他一些标志的组合(include/fcntl.h).

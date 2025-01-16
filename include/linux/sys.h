@@ -98,21 +98,21 @@ extern int sys_uselib();        // 86 - 选择共享库.             (fs/exec.c)
 // 系统调用函数指针表. 用于系统调用中断处理程序(int 0x80), 作为跳转表.
 fn_ptr sys_call_table[] = { 
     sys_setup, sys_exit, sys_fork, sys_read, sys_write, 
-    sys_open, sys_close, sys_waitpid, sys_creat, sys_link,          // 10
+    sys_open, sys_close, sys_waitpid, sys_creat, sys_link,                              // 10
     sys_unlink, sys_execve, sys_chdir, sys_time, sys_mknod, 
-    sys_chmod, sys_chown, sys_break, sys_stat, sys_lseek,           // 20
+    sys_chmod, sys_chown, sys_break, sys_stat, sys_lseek,                               // 20
     sys_getpid, sys_mount, sys_umount, sys_setuid, sys_getuid,
-    sys_stime, sys_ptrace, sys_alarm, sys_fstat, sys_pause,         // 30
+    sys_stime, sys_ptrace, sys_alarm, sys_fstat, sys_pause,                             // 30
     sys_utime, sys_stty, sys_gtty, sys_access, sys_nice, 
-    sys_ftime, sys_sync, sys_kill, sys_rename, sys_mkdir,           // 40
+    sys_ftime, sys_sync, sys_kill, sys_rename, sys_mkdir,                               // 40
     sys_rmdir, sys_dup, sys_pipe, sys_times, sys_prof, 
-    sys_brk, sys_setgid, sys_getgid, sys_signal, sys_geteuid,       // 50
+    sys_brk, sys_setgid, sys_getgid, sys_signal, sys_geteuid,                           // 50
     sys_getegid, sys_acct, sys_phys, sys_lock, sys_ioctl, 
-    sys_fcntl, sys_mpx, sys_setpgid, sys_ulimit, sys_uname,         // 60
+    sys_fcntl, sys_mpx, sys_setpgid, sys_ulimit, sys_uname,                             // 60
     sys_umask, sys_chroot, sys_ustat, sys_dup2, sys_getppid,
-    sys_getpgrp, sys_setsid, sys_sigaction, sys_sgetmask, sys_ssetmask,     // 70
+    sys_getpgrp, sys_setsid, sys_sigaction, sys_sgetmask, sys_ssetmask,                 // 70
     sys_setreuid, sys_setregid, sys_sigsuspend, sys_sigpending, sys_sethostname,
-    sys_setrlimit, sys_getrlimit, sys_getrusage, sys_gettimeofday, sys_settimeofday, // 80
+    sys_setrlimit, sys_getrlimit, sys_getrusage, sys_gettimeofday, sys_settimeofday,    // 80
     sys_getgroups, sys_setgroups, sys_select, sys_symlink, sys_lstat, 
     sys_readlink, sys_uselib 
 };
