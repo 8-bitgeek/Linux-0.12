@@ -28,55 +28,55 @@ int vfprint(FILE * stream, const char * format, va_list arg_list) {
     const char * p = 0;
     for (p = format; *p != '\0'; ++p) {
         switch (*p) {
-        case '%':
-            if (!translating) {
-                translating = 1;
-            } else {
-                if (fputc('%', stream) < 0) {
-                    return EOF;
+            case '%':
+                if (!translating) {
+                    translating = 1;
+                } else {
+                    if (fputc('%', stream) < 0) {
+                        return EOF;
+                    }
+                    ++ret;
+                    translating = 0;
                 }
-                ++ret;
-                translating = 0;
-            }
-            break;
-        case 'd':
-            /* %d */
-            if (translating) {
-                char buf[16];
-                translating = 0;
-                itoa(va_arg(arg_list, int), buf, 10);
-                if (fputs(buf, stream) < 0) {
+                break;
+            case 'd':
+                /* %d */
+                if (translating) {
+                    char buf[16];
+                    translating = 0;
+                    itoa(va_arg(arg_list, int), buf, 10);
+                    if (fputs(buf, stream) < 0) {
+                        return EOF;
+                    }
+                    ret += strlen(buf);
+                } else if (fputc('d', stream) < 0) {
                     return EOF;
+                } else {
+                    ret++;
                 }
-                ret += strlen(buf);
-            } else if (fputc('d', stream) < 0) {
-                return EOF;
-            } else {
-                ret++;
-            }
-            break;
-        case 's':
-            /* %s */
-            if (translating) {
-                const char * str = va_arg(arg_list, const char *);
+                break;
+            case 's':
+                /* %s */
+                if (translating) {
+                    const char * str = va_arg(arg_list, const char *);
+                    translating = 0;
+                    if (fputs(str, stream) < 0) {
+                        return EOF;
+                    }
+                    ret += strlen(str);
+                } else if (fputc('s', stream) < 0) {
+                    ret EOF;
+                } else {
+                    ret++;
+                }
+                break;
+            default:
                 translating = 0;
-                if (fputs(str, stream) < 0) {
+                if (fputc(*p, stream) < 0) {
                     return EOF;
+                } else {
+                    ret++;
                 }
-                ret += strlen(str);
-            } else if (fputc('s', stream) < 0) {
-                ret EOF;
-            } else {
-                ret++;
-            }
-            break;
-        default:
-            translating = 0;
-            if (fputc(*p, stream) < 0) {
-                return EOF;
-            } else {
-                ret++;
-            }
         }
     }
     return ret;
