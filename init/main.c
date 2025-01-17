@@ -339,8 +339,9 @@ void init(void)
 	if (!(pid = fork())) { 								// sys_fork() 系统调用(kernel/sys_call.s)
 		// 以下代码是在 Task-2 中执行. 关闭当前进程 fd 为 0 的文件.
 		close(0); 										// int $0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
-		if (open("/etc/rc", O_RDONLY, 0))
+		if (open("/etc/rc", O_RDONLY, 0)) {
 			_exit(1);									// 若文件打开失败, 则退出(lib/_exit.c).
+		}
 		// 调用 int $0x80 中断, __NR_execve. (lib/execve.c) (kernel/sys_call.s sys_execve())
 		execve("/bin/sh", argv_rc, envp_rc);			// 加载 /bin/sh 程序并执行.
 		// _exit(execve("/usr/root/hello", argv, envp));
@@ -348,8 +349,9 @@ void init(void)
     }
 	// 下面是父进程(Task-1)执行的语句. 调用 wait() 等待子进程停止或终止, 返回值应是子进程的进程号(pid). 
 	// &i 用于存放返回状态信息. 如果 wait() 返回值不等于子进程号, 则继续等待.
-  	if (pid > 0)
+  	if (pid > 0) {
 		while (pid != wait(&i));
+	}
 	// 如果执行到这里, 说明刚创建的子进程的执行已停止或终止了. 
 	// 下面循环中再创建一个新的子进程, 如果出错, 则显示 "初始化程序创建子进程失败" 信息并继续执行. 
 	// 新创建的子进程将关闭所有以前遗留的文件句柄(stdin, stdout, stderr), 新创建一个会话和进程组,
@@ -370,9 +372,11 @@ void init(void)
 			_exit(execve("/bin/sh", argv, envp));
 		}
 		// 等待子进程结束, 在 shell 里执行 exit 子进程会结束, 此时循环退出, 打印日志并重新创建子进程执行 /bin/sh.
-		while (1)
-			if (pid == wait(&i))
+		while (1) {
+			if (pid == wait(&i)) {
 				break;
+			}
+		}
 		printf("\n\rchild %d died with code %04x\n\r", pid, i);
 		sync();
 	}
