@@ -728,8 +728,9 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 		return -EEXIST;
 	}
 	// 然后我们读取该目录项的 inode 内容. 
-	if (!(inode = follow_link(dir, iget(dev, inr))))
+	if (!(inode = follow_link(dir, iget(dev, inr)))) {
 		return -EACCES;
+	}
 	// 若该 inode 对应的是一个目录, 并且访问模式不是只读(O_RDONLY)(也就是说目录只能是只读?), 
 	// 或者没有访问的许可权限, 则放回该 inode, 返回访问权限出错码退出.
 	if ((S_ISDIR(inode->i_mode) && (flag & O_ACCMODE)) || !permission(inode, ACC_MODE(flag))) {
@@ -739,8 +740,9 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 	// 接着我们更新该 inode 的访问时间字段值为当前时间. 如果设立了截 0 标志, 则将该 inode 的文件长度截为 0. 
 	// 最后返回该目录项 inode 的指针. 并返回 0(成功).
 	inode->i_atime = CURRENT_TIME;
-	if (flag & O_TRUNC)
+	if (flag & O_TRUNC) {
 		truncate(inode);
+	}
 	*res_inode = inode;
 	return 0;
 }

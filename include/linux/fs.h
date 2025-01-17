@@ -66,8 +66,8 @@ void buffer_init(long buffer_end);						// 高速缓冲区初始化函数.
 #define NULL ((void *) 0)
 #endif
 
-#define INODES_PER_BLOCK ((BLOCK_SIZE) / (sizeof (struct d_inode)))           // 每个逻辑块可存放的 inode 数(32).
-#define DIR_ENTRIES_PER_BLOCK ((BLOCK_SIZE) / (sizeof (struct dir_entry)))    // 每个逻辑块可存放的目录项数.
+#define INODES_PER_BLOCK ((BLOCK_SIZE) / (sizeof(struct d_inode)))           // 每个逻辑块可存放的 inode 数(32).
+#define DIR_ENTRIES_PER_BLOCK ((BLOCK_SIZE) / (sizeof(struct dir_entry)))    // 每个逻辑块可存放的目录项数.
 
 // 管道头, 管道尾, 管道大小, 管道空? 管道满? 管道头指针递增.
 #define PIPE_READ_WAIT(inode) ((inode).i_wait)

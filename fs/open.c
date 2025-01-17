@@ -309,8 +309,9 @@ int sys_open(const char * filename, int flag, int mode)
 		}
 	/* Likewise with block-devices: check for floppy_change */
 	// 如果打开的是块设备文件, 则检查盘片是否更换过. 若更换过则需要让高速缓冲区中该设备的所有缓冲块失效.
-	if (S_ISBLK(inode->i_mode))
+	if (S_ISBLK(inode->i_mode)) {
 		check_disk_change(inode->i_zone[0]);
+	}
 	// 初始化打开文件的文件结构: 设置文件结构属性和标志, 置句柄引用计数为 1, 
 	// 并设置 inode 字段为打开的 inode, 初始化文件读写指针为 0. 最后返回文件句柄号.
 	f->f_mode = inode->i_mode;
