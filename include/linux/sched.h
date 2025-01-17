@@ -187,8 +187,8 @@ struct task_struct {
 	unsigned long start_code;			// 代码段地址(线性地址).
 	unsigned long end_code;				// 代码长度(字节数).
 	unsigned long end_data;				// 代码长度 + 数据长度(字节数).
-	unsigned long brk;					// 总长度(代码长度 + 数据长度 + 未初始化数据区长度[bss]).
-	unsigned long start_stack;			// 堆栈段地址.
+	unsigned long brk;					// 总长度(代码长度 + 数据长度 + 未初始化数据区长度[bss]), 也负责进程的堆大小控制(堆结束地址).
+	unsigned long start_stack;			// 栈段起始地址.
 	long pid;							// 进程标识号(进程号).
 	long pgrp;							// 进程组号.
 	long session;						// 会话号.

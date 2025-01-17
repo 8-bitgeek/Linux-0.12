@@ -296,16 +296,14 @@ int sys_times(struct tms * tbuf)
 	return jiffies;
 }
 
-// 当参数 end_data_seg 数值合理, 并且系统确实有足够内存, 
-// 而且进程没有超越其最大数据段大小时, 该函数设置数据段末尾为 end_data_seg 指定的值. 
-// 该值必须大于代码结尾并且要小于堆栈结尾 16KB. 
-// 返回值是数据段的新结尾值(如果返回值与要求不同, 则表明有错误发生). 
-// 该函数并不能被用户直接调用, 而由 libc 库函数进行包装, 并且返回值也不一样. 
+// 设置进程的数据空间的地址, 获取动态内存空间的起始地址(end_data_seg = 0)或设置动态内存空间的结束地址.
+// 该函数并不能被用户直接调用, 而由 libc(或者其它 crt library)库函数进行包装, 并且返回值也不一样. 
 int sys_brk(unsigned long end_data_seg)
 {
-	// 如果参数值大于代码结尾, 并且小于(堆栈 - 16KB), 则设置新数据段结尾值. 
-	if (end_data_seg >= current->end_code && end_data_seg < current->start_stack - 16384)
+	// 如果参数值大于进程代码的末尾, 并且小于(堆栈 - 16KB), 则更新动态内存的起始地址.
+	if (end_data_seg >= current->end_code && end_data_seg < (current->start_stack - (16 * 1024))) {
 		current->brk = end_data_seg;
+	}
 	return current->brk;            			// 返回进程当前的数据段结尾值. 
 }
 

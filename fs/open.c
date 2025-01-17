@@ -266,9 +266,10 @@ int sys_open(const char * filename, int flag, int mode)
 	mode &= (0777 & ~current->umask); 	// 如果 umask = 000010010: ~(000-010-010) = 111-101-101 & 111-111-111 = 111-101-101: 即屏蔽掉组成员和其他人的 w 权限.
 	// 为了给打开文件建立一个文件句柄, 需要在进程的文件列表中找到一个空闲项.
 	// 空闲项的索引号 fd 即是句柄值. 若没有找到空闲项, 则返回出错码(参数无效).
-	for (fd = 0; fd < NR_OPEN; fd++)
+	for (fd = 0; fd < NR_OPEN; fd++) {
 		if (!current->filp[fd]) 					// 文件指针为空则表示找到空闲项.
 			break;
+	}
 	if (fd >= NR_OPEN) 								// 没找到空闲项则返回出错码.
 		return -EINVAL;
 	// 复位 fd 对应的 close_on_exec 位标志, close_on_exec 中的每个位(置位)代表系统调用 execve() 时需要关闭的文件句柄. 
@@ -280,11 +281,12 @@ int sys_open(const char * filename, int flag, int mode)
 	// 令 f 指向系统的文件列表开始处, 搜索空闲文件项(引用计数为 0 的项), 若已经没有空闲文件表结构项, 则返回出错码. 
 	// 另外, 下面的指针赋值 "f = 0 + file_table" 等同于 "f = file_table" 和 "f = &file_table[0]". 
 	f = 0 + file_table; 							// (fs/file_table.c)
-	for (i = 0; i < NR_FILE; i++, f++)
-		if (!f->f_count) break;         			// 在系统文件表中找到空闲结构项(没有被引用的文件项). 
+	for (i = 0; i < NR_FILE; i++, f++) {
+		if (!f->f_count) break;         			// 在系统文件表中找到空闲项(没有被引用的文件项). 
+	}
 	if (i >= NR_FILE)
 		return -EINVAL;
-	// 此时我们让进程文件列表中 fd 文件指针指向系统的文件列表中的空闲项, 并令文件引用计数递增 1. 
+	// 让进程文件指针列表中 fd 项指向系统的文件列表中的空闲项, 并令文件引用计数递增 1. 
 	(current->filp[fd] = f)->f_count++;
 	// Log(LOG_INFO_TYPE, "<<<<< sys_open: fd = %d >>>>>\n", fd);
 	// 调用函数 open_namei() 执行打开 inode 操作, 若返回值小于 0, 则说明出错, 于是释放刚申请到的文件结构, 返回出错码 i.

@@ -85,7 +85,7 @@ void * malloc(unsigned size) {
 static int brk(void * end_data_segment) {
     int ret = 0;
 
-    /* syscall 45: sys_brk() */
+    /* syscall __NR_brk = 45: sys_brk() */
     asm("movl $45, %%eax    \n\t"
         "movl %1, %%ebx     \n\t"
         "int $0x80          \n\t"
@@ -98,9 +98,9 @@ static int brk(void * end_data_segment) {
 int mini_crt_heap_init() {
     heap_header * header = NULL;
 
-    char * base = (char *)brk(0);                               /* heap space start addr */
+    char * base = (char *)brk(0);                               /* get heap space start addr */
     char * end = ADDR_ADD(base, HEAP_SIZE);                     /* heap space end addr */
-    end = (char *)brk(end);
+    end = (char *)brk(end);                                     /* set end addr of heap: make current task's brk = end by system call */
     if (!end) {
         return 0;
     }
