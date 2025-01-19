@@ -21,8 +21,7 @@ extern int *blk_size[];
 // 对于内核来说, 写操作是向高速缓冲区中写入数据. 什么时候数据最终写入设备是高速缓冲管理程序决定并处理的. 另外, 因为
 // 块设备是以块为单位进行读写, 因此对于写开始位置不处于块起始处时, 需要先将开始字节所在整个块读出, 然后将需要写的数据
 // 从开始处填写满该块, 再将完整的一块数据写盘(即交由高速缓冲程序去处理). 
-int block_write(int dev, long * pos, char * buf, int count)
-{
+int block_write(int dev, long * pos, char * buf, int count) {
 	// 首先由文件中位置pos换算成开始写盘块的块序号block, 并求出需写第1字节在该块中的偏移位置offset. 
 	int block = *pos >> BLOCK_SIZE_BITS;            			// pos所在文件数据块号. 
 	int offset = *pos & (BLOCK_SIZE - 1);             			// pos在数据块中偏移值. 
@@ -35,28 +34,33 @@ int block_write(int dev, long * pos, char * buf, int count)
 	// 在写一个块设备文件时, 要求写的总数据块数当然不能超过指定设备上容许的最大数据块总数. 因此这里首先取出指定
 	// 设备的块总数size来比较和限制函数参数给定的读入数据长度. 如果系统中没有对设备指定长度, 就使用默认长度
 	// 0x7fffffff(2GB个块). 
-	if (blk_size[MAJOR(dev)])
+	if (blk_size[MAJOR(dev)]) {
 		size = blk_size[MAJOR(dev)][MINOR(dev)];
-	else
+	} else {
 		size = 0x7fffffff;
+	}
 	// 然后针对要写入的字节数count, 循环执行以下操作, 直到数据全部写入. 在循环执行过程中, 若当前写入数据的块号
 	// 已经大于或等于指定设备的总块数, 则返回已写字节数并退出. 然后再计算在当前处理的数据块中可写入的字节数. 如果
 	// 需要写入的字节数填不满一块, 那么就只需写count字节. 如果正好写1块数据内容, 则直接申请1块高速缓冲块, 并把
 	// 用户数据放入即可. 否则就需要读入将被写入部分数据的数据块, 并预读下两块数据. 然后将块号递增1,为下次操作做好
 	// 准备. 如果缓冲块操作失败, 则返回已写字节数, 如果没有写入任何字节, 则返回出错号(负数). 
 	while (count > 0) {
-		if (block >= size)
+		if (block >= size) {
 			return written ? written : -EIO;
+		}
 		chars = BLOCK_SIZE - offset;
-		if (chars > count)
+		if (chars > count) {
 			chars = count;
-		if (chars == BLOCK_SIZE)
+		}
+		if (chars == BLOCK_SIZE) {
 			bh = getblk(dev, block);
-		else
+		} else {
 			bh = breada(dev, block, block + 1, block + 2, -1);
+		}
 		block++;
-		if (!bh)
+		if (!bh) {
 			return written ? written : -EIO;
+		}
 		// 接着先把指针p指向读出数据的缓冲块中开始写入数据的位置处. 若最后一次循环写入的数据不足一块, 则需要从块开始
 		// 处填写(修改)所需的字节, 因此这里需预先设置offset为零. 此后将文件中偏移指针pos前移此次将要写的字节数chars
 		// 并累加这些要写的字节数到统计值written中. 再把还需要写的计数值count减去此次要写的字节数chars. 然后我们从
@@ -67,8 +71,9 @@ int block_write(int dev, long * pos, char * buf, int count)
 		*pos += chars;
 		written += chars;               						// 累计写入字节数. 
 		count -= chars;
-		while (chars-- > 0)
+		while (chars-- > 0) {
 			*(p++) = get_fs_byte(buf++);
+		}
 		bh->b_dirt = 1;
 		brelse(bh);
 	}
@@ -91,24 +96,28 @@ int block_read(int dev, unsigned long * pos, char * buf, int count)
 	// 在读一个块设备文件时, 要求读的总数据块数当然不能超过指定设备上容许的最大数据块总数. 
 	// 因此这里首先取出指定设备的块总数 size 来比较和限制函数参数给定的读入数据长度. 
 	// 如果系统中没有对设备指定长度, 就使用默认长度 0x7fffffff(2GB 个块). 
-	if (blk_size[MAJOR(dev)])
+	if (blk_size[MAJOR(dev)]) {
 		size = blk_size[MAJOR(dev)][MINOR(dev)];
-	else
+	} else {
 		size = 0x7fffffff;
+	}
 	// 然后针对要读入的字节数 count, 循环执行以下操作, 直到数据全部读入. 在循环执行过程中, 
 	// 若当前读入数据的块号已经大于或等于指定设备的总块数, 则返回已读字节数并退出. 
-	// 然后再计算在当前处理的数据块中需读入的字节数. 如果需要读入的字节数还不满一块, 那么就只需读count字节. 
+	// 然后再计算在当前处理的数据块中需读入的字节数. 如果需要读入的字节数还不满一块, 那么就只需读 count 字节. 
 	// 然后调用读块函数 breada() 读入需要的数据块, 并预读下两块数据, 
 	// 如果读操作出错, 则返回已读字节数, 如果没有读入任何字节, 则返回出错号. 然后将块号递增 1. 为下次操作做好准备. 
 	// 如果缓冲块担操失败, 则返回已写字节数, 如果没有读入任何字节, 则返回出错号(负数). 
 	while (count > 0) {
-		if (block >= size)
+		if (block >= size) {
 			return read ? read : -EIO;
+		}
 		chars = BLOCK_SIZE - offset;
-		if (chars > count)
+		if (chars > count) {
 			chars = count;
-		if (!(bh = breada(dev, block, block + 1, block + 2, -1)))
+		}
+		if (!(bh = breada(dev, block, block + 1, block + 2, -1))) {
 			return read ? read : -EIO;
+		}
 		block++;
 		// 接着先把指针 p 指向读出盘块中开始读入数据的位置处. 若最后一次循环读操作的数据不足一块, 则需从块起始处读取所需字节, 
 		// 因此这里需预先设置 offset 为零. 此后将文件中偏移指针 pos 前移此次将要读的字节数 chars, 并且累加这些要读的字节数到统计值 read 中. 
@@ -119,8 +128,9 @@ int block_read(int dev, unsigned long * pos, char * buf, int count)
 		*pos += chars;
 		read += chars;                  						// 累计读入字节数. 
 		count -= chars;
-		while (chars-- > 0)
+		while (chars-- > 0) {
 			put_fs_byte(*(p++), buf++);
+		}
 		brelse(bh);
 	}
 	return read;                            					// 返回已读取的字节数, 正常退出. 

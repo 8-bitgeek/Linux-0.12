@@ -208,24 +208,26 @@ static char * translations[] = {
 /* 注意! gotoxy 函数认为 x==video_num_columns 时是正确的 */
 static inline void gotoxy(int currcons, int new_x, unsigned int new_y)
 {
-	if (new_x > video_num_columns || new_y >= video_num_lines)
+	if (new_x > video_num_columns || new_y >= video_num_lines) {
 		return;
+	}
 	x = new_x; 										// 设置当前光标列值
 	y = new_y; 										// 设置当前光标行值
 	pos = origin + y * video_size_row + (x << 1);	// 1 列用 2 个字节表示, 所以 x<<1.
 }
 
 // 设置滚屏起始显示内存地址.
-static inline void set_origin(int currcons)
-{
+static inline void set_origin(int currcons) {
 	// 首先判断显示卡类型. 对于 EGA/VGA, 我们可以指定屏内范围(区域)进行滚屏操作, 而 MDA 单色显示卡只能进行整屏滚屏操作. 
 	// 因此只有 EGA/VGA 卡才需要设置滚屏起始行显示内存地址(起始行是 origin 对应的行). 
 	// 即显示类型如果不是 EGA/VGA 彩色模式, 也不是 EGA/VGA 单色模式, 那么就直接返回. 
 	// 另外, 我们只对前台控制台进行操作, 因此当前控制台 currocons 必须是前台控制台时, 我们才需要设置其滚屏起始行对应的内存起点位置.
-	if (video_type != VIDEO_TYPE_EGAC && video_type != VIDEO_TYPE_EGAM)
+	if (video_type != VIDEO_TYPE_EGAC && video_type != VIDEO_TYPE_EGAM) {
 		return;
-	if (currcons != fg_console)
+	}
+	if (currcons != fg_console) {
 		return;
+	}
 	// 然后向显示寄存器选择端口 video_port_reg 输出 12, 即选择显示控制数据寄存器 r12, 接着写入滚屏起始地址高字节. 
 	// 其中向右移动 9 位, 实际上表示向右移动 8 位再除以 2(因为 1 个字符用 2 字节表示). 
 	// 再选择显示控制数据寄存器 r13, 然后写入滚屏起始地址低字节. 
@@ -242,16 +244,15 @@ static inline void set_origin(int currcons)
 
 // 显示内容向上滚动一行
 // 将屏幕滚动窗口向上移动一行, 并在屏幕滚动区域底出现的新行上添加空格字符. 滚屏区域必须大于 1 行.
-static void scrup(int currcons)
-{
+static void scrup(int currcons) {
 	// 滚屏区域必须至少有 2 行. 如果滚屏区域顶行号大于等于区域底行号, 则不满足进行滚行操作的条件. 
 	// 另外, 对于 EGA/VGA 卡, 我们可以指定屏内行范围(区域)进行滚屏操作, 而 MDA 单色显示卡只能进行整屏操作. 
 	// 该函数对 EGA 和 MDA 显示类型进行分别处理. 
 	// 如果显示类型是 EGA, 则还分为整屏窗口移动和区域内窗口移动这里首先处理显示卡是 EGA/VGA 显示类型的情况.
-	if (bottom <= top)
+	if (bottom <= top) {
 		return;
-	if (video_type == VIDEO_TYPE_EGAC || video_type == VIDEO_TYPE_EGAM)
-	{
+	}
+	if (video_type == VIDEO_TYPE_EGAC || video_type == VIDEO_TYPE_EGAM) {
 		// 如果移动起始行 top = 0, 移动最底行 bottom = video_num_lines = 25, 则表示整屏窗口向上移动, 
 		// 于是把整个屏幕窗口左上角对应的起始内存位置 origin 调整为向下移动一行对应的内存位置, 
 		// 同时也跟踪调整当前光标对应的内存位置以及屏幕末行末端字符指针 scr_end 的位置. 
@@ -276,11 +277,9 @@ static void scrup(int currcons)
 					"movl video_num_columns, %1\n\t"
 					"rep\n\t"									// 在新行上填入空格字符
 					"stosw"
-					::"a" (video_erase_char),
-					"c" ((video_num_lines - 1) * video_num_columns >> 1),
-					"D" (video_mem_start),
-					"S" (origin)
-					:);
+					: : "a" (video_erase_char), "c" ((video_num_lines - 1) * video_num_columns >> 1),
+						"D" (video_mem_start), "S" (origin)
+				);
 				// 重新设置快速滚屏的末端位置
 				scr_end -= origin - video_mem_start;
 				// 设置当前显示位置
@@ -294,10 +293,8 @@ static void scrup(int currcons)
 				__asm__("cld\n\t"
 					"rep\n\t"									// 重复操作, 在新出现现上填入擦除字符(空格字符).
 					"stosw"
-					::"a" (video_erase_char),
-					"c" (video_num_columns),
-					"D" (scr_end - video_size_row)
-					:);
+					: : "a" (video_erase_char), "c" (video_num_columns), "D" (scr_end - video_size_row)
+				);
 			}
 			// 然后把新屏幕滚动窗口内存起始位置值 origin 写入显示控制器中.
 			set_origin(currcons);
@@ -312,29 +309,23 @@ static void scrup(int currcons)
 				"movl video_num_columns, %%ecx\n\t"
 				"rep\n\t"										// 在新行上填入擦除字符.
 				"stosw"
-				::"a" (video_erase_char),
-				"c" ((bottom - top - 1) * video_num_columns >> 1),
-				"D" (origin + video_size_row * top),
-				"S" (origin + video_size_row * (top + 1))
-				:);
+				: : "a" (video_erase_char), "c" ((bottom - top - 1) * video_num_columns >> 1),
+					"D" (origin + video_size_row * top), "S" (origin + video_size_row * (top + 1))
+			);
 		}
-	}
 	// 如果显示类型不是 EGA(而是 MDA), 则执行下面移动操作. 
 	// 因为 MDA 显示控制卡只能整屏滚动, 并且会自动调整超出显示范围的情况, 即会自动翻巻指针, 
 	// 所以这里不对与屏幕内容相对应内存超出显示内存的情况单独处理处理方法与 EGA 非整屏移动情况完全一样.
-	else		/* Not EGA/VGA */
-	{
+	} else {		/* Not EGA/VGA */
 		__asm__("cld\n\t"
 			"rep\n\t"
 			"movsl\n\t"
 			"movl video_num_columns, %%ecx\n\t"
 			"rep\n\t"
 			"stosw"
-			::"a" (video_erase_char),
-			"c" ((bottom - top - 1) * video_num_columns >> 1),
-			"D" (origin + video_size_row * top),
-			"S" (origin + video_size_row * (top + 1))
-			:);
+			: : "a" (video_erase_char), "c" ((bottom - top - 1) * video_num_columns >> 1),
+				"D" (origin + video_size_row * top), "S" (origin + video_size_row * (top + 1))
+		);
 	}
 }
 
@@ -344,15 +335,14 @@ static void scrup(int currcons)
 // 即先从屏幕倒数第 2 行的最后一个字符开始复制到最后一行, 再将倒数第 3 行复制到倒数第 2 行, 等等. 
 // 因为此时对 EGA/VGA 显示类型和 MDA 类型的处理过程完全一样, 所以该函数实际上没有必要写两段相同的代码. 
 // 即这里 if 和 else 语句块中的操作完全一样.
-static void scrdown(int currcons)
-{
+static void scrdown(int currcons) {
 	// 同样, 滚屏区域必须至少有 2 行. 如果滚屏区域顶行号大于等于区域底行号, 则不满足进行滚行操作的条件. 
 	// 另外, 对于 EGA/VGA 卡, 我们可以指定屏内行范围(区域)进行滚屏操作, 而 MDA 单色显示卡只能进行整屏操作. 
 	// 由于窗口向上移动最多移动以当前控制台实际显示内存末端的情况, 所以这里只需要处理普通的内存数据移动情况.
-	if (bottom <= top)
+	if (bottom <= top) {
 		return;
-	if (video_type == VIDEO_TYPE_EGAC || video_type == VIDEO_TYPE_EGAM)
-	{
+	}
+	if (video_type == VIDEO_TYPE_EGAC || video_type == VIDEO_TYPE_EGAM) {
 		// %0 - eax(擦除字符 + 属性); %1 - ecx(top 行到 bottom - 1 行所对应的内存长字数);
 		// %2 - edi(窗口右下角最后一个字长位置); %3 - esi(窗口倒数第 2 行最后一个长字位置).
 		__asm__("std\n\t"							// 置方向位!!
@@ -362,15 +352,11 @@ static void scrdown(int currcons)
 			"movl video_num_columns, %%ecx\n\t"
 			"rep\n\t"								// 将擦除字符填入上方新行中.
 			"stosw"
-			::"a" (video_erase_char),
-			"c" ((bottom - top - 1) * video_num_columns >> 1),
-			"D" (origin + video_size_row * bottom - 4),
-			"S" (origin + video_size_row * (bottom - 1) - 4)
-			:);
-	}
+			: : "a" (video_erase_char), "c" ((bottom - top - 1) * video_num_columns >> 1),
+				"D" (origin + video_size_row * bottom - 4), "S" (origin + video_size_row * (bottom - 1) - 4)
+		);
 	// 如果不是 EGA 显示类型, 则执行以下操作(与上面完成一样).
-	else														/* Not EGA/VGA */
-	{
+	} else {													/* Not EGA/VGA */
 		__asm__("std\n\t"
 			"rep\n\t"
 			"movsl\n\t"
@@ -378,11 +364,9 @@ static void scrdown(int currcons)
 			"movl video_num_columns, %%ecx\n\t"
 			"rep\n\t"
 			"stosw"
-			::"a" (video_erase_char),
-			"c" ((bottom - top - 1) * video_num_columns >> 1),
-			"D" (origin + video_size_row * bottom - 4),
-			"S" (origin + video_size_row * (bottom - 1) - 4)
-			:);
+			: : "a" (video_erase_char), "c" ((bottom - top - 1) * video_num_columns >> 1),
+				"D" (origin + video_size_row * bottom - 4), "S" (origin + video_size_row * (bottom - 1) - 4)
+		);
 	}
 }
 
@@ -390,8 +374,7 @@ static void scrdown(int currcons)
 // 如果光标没有处在最后一行, 则直接修改光标当前行变量 y++, 并调整光标对应显示内存位置 pos(加上一行字符所对应的内存长度). 
 // 否则需要将屏幕窗口内容上移一行.
 // 函数名称 lf(line feed 换行) 是指处理控制字符 LF.
-static void lf(int currcons)
-{
+static void lf(int currcons) {
 	if (y + 1 < bottom) { 								// 如果小于滚动时的底行行号，则直接行号 +1
 		y++;
 		pos += video_size_row;							// 加上屏幕一行占用内存的字节数.
@@ -404,8 +387,7 @@ static void lf(int currcons)
 // 如果光标不在屏幕第一行上, 则直接修改光标当前标量 y--, 并调整光标对应显示内存位置 pos, 减去屏幕上一行字符所对应的内存长度字节数.
 // 否则需要将屏幕窗口内容下移一行.
 // 函数名称 ri(reverse index 反向索引)是指控制字符 RI 或转义序列 "ESC M".
-static void ri(int currcons)
-{
+static void ri(int currcons) {
 	if (y > top) {
 		y--;											// 减去屏幕一行占用内存的字节数
 		pos -= video_size_row;
@@ -417,8 +399,7 @@ static void ri(int currcons)
 // 回车操作, 光标回到第 1 列(0 列).
 // 调整光标对应内存位置 pos. 光标所在列号 * 2 即是 0 列到光标所在列对应的内存字节长度.
 // 函数名称 cr(carriage return 回车) 指明处理的控制字符的回车.
-static void cr(int currcons)
-{
+static void cr(int currcons) {
 	pos -= x << 1;										// 减去当前行第 0 列到光标处占用的内存字节数.
 	x = 0; 												// 列号归零, 实现回车操作
 }
@@ -426,8 +407,7 @@ static void cr(int currcons)
 // 擦除光标前一字符(用空格替代)(del - delete 删除)
 // 如果光标没有处在 0 列, 则将光标对应内存位置 pos 后退 2 字节(对应屏幕上一个字符), 
 // 然后将当前光标变量列值减 1, 并将光标所在位置处字符符擦除
-static void del(int currcons)
-{
+static void del(int currcons) {
 	if (x) {
 		pos -= 2;
 		x--;
@@ -440,8 +420,7 @@ static void del(int currcons)
 // 本函数根据指定的控制序列具体参数值, 执行与光标位置的删除操作, 并且在擦除字符或行时光标位置不变.
 // 函数名称 csi_J(CSI - Control Sequence Introducer, 即控制序列引导码) 指明对控制序列 "CSI Ps J" 进行处理.
 // 参数: vpar - 对应上面控制序列中 Ps 的值.
-static void csi_J(int currcons, int vpar)
-{
+static void csi_J(int currcons, int vpar) {
 	long count;
 	long start;
 
@@ -467,9 +446,8 @@ static void csi_J(int currcons, int vpar)
 	__asm__("cld\n\t"
 		"rep\n\t"
 		"stosw\n\t"
-		::"c" (count),
-		"D" (start),"a" (video_erase_char)
-		:);
+		: : "c" (count), "D" (start), "a" (video_erase_char)
+	);
 }
 
 // 删除上一行上与光标位置相关的部分.
@@ -477,16 +455,16 @@ static void csi_J(int currcons, int vpar)
 // 本函数根据参数擦除光标所在行的部分或所有字符. 
 // 擦除操作从屏幕上移走字符但不影响其他字符. 擦除的字符被丢弃. 在擦除字符或行时光标位置不变.
 // 参数: par - 对应上面控制序列中 Ps 的值.
-static void csi_K(int currcons, int vpar)
-{
+static void csi_K(int currcons, int vpar) {
 	long count;
 	long start;
 
 	// 首先根据三种情况分别设置需要删除的字符数和删除开始的显示内存位置.
 	switch (vpar) {
 		case 0:													/* erase from cursor to end of line */
-			if (x >= video_num_columns)							/* 删除光标到行尾所有字符 */
+			if (x >= video_num_columns)	{						/* 删除光标到行尾所有字符 */
 				return;
+			}
 			count = video_num_columns - x;
 			start = pos;
 			break;
@@ -506,9 +484,8 @@ static void csi_K(int currcons, int vpar)
 	__asm__("cld\n\t"
 		"rep\n\t"
 		"stosw\n\t"
-		::"c" (count),
-		"D" (start),"a" (video_erase_char)
-		:);
+		: : "c" (count), "D" (start), "a" (video_erase_char)
+	);
 }
 
 // 设置显示字符属性
@@ -518,8 +495,7 @@ static void csi_K(int currcons, int vpar)
 // 40~48 - 设置背景色彩; 49 - 默认背景色(Black).
 // 该控制序列根据参数设置字符显示属性. 
 // 以后所有发送到终端的字符都将使用这里指定的属性, 直到再次执行本控制序列重新设置字符显示的属性.
-void csi_m(int currcons)
-{
+void csi_m(int currcons) {
 	int i;
 
 	// 一个序列中可以带有多个不同参数. 参数存储在数组 par[] 中. 下面就根据接收到的参数个数 npar, 循环处理各个参数 Ps.
@@ -538,21 +514,17 @@ void csi_m(int currcons)
 				attr = (iscolor ? attr | 0x08 : attr | 0x0f); break;  		/* bold */
 			/*case 4: attr=attr|0x01;break;*/  /* underline */
 			case 4: 														/* bold */
-			  if (!iscolor)
-			    attr |= 0x01;												// 单色则带下划线显示.
-			  else
-			  { 															/* check if forground == background */
-			    if (vc_cons[currcons].vc_bold_attr != -1)
-			      attr = (vc_cons[currcons].vc_bold_attr & 0x0f) | (0xf0 & (attr));
-			    else
-			    {
-			    	short newattr = (attr&0xf0)|(0xf&(~attr));
-			      	attr = ((newattr&0xf)==((attr>>4)&0xf)?
-			        (attr&0xf0)|(((attr&0xf)+1)%0xf):
-			        newattr);
-			    }
-			  }
-			  break;
+				if (!iscolor) {
+					attr |= 0x01;												// 单色则带下划线显示.
+				} else {														/* check if forground == background */
+					if (vc_cons[currcons].vc_bold_attr != -1) {
+					attr = (vc_cons[currcons].vc_bold_attr & 0x0f) | (0xf0 & (attr));
+					} else {
+						short newattr = (attr&0xf0)|(0xf&(~attr));
+						attr = ((newattr & 0xf) == ((attr >> 4) & 0xf) ? (attr & 0xf0) | (((attr & 0xf) + 1) % 0xf) : newattr);
+					}
+				}
+				break;
 			// 如果 Ps = 5, 则把当前虚拟控制台随后显示的字符设置为闪烁, 即把属性字节位 7 置 1.
 			case 5: attr = attr | 0x80; break;  							/* blinking */
 			// 如果 Ps = 7, 则把当前虚拟控制台随后显示的字符设置为反显, 即把前景色和背景色交换.
@@ -572,28 +544,31 @@ void csi_m(int currcons)
 			// 当 Ps(par[i]) 为其他值时, 则是设置指定的前景色或背景色. 
 			// 如果 Ps = 30..37, 则是设置前景色; 如果 Ps=40..47, 则是设置背景色.
 			default:
-			  if (!can_do_colour)
-			    break;
-			  iscolor = 1;
-			  if ((par[i] >= 30) && (par[i] <= 38))		 			// 设置前景色.
-			    attr = (attr & 0xf0) | (par[i] - 30);
-			  else  												/* Background color */	// 设置背景色.
-			    if ((par[i] >= 40) && (par[i] <= 48))
-			      attr = (attr & 0x0f) | ((par[i] - 40) << 4);
-			    else
+				if (!can_do_colour) {
 					break;
+				}
+				iscolor = 1;
+				if ((par[i] >= 30) && (par[i] <= 38))	{	 			// 设置前景色.
+					attr = (attr & 0xf0) | (par[i] - 30);
+				} else { 												/* Background color */	// 设置背景色.
+					if ((par[i] >= 40) && (par[i] <= 48)) {
+					attr = (attr & 0x0f) | ((par[i] - 40) << 4);
+					} else {
+						break;
+					}
+				}
 		}
 }
 
 // 设置显示光标. 
 // 根据光标对应显示内存位置 pos, 设置显示控制器光标的显示位置.
-static inline void set_cursor(int currcons)
-{
+static inline void set_cursor(int currcons) {
 	// 既然我们需要设置显示光标, 说明有键盘操作, 因此需要恢复进行黑屏操作的延时计数值.
 	// 另外, 显示光标的控制台必须是当前控制台, 因此若当前处理的台号 currcons 不是前台控制台就立刻返回.
 	blankcount = blankinterval;						// 复位黑屏操作的计数值.
-	if (currcons != fg_console)
+	if (currcons != fg_console) {
 		return;
+	}
 	// 然后使用索引寄存器端口选择显示控制数据寄存器 r14(光标当前显示位置高字节), 
 	// 接着写入光标当前位置高字节(向右移动 9 位表示高字节移到低字节再除以 2),
 	// 相对于默认显示内存操作的. 再使用索引寄存器选择 r15, 并将光标当前位置低字节写入其中.
@@ -607,8 +582,7 @@ static inline void set_cursor(int currcons)
 
 // 隐藏光标
 // 把光标设置到当前虚拟控制台窗口的末端, 起到隐藏光标的作用. 
-static inline void hide_cursor(int currcons)
-{
+static inline void hide_cursor(int currcons) {
 	// 首先使用索引寄存器端口选择控制数据寄存器 r14(光标当前显示位置高字节), 
 	// 然后写入光标当前位置高字节(向右移动 9 位表示高字节移到低字节再除以 2),
 	// 是相对于默认显示内存操作的. 再使用索引寄存器选择 r15, 并将光标当前位置低字节写入其中. 
@@ -623,8 +597,7 @@ static inline void hide_cursor(int currcons)
 // 主机通过发送不带参数或参数是 0 的 DA 控制序列('ESC [ 0c' 或 'ESC Z'] 要求终端发送一个设备属性(DA)控制序列, 
 // 终端则发送第 85 行上定义的应答序列(即 'ESC [?];2c']来主机的序列, 该序列告诉主机本终端是具有高级视频功能的 VT100 兼容终端. 
 // 处理过程是将应答序列放入读缓冲队列中, 并使用 copy_to_cooked() 函数处理后放入辅助队列中.
-static void respond(int currcons, struct tty_struct * tty)
-{
+static void respond(int currcons, struct tty_struct * tty) {
 	char * p = RESPONSE;
 
 	cli();
@@ -638,11 +611,10 @@ static void respond(int currcons, struct tty_struct * tty)
 
 // 在光标处插入一空格字符.
 // 把光标开始处的所有字符右移一格, 并将擦除字符插入在光标所在处.
-static void insert_char(int currcons)
-{
+static void insert_char(int currcons) {
 	int i = x;
 	unsigned short tmp, old = video_erase_char;		// 擦除字符(加属性)
-	unsigned short * p = (unsigned short *) pos;	// 光标对应内存位置.
+	unsigned short * p = (unsigned short *)pos;	// 光标对应内存位置.
 
 	while (i++ < video_num_columns) {
 		tmp = *p;
@@ -654,8 +626,7 @@ static void insert_char(int currcons)
 
 // 在光标处插入一行.
 // 将屏幕窗口从光标所在行到窗口底的内容向下卷动一行. 光标将处在新的空行上.
-static void insert_line(int currcons)
-{
+static void insert_line(int currcons) {
 	int oldtop, oldbottom;
 
 	// 首先保存屏幕窗口卷动开始行 top 和最后行 bottom 值, 然后从光标所在行让屏幕内容向下滚动一行. 
@@ -671,15 +642,15 @@ static void insert_line(int currcons)
 
 // 删除一个字符
 // 删除光标处的一个字符, 光标右边的所有字符左移一格.
-static void delete_char(int currcons)
-{
+static void delete_char(int currcons) {
 	int i;
 	unsigned short * p = (unsigned short *) pos;
 
 	// 如果光标的当前列位置 x 走出屏幕最右列, 则返回. 
 	// 否则从光标右一个字符开始到行末所有字符左移一格. 然后在最后一个字符处填入擦除字符.
-	if (x >= video_num_columns)
+	if (x >= video_num_columns) {
 		return;
+	}
 	i = x;
 	while (++i < video_num_columns) {				// 光标右所有字符左移 1 格.
 		*p = *(p + 1);
@@ -690,8 +661,7 @@ static void delete_char(int currcons)
 
 // 删除光标所在行
 // 删除光标所在的一行, 并从光标所在行开始屏幕内容上巻一行.
-static void delete_line(int currcons)
-{
+static void delete_line(int currcons) {
 	int oldtop, oldbottom;
 
 	// 首先保存屏幕窗口卷动开始行 top 和最后行 bottom 值, 然后从光标所在行让屏幕内容向上滚动一行. 
@@ -710,30 +680,32 @@ static void delete_line(int currcons)
 // Pn 是插入的字符数. 默认是 1. 光标将仍然处于第 1 个插入的空格字符处. 
 // 在光标与右边界的字符将右移. 超过右边界的字符将被丢失.
 // 参数 nr = 转义字符序列中的参数 Pn.
-static void csi_at(int currcons, unsigned int nr)
-{
+static void csi_at(int currcons, unsigned int nr) {
 	// 如果插入的字符数大于一行字符数, 则截为一行字符数; 若插入字符数 nr 为 0, 则插入 1 个字符. 然后循环插入指定个空格字符.
-	if (nr > video_num_columns)
+	if (nr > video_num_columns) {
 		nr = video_num_columns;
-	else if (!nr)
+	} else if (!nr) {
 		nr = 1;
-	while (nr--)
+	}
+	while (nr--) {
 		insert_char(currcons);
+	}
 }
 
 // 在光标位置处插入 nr 行.
 // ANSI转义字符序列: 'ESC [ Pn L'. 该控制序列在光标处插入 1 行或多行空行. 操作完成后光标位置不变. 
 // 当空行被插入时, 光标以下滚动区域内的行向下移动. 滚动超出显示页的行就丢失.
 // 参数 nr = 转义字符序列中的参数 Pn.
-static void csi_L(int currcons, unsigned int nr)
-{
+static void csi_L(int currcons, unsigned int nr) {
 	// 如果插入的行数大于屏最多行数, 则截为屏幕显示行数; 若插入行数 nr 为 0, 则插入 1 行. 然后循环插入指定行数 nr 的空行.
-	if (nr > video_num_lines)
+	if (nr > video_num_lines) {
 		nr = video_num_lines;
-	else if (!nr)
+	} else if (!nr) {
 		nr = 1;
-	while (nr--)
+	}
+	while (nr--) {
 		insert_line(currcons);
+	}
 }
 
 // 删除光标处的 nr 个字符.
@@ -741,15 +713,16 @@ static void csi_L(int currcons, unsigned int nr)
 // 当一个字符被删除时, 光标右所有字符都左移, 这会在右边界处产生一个空字符. 
 // 其属性应该与最后一个左移字符相同, 但这里作了简化处理, 仅使用字符的默认属性(黑底白字空格 0x0720)来设置空字符.
 // 参数: nr = 转义字符序列中的参数 Pn.
-static void csi_P(int currcons, unsigned int nr)
-{
+static void csi_P(int currcons, unsigned int nr) {
 	// 如果删除的字符数大于一行字符数, 则截为一行字符数; 若删除字符数 nr 为 0, 则删除 1 个字符. 然后循环删除光标处指定字符数 nr.
-	if (nr > video_num_columns)
+	if (nr > video_num_columns) {
 		nr = video_num_columns;
-	else if (!nr)
+	} else if (!nr) {
 		nr = 1;
-	while (nr--)
+	}
+	while (nr--) {
 		delete_char(currcons);
+	}
 }
 
 // 删除光标处的 nr 行.
@@ -757,27 +730,26 @@ static void csi_P(int currcons, unsigned int nr)
 // 当行被删除时, 滚动区域内的被删行以下的行会向上移动, 并且会在最底行添加1空行. 
 // 若 Pn 大于显示页上剩余行数, 则本序列仅删除这些剩余行, 并对滚动区域处不起作用.
 // 参数 nr = 转义字符序列中的参数 Pn.
-static void csi_M(int currcons, unsigned int nr)
-{
+static void csi_M(int currcons, unsigned int nr) {
 	// 如果删除的行数大于屏幕最大行数, 则截为屏幕显示行数; 若欲删除的行数 nr 为 0, 则删除 1 行. 然后循环删除指定行数 nr.
-	if (nr > video_num_lines)
+	if (nr > video_num_lines) {
 		nr = video_num_lines;
-	else if (!nr)
+	} else if (!nr) {
 		nr=1;
-	while (nr--)
+	}
+	while (nr--) {
 		delete_line(currcons);
+	}
 }
 
 // 保存当前光标位置
-static void save_cur(int currcons)
-{
+static void save_cur(int currcons) {
 	saved_x = x;
 	saved_y = y;
 }
 
 // 恢复保存的光标位置
-static void restore_cur(int currcons)
-{
+static void restore_cur(int currcons) {
 	gotoxy(currcons, saved_x, saved_y);
 }
 
@@ -803,15 +775,13 @@ static void restore_cur(int currcons)
 // ESsetgraph- 表示收到设置字符转移序列 'ESC (' 或 'ESC )'. 它们分别用于指定 G0 和 G1 所用的字符集. 
 // 			   此时若收到字符 '0', 则选择图形字符集作为 G0 和 G1,
 //             若收到的字符是 'B', 这选择普通 ASCII 字符集作为 G0 和 G1 的字符集.
-enum { ESnormal, ESesc, ESsquare, ESgetpars, ESgotpars, ESfunckey,
-	ESsetterm, ESsetgraph };
+enum { ESnormal, ESesc, ESsquare, ESgetpars, ESgotpars, ESfunckey, ESsetterm, ESsetgraph };
 
 // 控制台写函数
 // 从终端对应的 tty 写缓冲队列(write_q)中取字符针对每个字符进行分析. 
 // 若是控制字符或转义或控制序列, 则进行光标定位, 字符删除等的控制处理; 对于普通字符就直接在光标处显示.
 // 参数: tty 是当前控制台使用的 tty 结构指针.
-void con_write(struct tty_struct * tty)
-{
+void con_write(struct tty_struct * tty) {
 	int nr;
 	char c;
 	int currcons;
@@ -824,16 +794,19 @@ void con_write(struct tty_struct * tty)
 	// 则序列不会执行而立刻终止, 同时显示随后的字符. 注意, con_write() 函数只处理取队列字符数时 write_q 中当前含有的字符. 
 	// 这有可能在一个序列被放到写队列期间读取字符数, 因此本函数前一次退出时 state 有可能处于处理转义或控制序列的其他状态上.
 	currcons = tty - tty_table;
-	if ((currcons >= MAX_CONSOLES) || (currcons < 0))
+	if ((currcons >= MAX_CONSOLES) || (currcons < 0)) {
 		panic("con_write: illegal tty");
+	}
 
 	nr = CHARS(tty->write_q);										// 取写队列中字符数, 在 tty.h 文件中
 	while (nr--) {
-		if (tty->stopped)
+		if (tty->stopped) {
 			break;
+		}
 		GETCH(tty->write_q, c);										// 取 1 字符到 c 中
-		if (c == 24 || c == 26)										// 控制字符 CAN, SUB - 取消, 替换
+		if (c == 24 || c == 26)	{									// 控制字符 CAN, SUB - 取消, 替换
 			state = ESnormal;
+		}
 		switch(state) {
 			// ESnormal: 表示处于初始正常状态. 此时若接收到的是普通显示字符, 则把字符直接显示在屏幕上; 
 			// 			若接收到的是控制字符(例如回车字符), 则对光标位置进行设置. 
@@ -852,26 +825,24 @@ void con_write(struct tty_struct * tty)
 					}
 					__asm__("movb %2, %%ah\n\t"						// 写字符到显示终端
 						"movw %%ax, %1\n\t"
-						::"a" (translate[c - 32]),
-						"m" (*(short *)pos),
-						"m" (attr)
-						:);
+						: : "a" (translate[c - 32]), "m" (*(short *)pos), "m" (attr)
+					);
 					pos += 2;
 					x++;
 				// 如果字符 c 是转义字符 ESC, 则转换状态 state 到 ESesc
-				} else if (c == 27)									// ESC - 转义控制字符
+				} else if (c == 27) {								// ESC - 转义控制字符
 					state = ESesc;
 				// 如果 c 是换行符 LF(10), 或垂直制表符 VT(11), 或换页符 FF(12), 则光标移动到下 1 行.
-				else if (c == 10 || c == 11 || c == 12)
+				} else if (c == 10 || c == 11 || c == 12) {
 					lf(currcons);
 				// 如果 c 是回车符 CR(13), 则将光标移动到头列(0 列)
-				else if (c == 13)									// CR - 回车
+				} else if (c == 13)	{								// CR - 回车
 					cr(currcons);
 				// 如果 c 是 DEL(127), 则将光标左边字符擦除(用空格字符替代), 并将光标移到被擦除位置.
-				else if (c == ERASE_CHAR(tty))
+				} else if (c == ERASE_CHAR(tty)) {
 					del(currcons);
 				// 如果 c 是 BS(backspace, 8), 则将光标左移 1 格, 并相应调整光标对应内存位置指针 pos.
-				else if (c == 8) {									// BS - 后退.
+				} else if (c == 8) {									// BS - 后退.
 					if (x) {
 						x--;
 						pos -= 2;
@@ -889,13 +860,14 @@ void con_write(struct tty_struct * tty)
 					}
 					c = 9;
 				// 如果字符 c 是响铃符 BEL(7), 则调用蜂鸣函数, 使扬声器发声.
-				} else if (c == 7)									// BEL - 响铃
+				} else if (c == 7) {								// BEL - 响铃
 					sysbeep();
 				// 如果 c 是控制字符 SO(14) 或 SI(15), 则相应选择字符集 G1 或 G0 作为显示字符集.
-			  	else if (c == 14)									// SO - 换出, 使用 G1.
+				} else if (c == 14)	{								// SO - 换出, 使用 G1.
 			  		translate = GRAF_TRANS;
-			  	else if (c == 15)									// SI - 换进, 使用 G0.
+				} else if (c == 15)	{								// SI - 换进, 使用 G0.
 					translate = NORM_TRANS;
+				}
 				break;
 			// ESesc: 表示接收到转义序列引导字符 ESC(0x1b = 033 = 27); 如果在此状态下接收到一个 '[' 字符, 则说明转义序列引导码, 
 			// 		 于是跳转到 ESsquare 去处理. 否则就把接收到的字符作为转义序列来处理. 对于选择字符集转义序列 'ESC (' 和 'ESC )', 
@@ -904,8 +876,7 @@ void con_write(struct tty_struct * tty)
 			// 处理完后默认的状态将是 ESnormal.
 			case ESesc:
 				state = ESnormal;
-				switch (c)
-				{
+				switch (c) {
 				  case '[':											// ESC [ - 是 CSI 序列.
 					state = ESsquare;
 					break;
@@ -959,17 +930,18 @@ void con_write(struct tty_struct * tty)
 			// 如果此时接收到字符还是 '[', 那么表明收到了键盘功能键发出的序列, 于是设置下一状态为 ESfunckey. 
 			// 否则直接进入 ESgetpars 状态继续处理.
 			case ESsquare:
-				for(npar = 0; npar < NPAR; npar++)					// 初始化参数数组.
+				for(npar = 0; npar < NPAR; npar++) {				// 初始化参数数组.
 					par[npar] = 0;
+				}
 				npar = 0;
 				state = ESgetpars;
-				if (c == '[')  										/* Function key */	// 'ESC [[' 是功能键.
-				{
+				if (c == '[') { 									/* Function key */	// 'ESC [[' 是功能键.
 					state = ESfunckey;
 					break;
 				}
-				if (ques = (c == '?'))
+				if (ques = (c == '?')) {
 					break;
+				}
 			// ESgetpars: 该状态表示此时要接收控制序列的参数值. 参数用十进制数表示, 把接收到的数字字符转换成数值并保存到 par[] 数组中. 
 			// 			  如果收到一个分号 ';', 则还是维持在本状态, 并把接收到的参数值保存在数据 par[] 下一项中. 
 			//            若不是数字字符或分号, 说明已取得所有参数, 那么就转移到状态 ESgotparts 去处理.
@@ -983,7 +955,9 @@ void con_write(struct tty_struct * tty)
 				} else if (c >= '0' && c <= '9') {
 					par[npar] = 10 * par[npar] + c - '0';
 					break;
-				} else state = ESgotpars;
+				} else {
+					state = ESgotpars;
+				}
 			// ESgotpars: 表示已经接收到一个完整的控制序列. 此时可以根据本状态接收到的结尾字符对相应控制序列进行处理. 不过在处理之前, 
 			// 			 如果在 ESsquare 状态收到过 '?', 说明这个序列是终端设备私有序列. 
 			//   		 本内核不对支持对这种序列的处理, 于是直接恢复到 ESnormal 状态.
@@ -994,9 +968,9 @@ void con_write(struct tty_struct * tty)
 			//  		 否则就去执行相应控制序列. 待序列处理完后就把状态恢复到 ESnormal.
 			case ESgotpars:
 				state = ESnormal;
-				if (ques)
-				{ ques =0;
-				  break;
+				if (ques) { 
+					ques =0;
+				  	break;
 				}
 				switch(c) {
 					// 如果 c 是字符 'G' 或 '`', 则 par[] 中第 1 个参数代表列号, 若列号不为零, 则将光标左移 1 格.
@@ -1080,8 +1054,7 @@ void con_write(struct tty_struct * tty)
 					case 'r':									// CSI Pn r - 设置滚屏上下界.
 						if (par[0]) par[0]--;
 						if (!par[1]) par[1] = video_num_lines;
-						if (par[0] < par[1] &&
-						    par[1] <= video_num_lines) {
+						if (par[0] < par[1] && par[1] <= video_num_lines) {
 							top = par[0];
 							bottom = par[1];
 						}
@@ -1100,17 +1073,16 @@ void con_write(struct tty_struct * tty)
 					// 那么 par[0] 中是开始黑屏时延迟的分钟数; 如果 c 是字符 'b', 那么 par[0] 中是设置的粗体字符属性值.
 					case 'l': 									/* blank interval */
 					case 'b': 									/* bold attribute */
-						  if (!((npar >= 2) &&
-						  ((par[1] - 13) == par[0]) &&
-						  ((par[2] - 17) == par[0])))
-						    break;
-						if ((c == 'l') && (par[0] >= 0) && (par[0] <= 60))
-						{
-						  blankinterval = HZ * 60 * par[0];
-						  blankcount = blankinterval;
+						if (!((npar >= 2) && ((par[1] - 13) == par[0]) && ((par[2] - 17) == par[0]))) {
+							break;
 						}
-						if (c == 'b')
-						  vc_cons[currcons].vc_bold_attr = par[0];
+						if ((c == 'l') && (par[0] >= 0) && (par[0] <= 60)) {
+							blankinterval = HZ * 60 * par[0];
+							blankcount = blankinterval;
+						}
+						if (c == 'b') {
+							vc_cons[currcons].vc_bold_attr = par[0];
+						}
 				}
 				break;
 			// ESfunckey: 表示接收到了键盘上功能键发出的一个序列, 不用显示. 于是恢复到正常状态 ESnormal.
@@ -1127,10 +1099,11 @@ void con_write(struct tty_struct * tty)
 				if (c == 'S') {
 					def_attr = attr;
 					video_erase_char = (video_erase_char & 0x0ff) | (def_attr << 8);
-				} else if (c == 'L')
-					; 										/*linewrap on*/
-				else if (c == 'l')
-					; 										/*linewrap off*/
+				} else if (c == 'L') {
+					; 										/* linewrap on */
+				} else if (c == 'l') {
+					; 										/* linewrap off */
+				}
 				break;
 			// ESsetgraph: 表示收到设置字符转移序列 'ESC (' 或 'ESC )'. 它们分别用于指定 G0 和 G1 所用的字符集. 
 			// 			   此时若收到字符 '0', 则选择图形字符集作为 G0 和 G1, 
@@ -1139,10 +1112,11 @@ void con_write(struct tty_struct * tty)
 			// 此时若收到字符 '0', 则选择图形字符集作为 G0 和 G1, 若收到的字符是 'B', 则选择普通 ASCII 字符集作为 G0 和 G1 的字符集.
 			case ESsetgraph:								// 'CSI ( 0'或'CSI ( B' - 选择字符集
 				state = ESnormal;
-				if (c == '0')
+				if (c == '0') {
 					translate = GRAF_TRANS;
-				else if (c == 'B')
+				} else if (c == 'B') {
 					translate = NORM_TRANS;
+				}
 				break;
 			default:
 				state = ESnormal;
@@ -1165,8 +1139,7 @@ void con_write(struct tty_struct * tty)
  * 这个子程序初始化控制台中断, 其他什么都不做. 如果你想让屏幕干净的话, 就使用适当的转义字符序列调用 tty_write() 函数.
  * 读取 setup.s 程序保存的信息, 用以确定当前显示器类型, 并且设置所有相关参数.
  */
-void con_init(void)
-{
+void con_init(void) {
 	register unsigned char a;
 	char *display_desc = "????";
 	char *display_ptr;
@@ -1189,8 +1162,7 @@ void con_init(void)
 
 	// 然后根据显示模式是单色还是彩色, 分别设置所使用的显示内存起始位置以及显示寄存器索引端口号和显示寄存器数据端口号.
 	// 如果获得的 BIOS 显示方式等于 7, 则表示是单色显示卡.
-	if (ORIG_VIDEO_MODE == 7)					/* Is this a monochrome display? */
-	{
+	if (ORIG_VIDEO_MODE == 7) {					/* Is this a monochrome display? */
 		video_mem_base = 0xb0000;				// 设置单显映像内存起始地址.
 		video_port_reg = 0x3b4;					// 设置单显索引寄存器端口.
 		video_port_val = 0x3b5;					// 设置单显数据寄存器端口.
@@ -1203,38 +1175,30 @@ void con_init(void)
 		// 注意, 这里使用了 bx 在调用中断 int 0x10 前后是否被改变的方法来判断卡的类型. 
 		// 若 BL 在中断调用后值被改变, 表示显示卡支持 ah = 12h 功能调用, 是 EGA 或后推出来的 VGA 等类型显示卡. 
 		// 若中断调用返回值末变, 表示显示卡不支持这个功能, 则说明是一般单色显示卡.
-		if ((ORIG_VIDEO_EGA_BX & 0xff) != 0x10)
-		{
+		if ((ORIG_VIDEO_EGA_BX & 0xff) != 0x10) {
 			video_type = VIDEO_TYPE_EGAM;		// 设置显示类型(EGA单色).
 			video_mem_term = 0xb8000;			// 设置显示内存末端地址.
 			display_desc = "EGAm";				// 设置显示描述字符串.
-		}
 		// 如果 BX 寄存器的值等于 0x10, 则说明是单色显示卡 MDA, 仅有 8KB 显示内存.
-		else
-		{
+		} else {
 			video_type = VIDEO_TYPE_MDA;		// 设置显示类型(MDA 单色).
 			video_mem_term = 0xb2000;			// 设置显示内存末端地址.
 			display_desc = "*MDA";				// 设置显示描述字符串.
 		}
-	}
 	// 如果显示方式不为 7, 说明是彩色显示卡. 此时文本方式下所用显示内存起始地址为 0xb8000; 
 	// 显示控制索引寄存器端口地址为 0x3d4; 数据寄存器端口地址为 0x3d5.
-	else										/* If not, it is color. */
-	{
+	} else {									/* If not, it is color. */
 		can_do_colour 	= 1;					// 设置彩色显示标志.
 		video_mem_base 	= 0xb8000;				// 显示内存起始地址(736KB).
 		video_port_reg	= 0x3d4;				// 设置彩色显示索引寄存器端口.
 		video_port_val	= 0x3d5;				// 设置彩色显示数据寄存器端口.
 		// 再判断显示卡类别. 如果 BX 不等于 0x10, 则说明是 EGA 显示卡, 此时共有 32KB 显示内存可用(0xb8000~0xc0000, 即 736KB-768KB).
 		// 否则说明是 CGA 显示卡, 只能使用 8KB 显示内存(0xb8000~0xba000).
-		if ((ORIG_VIDEO_EGA_BX & 0xff) != 0x10)
-		{
+		if ((ORIG_VIDEO_EGA_BX & 0xff) != 0x10) {
 			video_type = VIDEO_TYPE_EGAC;		// 设置显示类型(EGA 彩色).
 			video_mem_term = 0xc0000;			// 设置显示内存末端地址(768KB).
 			display_desc = "EGAc";				// 设置显示描述字符串.
-		}
-		else
-		{
+		} else {
 			video_type = VIDEO_TYPE_CGA;		// 设置显示类型(CGA).
 			video_mem_term = 0xba000;			// 设置显示内存末端地址.
 			display_desc = "*CGA";				// 设置显示描述字符串.
@@ -1250,11 +1214,13 @@ void con_init(void)
 	// 根据实际的显示内存的大小计算显示控制终端的实际数量((32*1024)/(25*160) ≈ 8)
 	NR_CONSOLES = video_memory / (video_num_lines * video_size_row); 	// video_num_lines * video_size_row = 25 * 160 = 4000Byte
 	// 显示终端的最大数量是 MAX_CONSOLES, 设置在 tty.h 头文件中
-	if (NR_CONSOLES > MAX_CONSOLES)
+	if (NR_CONSOLES > MAX_CONSOLES) {
 		NR_CONSOLES = MAX_CONSOLES;
+	}
 	// 如果计算出来的显示终端数量为 0, 则将显示终端数量设置为 1
-	if (!NR_CONSOLES)
+	if (!NR_CONSOLES) {
 		NR_CONSOLES = 1;
+	}
 	video_memory /= NR_CONSOLES;				// 每个虚拟控制台占用显示内存字节数(32*1024/8 = 4096Byte = 4KB).
 
 	/* Let the user known what kind of display driver we are using */
@@ -1263,8 +1229,7 @@ void con_init(void)
 	// 首先将显示指针 display_ptr 指到屏幕第 1 行右端差 4 个字符处(每个字符需 2 个字节, 因此减 8), 
 	// 然后循环复制字符串的字符, 并且每复制 1 个字符都空开 1 个属性字节.
 	display_ptr = ((char *)video_mem_base) + video_size_row - 8; 	// 在右上角打印描述字符的起始显存地址
-	while (*display_desc)
-	{
+	while (*display_desc) {
 		*display_ptr++ = *display_desc++;
 		display_ptr++;
 	}
@@ -1316,8 +1281,7 @@ void con_init(void)
 // 更新当前控制台.
 // 把前台控制台转换为 fg_console 指定的虚拟控制台. fg_console 是设置的前台虚拟控制台号.
 // fg_console 变量在 tty.h 头文件中定义, 用来启动后默认使用的显示终端
-void update_screen(void)
-{
+void update_screen(void) {
 	set_origin(fg_console);													// 设置滚屏起始显示内存地址.
 	set_cursor(fg_console);													// 设置显示控制器中光标显示内存位置.
 }
@@ -1326,8 +1290,7 @@ void update_screen(void)
 
 // 停止蜂鸣
 // 复位 8255A PB 端口的位 1 和位 0.
-void sysbeepstop(void)
-{
+void sysbeepstop(void) {
 	/* disable counter 2 */		/* 禁止定时器 2 */
 	outb(inb_p(0x61)&0xFC, 0x61);
 }
@@ -1337,8 +1300,7 @@ int beepcount = 0;		// 蜂鸣时间滴答计数.
 // 开通蜂鸣
 // 8255A 芯片 PB 端口的位 1 用作扬声器的开门信号; 位 0 用作 8253 定时器 2 门信号, 该定时器的输出脉冲送往扬声器, 作为扬声器发声频率. 
 // 因此要使扬声器发声, 需要两步: 首先开启 PB 端口(0x61)位 1 和位 0(置位), 然后设置定时器 2 通道发送一定的定时频率即可.
-static void sysbeep(void)
-{
+static void sysbeep(void) {
 	/* enable counter 2 */							/* 开启定时器 2 */
 	outb_p(inb_p(0x61)|3, 0x61);
 	/* set command for counter 2, 2 byte write */	/* 送设置定时器 2 命令 */
@@ -1353,39 +1315,40 @@ static void sysbeep(void)
 // 拷贝屏幕
 // 把屏幕内容复制到参数指定的用户缓冲区 arg 中. 
 // 参数 arg 有两个用途: 一是用于传递控制台号, 二是作为用户缓冲区指针. 
-int do_screendump(int arg)
-{
-	char *sptr, *buf = (char *)arg;
+int do_screendump(int arg) {
+	char * sptr, * buf = (char *)arg;
 	int currcons, l;
 
 	// 函数首先验证用户提供的缓冲区容量, 若不够则进行适当扩展. 然后从其开始处取出控制台号 currcons.
 	// 在判断控制台号有效后, 就把该控制台屏幕的所有内存内容复制到用户缓冲区中. 
 	verify_area(buf, video_num_columns * video_num_lines);
 	currcons = get_fs_byte(buf);
-	if ((currcons < 1) || (currcons > NR_CONSOLES))
+	if ((currcons < 1) || (currcons > NR_CONSOLES)) {
 		return -EIO;
+	}
 	currcons--;
-	sptr = (char *) origin;
-	for (l = video_num_lines * video_num_columns; l > 0 ; l--)
+	sptr = (char *)origin;
+	for (l = video_num_lines * video_num_columns; l > 0; l--) {
 		put_fs_byte(*sptr++, buf++);
+	}
 	return(0);
 }
 
 // 黑屏处理
 // 当用户在 blankInterval 时间间隔内没有按任何按键时就让屏幕黑屏, 以保护屏幕.
-void blank_screen()
-{
-	if (video_type != VIDEO_TYPE_EGAC && video_type != VIDEO_TYPE_EGAM)
+void blank_screen() {
+	if (video_type != VIDEO_TYPE_EGAC && video_type != VIDEO_TYPE_EGAM) {
 		return;
+	}
 	/* blank here. I can't find out how to do it, though */
 }
 
 // 恢复黑屏的屏幕
 // 当用户按下任何按键时, 就恢复处于黑屏状态的屏幕显示内容.
-void unblank_screen()
-{
-	if (video_type != VIDEO_TYPE_EGAC && video_type != VIDEO_TYPE_EGAM)
+void unblank_screen() {
+	if (video_type != VIDEO_TYPE_EGAC && video_type != VIDEO_TYPE_EGAM) {
 		return;
+	}
 	/* unblank here */
 }
 
@@ -1393,8 +1356,7 @@ void unblank_screen()
 // 该函数仅用于内核显示函数 printk()(kernel/printk.c), 用于在当前前台控制台上显示内核信息.
 // 处理方法是循环取出缓冲区中的字符, 并根据字符的特性控制光标移动或直接显示在屏幕上.
 // 参数 b 是 null 结尾的字符串缓冲区指针. 
-void console_print(const char * b)
-{
+void console_print(const char * b) {
 	int currcons = fg_console;
 	char c;
 
@@ -1423,10 +1385,8 @@ void console_print(const char * b)
 		// 寄存器 al 中是需要显示的字符, 这里把属性字节放到 ah 中, 然后把 ax 内容存储到光标内存位置 pos 处, 即在光标处显示字符. 
 		__asm__("movb %2, %%ah\n\t"              				// 属性字节放到 ah 中. 
 			"movw %%ax, %1\n\t"              					// ax 内容放到 pos 处. 
-			::"a" (c),
-			"m" (*(short *)pos),
-			"m" (attr)
-			:);
+			: : "a" (c), "m" (*(short *)pos), "m" (attr)
+		);
 		pos += 2; 												// 显存中下一个字符地址
 		x++; 													// 列号自增
 	}
@@ -1434,7 +1394,7 @@ void console_print(const char * b)
 }
 
 
-void del_col(int i){
+void del_col(int i) {
 	int currcons = fg_console;
 	gotoxy(currcons, x - i, y);
 	csi_P(currcons, i);
