@@ -436,7 +436,7 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 		 * Sorta complicated, but hopefully it will work.  -TYT
 		 */
         /* 这部分处理对 “#!” 的解释, 有些复杂, 但希望能工作.  -TYT */
-		char buf[128], *cp, *interp, *i_name, *i_arg;
+		char buf[128], * cp, * interp, * i_name, * i_arg;
 		unsigned long old_fs;
 
 		// 从这里开始, 我们从脚本文件中提取解释程序名及其参数, 并把解释程序名, 
@@ -459,9 +459,10 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 		// 此时我们得到脚本解释程序的路径名(比如 '/bin/sh').
 		interp = i_name = cp; 							 	// 指向解释程序的路径名.
 		i_arg = 0;
-		for ( ; *cp && (*cp != ' ') && (*cp != '\t'); cp++) { // 循环结束后 cp 指向空格或制表符(如果有的话).
- 			if (*cp == '/')
+		for (; *cp && (*cp != ' ') && (*cp != '\t'); cp++) { // 循环结束后 cp 指向空格或制表符(如果有的话).
+ 			if (*cp == '/') {
 				i_name = cp + 1;							// 循环结束后 i_name 指向解释程序的文件名(非路径名). 
+			}
 		}
 		// 若解释程序文件名后还有字符, 则它们应该是解释程序的参数串, 令 i_arg 指向参数字符串. 
 		if (*cp) { 											// 如果 cp 此时没有指向结束符 '\0' 表示此时指向空格或制表符, 表示后面可能还有字符.
@@ -536,9 +537,8 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 	// 因此对于下列情况将不执行程序: 如果执行文件不是需求页可执行文件(ZMAGIC), 或者代码和数据重定位部分长度不等于 0, 
 	// 或者(代码段 + 数据段 + 堆)长度超过 50MB, 或者执行文件长度小于(代码段 + 数据段 + 符号表长度 + 执行头部分)长度的总和.
 	brelse(bh);
-	if (N_MAGIC(ex) != ZMAGIC || ex.a_trsize || ex.a_drsize ||
-			ex.a_text + ex.a_data + ex.a_bss > 0x3000000 ||
-			inode->i_size < ex.a_text + ex.a_data + ex.a_syms + N_TXTOFF(ex)) {	// N_TXTOFF(ex) == 1024.
+	if (N_MAGIC(ex) != ZMAGIC || ex.a_trsize || ex.a_drsize || ex.a_text + ex.a_data + ex.a_bss > 0x3000000 
+			|| inode->i_size < ex.a_text + ex.a_data + ex.a_syms + N_TXTOFF(ex)) {	// N_TXTOFF(ex) == 1024.
 		retval = -ENOEXEC;
 		goto exec_error2;
 	}
@@ -583,21 +583,25 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 
 	// 这里我们首先放回进程原执行程序的 i 节点, 并且让进程 executable 字段指向新的可执行文件的 inode.
 	// 然后复位原进程的所有信号处理句柄, 但对于 SIG_IGN 句柄无须复位.
-	if (current->executable) 					// 如果当前进程有可执行文件, 则将其释放.
+	if (current->executable) {					// 如果当前进程有可执行文件, 则将其释放.
 		iput(current->executable);
+	}
 	current->executable = inode; 				// 设置当前进程指向新的可执行文件的 inode.
 	current->signal = 0; 						// 对信号和信号处理函数进行初始化.
 	for (i = 0; i < 32; i++) {
 		current->sigaction[i].sa_mask = 0;
 		current->sigaction[i].sa_flags = 0;
 		// 清空 32(31) 种信号的处理函数.
-		if (current->sigaction[i].sa_handler != SIG_IGN)
+		if (current->sigaction[i].sa_handler != SIG_IGN) {
 			current->sigaction[i].sa_handler = NULL;
+		}
 	}
 	// 再根据设定的执行时关闭文件句柄(close_on_exec)位图标志, 关闭对应的文件并复位该标志.
-	for (i = 0; i < NR_OPEN; i++)
-		if ((current->close_on_exec >> i) & 1)
+	for (i = 0; i < NR_OPEN; i++) {
+		if ((current->close_on_exec >> i) & 1) {
 			sys_close(i);
+		}
+	}
 	current->close_on_exec = 0;
 	// ** 然后根据当前进程指定的基地址和限长, 释放原程序的代码段和数据段所对应的内存页表指定的物理内存页面及页表本身. 
 	// 释放完后新执行文件并没有占用 0-640KB 对应的物理页面, 因此在处理器真正运行新执行文件代码时(访问 0x0)就会引起缺页异常中断, 
@@ -605,8 +609,9 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 	free_page_tables(get_base(current->ldt[1]), get_limit(0x0f)); 		// 只释放原程序代码/数据段大小的页面. 
 	free_page_tables(get_base(current->ldt[2]), get_limit(0x17));		// (初次 execve 时一般是 640KB, 即复制的内核代码/数据段)
 	// 如果 "上次任务使用了协处理器" 指向的是当前进程, 则将其置空, 并复位使用了协处理器的标志.
-	if (last_task_used_math == current)
+	if (last_task_used_math == current) {
 		last_task_used_math = NULL;
+	}
 	current->used_math = 0;
 	// 然后我们根据要执行文件的头结构中的代码长度字段 a_text 的值修改局部表中描述符基址和段限长, 
 	// 并将 128KB 的参数和环境空间页面放置在数据段 64MB - 4MB - 128KB 处.
@@ -617,7 +622,7 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 	p -= LIBRARY_SIZE + (MAX_ARG_PAGES * PAGE_SIZE); 	// 此时 p 指向进程空间的 64MB - 4MB - 128KB + p, 即 p 指向 64MB 进程空间中的参数和环境空间.
 	// 然后调用内部函数 create_tables() 在栈空间中创建环境和参数变量指针表, 供程序的 main() 函数作为参数使用, 并返回该栈指针.
 	// 执行下面代码后: | 空闲 (p->)| argc | 参数指针的指针 | 变量指针的指针 | 参数指针 | 变量指针 | 参数 | 环境变量 | 动态库文件代码空间(4MB) |
-	p = (unsigned long) create_tables((char *)p, argc, envc); 	// 此时 p 指向栈顶(栈顶是压入的参数个数 argc).
+	p = (unsigned long)create_tables((char *)p, argc, envc); 	// 此时 p 指向栈顶(栈顶是压入的参数个数 argc).
 	// 根据可执行文件(头)的信息, 更新当前进程的各个属性信息.
 	// 进程代码结束字段 end_code == 可执行文件的代码段长度 a_text; 
 	// 数据结束字段 end_data == 可执行文件的代码段长度 + 数据段长度(a_data + a_text); 
@@ -639,7 +644,8 @@ restart_interp:											// 脚本文件处理完后, 使用这个标号重启�
 exec_error2:
 	iput(inode);									// 放回 i 节点.
 exec_error1:
-	for (i = 0; i < MAX_ARG_PAGES; i++)
+	for (i = 0; i < MAX_ARG_PAGES; i++) {
 		free_page(page[i]);							// 释放存放参数和环境串的内存页面.
+	}
 	return(retval);									// 返回出错码.
 }

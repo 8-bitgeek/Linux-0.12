@@ -18,8 +18,7 @@ extern int sys_close(int fd);
 // 复制文件句柄(文件描述符).
 // 参数: fd - 要复制的文件句柄, arg - 指定新文件句柄的最小数值.
 // 返回新文件句柄或出错码.
-static int dupfd(unsigned int fd, unsigned int arg)
-{
+static int dupfd(unsigned int fd, unsigned int arg) {
 	// 首先检查函数参数的有效性. 
 	// 如果文件句柄值大于一个程序最多打开文件数 NR_OPEN, 或者要复制的句柄文件结构不存在, 则返回出错码并退出. 
 	// 如果指定的新句柄值 arg 大于最多打开文件数, 也返回出错码并退出. 
@@ -49,8 +48,7 @@ static int dupfd(unsigned int fd, unsigned int arg)
 // 复制指定文件句柄 oldfd, 新文件句柄值等于 newfd. 如果 newfd 已打开, 则首先关闭之.
 // 参数: oldfd -- 原文件句柄; newfd - 新文件句柄.
 // 返回新文件句柄值.
-int sys_dup2(unsigned int oldfd, unsigned int newfd)
-{
+int sys_dup2(unsigned int oldfd, unsigned int newfd) {
 	sys_close(newfd);               						// 若句柄 newfd 已经打开, 则首先关闭之.
 	return dupfd(oldfd, newfd);      						// 复制并返回新句柄.
 }
@@ -59,8 +57,7 @@ int sys_dup2(unsigned int oldfd, unsigned int newfd)
 // 复制指定文件句柄 fildes, 新句柄的值是当前最小的空闲句柄值.
 // 参数: fildes -- 被复制的文件句柄.
 // 返回新文件句柄值.
-int sys_dup(unsigned int fildes)
-{
+int sys_dup(unsigned int fildes) {
 	return dupfd(fildes, 0);
 }
 
@@ -72,24 +69,25 @@ int sys_dup(unsigned int fildes)
 // 但本内核中没有实现文件上锁功能.
 // 返回: 若出错, 则所有操作都返回 -1. 若成功，那么 F_DUPFD 返回新文件句柄; 
 // F_GETFD 返回文件句柄的当前执行时关闭标志 close_on_exec; F_GETFL 返回文件操作和访问标志.
-int sys_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg)
-{
+int sys_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg) {
 	struct file * filp;
 
 	// 首先检查给出的文件句柄有效性. 然后根据不同命令 cmd 进行分别处理. 
 	// 如果文件句柄值大于一个进程最多打开文件数 NR_OPEN, 或者该句柄的文件结构指针为空, 则返回出错码并退出.
-	if (fd >= NR_OPEN || !(filp = current->filp[fd]))
+	if (fd >= NR_OPEN || !(filp = current->filp[fd])) {
 		return -EBADF;
+	}
 	switch (cmd) {
 		case F_DUPFD:   										// 复制文件句柄.
 			return dupfd(fd,arg);
 		case F_GETFD:   										// 取文件句柄的执行时关闭标志.
 			return (current->close_on_exec >> fd) & 1;
 		case F_SETFD:   										// 设置执行时关闭标志. arg 位 0 置位是设置, 否则关闭.
-			if (arg & 1)
+			if (arg & 1) {
 				current->close_on_exec |= (1 << fd);
-			else
+			} else {
 				current->close_on_exec &= ~(1 << fd);
+			}
 			return 0;
 		case F_GETFL:   										// 取文件状态标志和访问模式.
 			return filp->f_flags;
@@ -97,7 +95,9 @@ int sys_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg)
 			filp->f_flags &= ~(O_APPEND | O_NONBLOCK);
 			filp->f_flags |= arg & (O_APPEND | O_NONBLOCK);
 			return 0;
-		case F_GETLK:	case F_SETLK:	case F_SETLKW:  		// 未实现.
+		case F_GETLK:	
+		case F_SETLK:	
+		case F_SETLKW:  		// 未实现.
 			return -1;
 		default:
 			return -1;
