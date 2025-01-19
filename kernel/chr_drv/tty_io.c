@@ -631,7 +631,7 @@ void tty_init(void) {
 	rs_queues[4] = (struct tty_queue) {0x2f8, 0, 0, 0, ""};
 	// 初步设置所有终端的 tty 结构体
 	for (i = 0; i < 256; i++) {
-		tty_table[i] =  (struct tty_struct) {
+		tty_table[i] = (struct tty_struct) {
 		 	{0, 0, 0, 0, 0, INIT_C_CC}, 					// termios: 终端 io 属性和控制字符数据结构
 			0, 0, 0, 										// pgrp(所属进程组), session(会话号), stopped(结束标志), 
 			NULL, NULL, NULL, NULL  						// *write(写函数), read_q(读缓冲队列), write_q(写缓冲队列), secondary(辅助缓冲队列)

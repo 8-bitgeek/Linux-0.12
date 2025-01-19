@@ -37,8 +37,7 @@ long last_pid = 0;							// 最新进程号, 其值会由 get_empty_process() �
 // 由于检测判断是以页面为单位进行操作, 因此程序首先需要找出 addr 所在页面开始地址 start, 然后 start 加上进程数据段基址,
 // 使这个 start 变换成 CPU 4GB 线性空间中的地址. 最后循环调用 write_verify() 对指定大小的内存空间进行写前验证. 
 // 若页面是只读的, 则执行共享检验和复制页面操作(写时复制).
-void verify_area(void * addr, int size)
-{
+void verify_area(void * addr, int size) {
 	unsigned long start;
 
 	// 首先将起始地址 start 调整为其所在页的左边界开始位置, 同时相应地调整验证区域大小. 
@@ -77,10 +76,12 @@ int copy_mem(int nr, struct task_struct * p)
 	data_limit = get_limit(0x17); 							// 父进程(当前进程)的数据段长度: 0x17 = 0b-00010-1-11 (LDT 表项 2, 局部数据段, 特权级 3)
 	old_code_base = get_base(current->ldt[1]); 				// 这里的 ldt 是 task_struct 结构中的 ldt 字段, 即当前任务的局部描述符表
 	old_data_base = get_base(current->ldt[2]); 				// 获取当前进程(父进程)的代码段和数据段基地址.
-	if (old_data_base != old_code_base)
+	if (old_data_base != old_code_base) {
 		panic("We don't support separate I&D");
-	if (data_limit < code_limit)
+	}
+	if (data_limit < code_limit) {
 		panic("Bad data_limit");
+	}
 	// 然后设置新进程在线性地址空间中的基地址等于(64MB * 其任务号[nr]), 并用该值设置新进程局部描述符表(LDT)中代码段和数据段描述符中的基地址. 
 	// 接着设置新进程的页目录表项和页表项, 即复制当前进程(父进程)的页目录表项和页表项. 此时子进程共享父进程的内存页面.
 	// 正常情况下 copy_page_tables() 返回 0, 否则表示出错, 则释放刚申请的页表项.
@@ -125,8 +126,8 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 		long none, 														// system_call 中的 `call *%ebx` 指令入栈了该数据(下一行代码 `pushl %eax` 的地址).
 		long ebx, long ecx, long edx, long orig_eax, 					// system_call 中入栈的数据
 		long fs, long es, long ds, 										// system_call 压入的段寄存器及通用寄存器
-		long eip, long cs, long eflags, long esp, long ss) 				// 用户态任务调用 int 0x80 中断时, cpu 自动压入栈中的用户态下的 ss, esp, eflags, cs, eip
-{
+		long eip, long cs, long eflags, long esp, long ss) {			// 用户态任务调用 int 0x80 中断时, cpu 自动压入栈中的用户态下的 ss, esp, eflags, cs, eip
+
 	struct task_struct * p;
 	int i;
 	struct file * f;
@@ -135,10 +136,10 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	// 然后将新任务结构指针放入任务数组的 nr 项中. 
 	// 其中 nr 为任务号, 由前面 find_empty_process() 返回. 
 	// 接着把当前进程任务结构复制到刚申请到的物理内存页面 p 开始处(p 指向新申请的空闲物理页面地址).
-	p = (struct task_struct *) get_free_page(); 	// 获取空闲的页面的物理起始地址(mem_map[i] 中标记为未使用项所对应页面的物理地址).
-	if (!p) 										// 如果申请到的空闲页面的物理地址为 0x0, 则表示申请失败, 返回出错码.
-		return -EAGAIN;
-	task[nr] = p; 							// 任务项指向刚申请的进程物理内存地址; task_struct * task[NR_TASKS] 定义在 kernel/sched.c 中.
+	p = (struct task_struct *)get_free_page(); 		// 获取空闲的页面的物理起始地址(mem_map[i] 中标记为未使用项所对应页面的物理地址).
+	if (!p) return -EAGAIN; 						// 如果申请到的空闲页面的物理地址为 0x0, 则表示申请失败, 返回出错码.
+		
+	task[nr] = p; 									// 任务项指向刚申请的进程物理内存地址; task_struct * task[NR_TASKS] 定义在 kernel/sched.c 中.
 	// 复制当前任务(也是新进程的父进程)体信息, 作为新进程的初始信息
 	*p = *current;	/* NOTE! this doesn't copy the supervisor stack */	/* 注意! 这样不会复制超级用户堆栈(只复制当前进程的属性信息) */
 	// 随后对复制来的进程结构内容进行一些修改, 作为新进程的任务结构. 
@@ -187,8 +188,9 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	// 因此, 如果任务切换发生在一个 ESC 指令开始执行之后, 则协处理器中的内容就可能需要在执行新的 ESC 指令之前保存起来. 
 	// 捕获处理句柄会保存协处理器的内容并复位 TS 标志. 
 	// 指令 fnsave 用于把协处理器的所有状态保存到目的操作数指定的内存区域中(tss.i387).
-	if (last_task_used_math == current)
+	if (last_task_used_math == current) {
 		__asm__("clts; fnsave %0; frstor %0" : : "m" (p->tss.i387));
+	}
 
 	// 设置新任务 LDT 代码段和数据段描述符中的段基地址(未设置段限长, 段限长在 do_execve 时设置), 并复制页表. 
 	// 如果出错(返回值不是 0), 则复位任务数组中相应项并释放为该新任务分配的用于任务结构的内存页.
@@ -199,17 +201,23 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	}
 	// 如果父进程中有文件是打开的, 则将对应文件的打开次数增 1. 因为这里创建的子进程会与父进程共享这些打开的文件. 
 	// 将当前进程(父进程)的 pwd, root, executable, library 引用次数均增 1. 与上面同样的道理, 子进程也引用了这些 i 节点.
-	for (i = 0; i < NR_OPEN; i++)
-		if (f = p->filp[i])
+	for (i = 0; i < NR_OPEN; i++) {
+		if (f = p->filp[i]) {
 			f->f_count++;
-	if (current->pwd)
+		}
+	}
+	if (current->pwd) {
 		current->pwd->i_count++;
-	if (current->root)
+	}
+	if (current->root) {
 		current->root->i_count++;
-	if (current->executable) 				// 进程对应的可执行文件的 inode 指针
+	}
+	if (current->executable) {				// 进程对应的可执行文件的 inode 指针
 		current->executable->i_count++;
-	if (current->library)
+	}
+	if (current->library) {
 		current->library->i_count++;
+	}
 	// 随后在 GDT 表中设置新任务 TSS 段和 LDT 段描述符项. 这两个段的限长均被设置成 104 字节.
 	// 参见 include/asm/system.h. 然后设置进程之间的关系链表指针, 即把新进程插入到当前进程的子进程链表中. 
 	// 把新进程的父进程设置为当前进程, 把新进程的最新子进程指针 p_cpt 和年轻兄弟进程指针 p_ysptr 置空. 
@@ -226,8 +234,9 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	p->p_cptr = 0;						// 复位新进程的最新子进程指针.
 	p->p_ysptr = 0;						// 复位新进程的比邻年轻兄弟进程指针.
 	p->p_osptr = current->p_cptr;		// 设置新进程的比邻老兄兄弟进程指针.
-	if (p->p_osptr)						// 若新进程有老兄兄弟进程, 则让其年轻进程兄弟指针指向新进程
+	if (p->p_osptr)	{					// 若新进程有老兄兄弟进程, 则让其年轻进程兄弟指针指向新进程
 		p->p_osptr->p_ysptr = p;
+	}
 	current->p_cptr = p;				// 让当前进程最新子进程指针指向新进程.
 	p->state = TASK_RUNNING;			/* do this last, just in case */  /* 设置进程状态为待运行状态 */
 	// Log(LOG_INFO_TYPE, "<<<<< fork new process current_pid = %d, child_pid = %d, nr = %d >>>>>\n", current->pid, p->pid, nr);
@@ -238,8 +247,7 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 // 函数返回在任务数组中的任务号(数组项). 注意: last_pid != 任务号.
 // last_pid 是进程号, 全局变量，每次调用该函数都**记录**一个未被占用的进程号(last_pid), 
 // 并返回一个空闲的任务项号(task[i] 中的 i).
-int find_empty_process(void)
-{
+int find_empty_process(void) {
 	int i;
 
 	// 首先获取新的进程号. 如果 last_pid 增加 1 后超出进程号的正数表示范围, 则重新从 1 开始使用 pid 号. 
@@ -248,16 +256,20 @@ int find_empty_process(void)
 	// 如果找到一个没被占用的 pid 号, 则接着在任务数组中为新任务寻找一个空闲项, 并返回项号. 
 	// last_pid 是一个全局变量, 不用作为返回值返回. 如果此时任务数组中 64 个项已经被全部占用, 则返回出错码.
 	repeat:
-		if ((++last_pid) < 0) last_pid = 1;
-		for(i = 0; i < NR_TASKS; i++) {
+		if ((++last_pid) < 0) {
+			last_pid = 1;
+		}
+		for (i = 0; i < NR_TASKS; i++) {
 			// 如果当前测试的 pid(last_pid) 已经被占用, 则重新生成一个 last_pid.
-			if (task[i] && ((task[i]->pid == last_pid) || (task[i]->pgrp == last_pid))) 
+			if (task[i] && ((task[i]->pid == last_pid) || (task[i]->pgrp == last_pid)))  {
 				goto repeat; 			// 重新生成一个 last_pid.
+			}
 		}
 	// 如果找到一个未被占用的进程号, 则查找任务数组中的空闲项. 
-	for(i = 1; i < NR_TASKS; i++) {
-		if (!task[i]) 					// 如果找到一个空闲的任务项.
+	for (i = 1; i < NR_TASKS; i++) {
+		if (!task[i]) {					// 如果找到一个空闲的任务项.
 			return i; 					// 返回空闲的任务项号.
+		}
 	}
 	// 如果没有找到空闲项, 则返回出错码.
 	return -EAGAIN;
