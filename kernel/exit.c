@@ -24,13 +24,11 @@ extern int sys_close();         				// 6 - 关闭文件
 // 扫描任务指针数组表 task[] 以寻找指定的任务. 
 // 如果找到, 则首先清空该任务槽, 然后释放该任务数据结构所占用的内在页面, 最后执行调度函数并返回立即退出. 
 // 如果在任务数组表中没有找到指定任务对应的项, 则内核 panic. 
-void release(struct task_struct * p)
-{
+void release(struct task_struct * p) {
 	int i;
 
 	// 如果给定的任务结构指针为 NULL 则退出. 如果该指针指向当前进程则显示警告信息退出. 
-	if (!p)
-		return;
+	if (!p) return;
 	if (p == current) {
 		printk("task releasing itself\n\r");
 		return;
@@ -39,7 +37,7 @@ void release(struct task_struct * p)
 	// 如果找到, 则置空任务指针数组中对应项, 并且更新任务结构之间的关联指针, 释放任务 p 数据结构占用的内在页面. 
 	// 最后在执行调度程序返回后退出. 如果没有找到指定的任务 p, 则说明内核代码出错了, 则显示出错信息并死机. 
 	// 更新链接部分的代码会把指定任务 p 从双向链表中删除. 
-	for (i = 1; i < NR_TASKS; i++)
+	for (i = 1; i < NR_TASKS; i++) {
 		if (task[i] == p) {
 			task[i] = NULL;
 			/* Update links */      /* 更新链接 */
@@ -64,6 +62,7 @@ void release(struct task_struct * p)
 			schedule();
 			return;
 		}
+	}
 	panic("trying to release non-existent task");
 }
 
@@ -77,15 +76,14 @@ void release(struct task_struct * p)
  * 检查 task[] 数组中是否存在一个指定的 task_struct 结构指针 p. 
  */
 // 检测任务结构指针 p. 
-int bad_task_ptr(struct task_struct * p)
-{
+int bad_task_ptr(struct task_struct * p) {
 	int i;
 
-	if (!p)
-		return 0;
+	if (!p) return 0;
 	for (i = 0; i < NR_TASKS; i++) {
-		if (task[i] == p)
+		if (task[i] == p) {
 			return 0;
+		}
 	}
 	return 1;
 }
@@ -106,59 +104,71 @@ int bad_task_ptr(struct task_struct * p)
  * 并检查了链表与指针 p_cptr 和 p_pptr 构成的进程树之间的关系. 
  */
 // 检查进程树. 
-void audit_ptree()
-{
+void audit_ptree() {
 	int	i;
 
 	// 扫描系统中的除任务 0 以外的所有任务, 检查它们中 4 个指针(pptr, cptr, ysptr 和 osptr)的正确性. 
 	// 若任务数组槽(项)为空则跳过. 
 	for (i = 1; i < NR_TASKS; i++) {
-		if (!task[i])
-			continue;
+		if (!task[i]) continue;
 		// 如果任务的父进程指针 p_pptr 没的指向任何进程(即在任务数组中存在), 
 		// 则显示警告信息 "警告, pid 号 N 的父进程链接有问题". 
 		// 以下语句对 cptr, ysptr 和 osptr 进行类似操作. 
-		if (bad_task_ptr(task[i]->p_pptr))
+		if (bad_task_ptr(task[i]->p_pptr)) {
 			printk("Warning, pid %d's parent link is bad\n", task[i]->pid);
-		if (bad_task_ptr(task[i]->p_cptr))
+		}
+		if (bad_task_ptr(task[i]->p_cptr)) {
 			printk("Warning, pid %d's child link is bad\n", task[i]->pid);
-		if (bad_task_ptr(task[i]->p_ysptr))
+		}
+		if (bad_task_ptr(task[i]->p_ysptr)) {
 			printk("Warning, pid %d's ys link is bad\n", task[i]->pid);
-		if (bad_task_ptr(task[i]->p_osptr))
+		}
+		if (bad_task_ptr(task[i]->p_osptr)) {
 			printk("Warning, pid %d's os link is bad\n", task[i]->pid);
+		}
 		// 如果任务的父进程指针 p_pptr 指向了自己, 则显示警告信息 "警告, pid 号 N 的父进程链接指针指向了自己". 
 		// 以下语句对 cptr, ysptr 和 osptr 进行类似操作. 
-		if (task[i]->p_pptr == task[i])
+		if (task[i]->p_pptr == task[i]) {
 			printk("Warning, pid %d parent link points to self\n");
-		if (task[i]->p_cptr == task[i])
+		}
+		if (task[i]->p_cptr == task[i]) {
 			printk("Warning, pid %d child link points to self\n");
-		if (task[i]->p_ysptr == task[i])
+		}
+		if (task[i]->p_ysptr == task[i]) {
 			printk("Warning, pid %d ys link points to self\n");
-		if (task[i]->p_osptr == task[i])
+		}
+		if (task[i]->p_osptr == task[i]) {
 			printk("Warning, pid %d os link points to self\n");
+		}
 		// 如果任务有比自己先创建的比邻兄弟进程, 那么就检查它们是否有共同的父进程, 
 		// 并检查这个老兄弟进程的 ysptr 指针是否正确地指向本进程. 否则显示警告信息. 
 		if (task[i]->p_osptr) {
-			if (task[i]->p_pptr != task[i]->p_osptr->p_pptr)
+			if (task[i]->p_pptr != task[i]->p_osptr->p_pptr) {
 				printk("Warning, pid %d older sibling %d parent is %d\n", task[i]->pid, task[i]->p_osptr->pid, task[i]->p_osptr->p_pptr->pid);
-			if (task[i]->p_osptr->p_ysptr != task[i])
+			}
+			if (task[i]->p_osptr->p_ysptr != task[i]) {
 				printk("Warning, pid %d older sibling %d has mismatched ys link\n", task[i]->pid, task[i]->p_osptr->pid);
+			}
 		}
 		// 如果任务有比自己后创建的比邻兄弟进程, 那么就检查它们是否有共同的父进程, 
 		// 并检查这个小弟进程的 osptr 指针是否正确地指向本进程, 否则显示警告信息. 
 		if (task[i]->p_ysptr) {
-			if (task[i]->p_pptr != task[i]->p_ysptr->p_pptr)
+			if (task[i]->p_pptr != task[i]->p_ysptr->p_pptr) {
 				printk("Warning, pid %d younger sibling %d parent is %d\n", task[i]->pid, task[i]->p_osptr->pid, task[i]->p_osptr->p_pptr->pid);
-			if (task[i]->p_ysptr->p_osptr != task[i])
+			}
+			if (task[i]->p_ysptr->p_osptr != task[i]) {
 				printk("Warning, pid %d younger sibling %d has mismatched os link\n", task[i]->pid, task[i]->p_ysptr->pid);
+			}
 		}
 		// 如果任务的最新子进程指针 cptr 不空, 那么检查该子进程的父进程是否为本进程, 
 		// 并检查该子进程的小弟进程指针 yspter 是否为空. 若不是, 则显示警告信息. 
 		if (task[i]->p_cptr) {
-			if (task[i]->p_cptr->p_pptr != task[i])
+			if (task[i]->p_cptr->p_pptr != task[i]) {
 				printk("Warning, pid %d youngest child %d has mismatched parent link\n", task[i]->pid, task[i]->p_cptr->pid);
-			if (task[i]->p_cptr->p_ysptr)
+			}
+			if (task[i]->p_cptr->p_ysptr) {
 				printk("Warning, pid %d youngest child %d has non-NULL ys link\n", task[i]->pid, task[i]->p_cptr->pid);
+			}
 		}
 	}
 }
@@ -168,32 +178,34 @@ void audit_ptree()
 // 参数: sig - 信号值; p - 指定任务的指针; 
 // 		priv - 强制发送信号的标志. 
 // 即不需要考虑进程用户属性或级别而能发送信号 sig 并退出, 否则返回未许可错误号. 
-static inline int send_sig(long sig, struct task_struct * p, int priv)
-{
+static inline int send_sig(long sig, struct task_struct * p, int priv) {
 	// 如果没有权限, 并且当前进程的有效用户 ID 与进程 p 的不同, 并且也不是超级用户, 则说明没有向 p 发送信号的权限. 
 	// suser() 定义为(current->euid == 0), 用于判断是否为超级用户. 
-	if (!p)
-		return -EINVAL;
-	if (!priv && (current->euid != p->euid) && !suser())
+	if (!p) return -EINVAL;
+	if (!priv && (current->euid != p->euid) && !suser()) {
 		return -EPERM;
+	}
 	// 若需要发送的信号是 SIGKILL 或 SIGCONT, 那么如果此时接收信号的进程 p 正处于停止状态就置其为就绪(运行)状态. 
 	// 然后修改进程 p 的信号位图 signal, 去掉(复位)会导致进程停止的信号 SIGSTOP, SIGTSTP, SIGTTIN, SIGTTOU. 
 	if ((sig == SIGKILL) || (sig == SIGCONT)) {
-		if (p->state == TASK_STOPPED)
+		if (p->state == TASK_STOPPED) {
 			p->state = TASK_RUNNING;
+		}
 		p->exit_code = 0;
 		p->signal &= ~((1 << (SIGSTOP - 1)) | (1 << (SIGTSTP - 1)) | (1 << (SIGTTIN - 1)) | (1 << (SIGTTOU - 1)));
 	}
 	/* If the signal will be ignored, don't even post it */
     /* 如果要发送的信号 sig 将被进程 p 忽略掉, 那么就根本不用发送. */
-	if ((int)p->sigaction[sig - 1].sa_handler == 1)
+	if ((int)p->sigaction[sig - 1].sa_handler == 1) {
 		return 0;
+	}
 	/* Depends on order SIGSTOP, SIGTSTP, SIGTTIN, SIGTTOU */
    	/* 以下判断依赖于 SIGSTOP, SIGTSTP, SIGTTIN, SIGTTOU */
 	// 如果信号是 SIGSTOP, SIGTSTP, SIGTTIN, SIGTTOU 之一, 那么说明要让接收信号的进程 p 停止运行. 
 	// 因此(若 p 的信号位图中有 SIGCONT 置位)就需要复位位图中继续运行的信号. 
-	if ((sig >= SIGSTOP) && (sig <= SIGTTOU))
+	if ((sig >= SIGSTOP) && (sig <= SIGTTOU)) {
 		p->signal &= ~(1 << (SIGCONT - 1));
+	}
 	/* Actually deliver the signal */
     /* 最后, 我们向进程 p 发送信号 p. */
 	p->signal |= (1 << (sig - 1));
@@ -203,13 +215,13 @@ static inline int send_sig(long sig, struct task_struct * p, int priv)
 // 根据进程组号 pgrp 取得进程组所属的会话号. 
 // 扫描任务数组, 寻找进程组号为 pgrp 的进程, 并返回其会话号. 
 // 如果没有找到指定的进程组号 pgrp 的任何进程, 则返回 -1.
-int session_of_pgrp(int pgrp)
-{
+int session_of_pgrp(int pgrp) {
 	struct task_struct ** p;
 
  	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
-		if ((*p)->pgrp == pgrp)
-			return((*p)->session);
+		if ((*p)->pgrp == pgrp) {
+			return ((*p)->session);
+		}
 	}
 	return -1;
 }
@@ -220,8 +232,7 @@ int session_of_pgrp(int pgrp)
 // 只要向一个进程发送成功最后就会返回 0; 
 // 否则如果没有找到指定进程组号 pgrp 的任何一个进程, 则返回出错号 -ESRCH; 
 // 若找到进程组号是 pgrp 的进程, 但是发送信号失败, 则返回发送失败的错误码. 
-int kill_pg(int pgrp, int sig, int priv)
-{
+int kill_pg(int pgrp, int sig, int priv) {
 	struct task_struct ** p;
 	int err, retval = -ESRCH;                // -ESRCH 表示指定的进程不存在. 
 	int found = 0;
@@ -229,15 +240,18 @@ int kill_pg(int pgrp, int sig, int priv)
 	// 首先判断给定的信号和进程组号是否有效. 然后扫描系统中所有任务. 
 	// 若扫描到进程组号为 pgrp 的进程, 就向其发送信号 sig. 
 	// 只要有一次信号发送成功, 函数最后就会返回 0. 
-	if (sig < 1 || sig > 32 || pgrp <= 0)
+	if (sig < 1 || sig > 32 || pgrp <= 0) {
 		return -EINVAL;
- 	for (p = &LAST_TASK; p > &FIRST_TASK; --p)
+	}
+ 	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
 		if ((*p)->pgrp == pgrp) {
-			if (sig && (err = send_sig(sig, *p, priv)))
+			if (sig && (err = send_sig(sig, *p, priv))) {
 				retval = err;
-			else
+			} else {
 				found++;
+			}
 		}
+	}
 	return(found ? 0 : retval);
 }
 
@@ -246,15 +260,16 @@ int kill_pg(int pgrp, int sig, int priv)
 // 即向进程号为 pid 的进程发送指定信号 sig. 
 // 若找到指定 pid 的进程, 那么若信号发送成功, 则返回 0; 否则返回信号发送出错. 
 // 如果没有找到指定进程号 pid 的进程, 则返回出错号 -ESRCH(指定进程不存在). 
-int kill_proc(int pid, int sig, int priv)
-{
+int kill_proc(int pid, int sig, int priv) {
  	struct task_struct ** p;
 
-	if (sig < 1 || sig > 32)
+	if (sig < 1 || sig > 32) {
 		return -EINVAL;
+	}
 	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
-		if ((*p)->pid == pid)
+		if ((*p)->pid == pid) {
 			return(sig ? send_sig(sig, *p, priv) : 0);
+		}
 	}
 	return(-ESRCH);
 }
@@ -275,22 +290,24 @@ int kill_proc(int pid, int sig, int priv)
 // 如果信号 sig 为 0, 则不发送信号, 但仍会进行错误检查. 如果成功则返回 0.
 // 该函数扫描任务数组表, 并根据 pid 对满足条件的进程发送指定信号 sig. 
 // 若 pid 等于 0, 表明当前进程是进程组组长, 因此需要向所有组内的进程强制发送信号 sig. 
-int sys_kill(int pid, int sig)
-{
+int sys_kill(int pid, int sig) {
 	struct task_struct ** p = NR_TASKS + task;      	// p 指向任务数组最后一项. 
 	int err, retval = 0;
 
-	if (!pid)
+	if (!pid) {
 		return(kill_pg(current->pid, sig, 0));
+	}
 	if (pid == -1) {
 		while (--p > &FIRST_TASK) {
-			if (err = send_sig(sig, *p, 0))
+			if (err = send_sig(sig, *p, 0)) {
 				retval = err;
+			}
 		}
 		return(retval);
 	}
-	if (pid < 0)
+	if (pid < 0) {
 		return(kill_pg(-pid, sig, 0));
+	}
 	/* Normal kill */
 	return(kill_proc(pid, sig, 0));
 }
@@ -328,30 +345,32 @@ int sys_kill(int pid, int sig)
 // 否则说明该进程是指定组的成员并且其父进程不是 init 进程. 
 // 此时如果该进程父进程的组号不等于指定的组号 pgrp, 但父进程的会话号等于进程的会话号, 则说明它们同属于一个会话. 
 // 因此指定的 pgrp 进程组肯定不是孤儿进程组. 否则......
-int is_orphaned_pgrp(int pgrp)
-{
+int is_orphaned_pgrp(int pgrp) {
 	struct task_struct **p;
 
 	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
-		if (!(*p) || ((*p)->pgrp != pgrp) || ((*p)->state == TASK_ZOMBIE) || ((*p)->p_pptr->pid == 1))
+		if (!(*p) || ((*p)->pgrp != pgrp) || ((*p)->state == TASK_ZOMBIE) || ((*p)->p_pptr->pid == 1)) {
 			continue;
-		if (((*p)->p_pptr->pgrp != pgrp) && ((*p)->p_pptr->session == (*p)->session))
+		}
+		if (((*p)->p_pptr->pgrp != pgrp) && ((*p)->p_pptr->session == (*p)->session)) {
 			return 0;
+		}
 	}
 	return(1);	/* (sighing) "Often!" */        /* (唉)是孤儿进程组! */
 }
 
 // 判断进程组中是否含有处于停止状态的作业(进程组). 有则返回 1; 无则返回 0.
 // 查找方法是扫描整个任务数组. 检查属于指定组 pgrp 的任何进程是否处于停止状态. 
-static int has_stopped_jobs(int pgrp)
-{
+static int has_stopped_jobs(int pgrp) {
 	struct task_struct ** p;
 
 	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
-		if ((*p)->pgrp != pgrp)
+		if ((*p)->pgrp != pgrp) {
 			continue;
-		if ((*p)->state == TASK_STOPPED)
+		}
+		if ((*p)->state == TASK_STOPPED) {
 			return(1);
+		}
 	}
 	return(0);
 }
@@ -359,8 +378,7 @@ static int has_stopped_jobs(int pgrp)
 // 程序退出处理函数. 
 // 该函数将根据进程自身的特性对其进行处理, 并把当前进程状态设置成僵死状态 TASK_ZOMBIE, 
 // 最后调用调度函数 schedule() 去执行其他进程, 不再返回. 
-void do_exit(long code)
-{
+void do_exit(long code) {
 	struct task_struct * p;
 	int i;
 
@@ -378,8 +396,9 @@ void do_exit(long code)
 	// 再对当前进程的工作目录 pwd, 根目录 root, 执行程序文件的 i 节点以及库文件进行同步操作, 
 	// 放回各个 i 节点并分别置空(释放). 接着把当前进程的状态设置为僵死状态(TASK_ZOMBIE), 并设置进程退出码. 
 	for (i = 0; i < NR_OPEN; i++) {
-		if (current->filp[i])
+		if (current->filp[i]) {
 			sys_close(i);
+		}
 	}
 	iput(current->pwd);
 	current->pwd = NULL;
@@ -441,8 +460,9 @@ void do_exit(long code)
 	if (p = current->p_cptr) {
 		while (1) {
 			p->p_pptr = task[1];
-			if (p->state == TASK_ZOMBIE)
+			if (p->state == TASK_ZOMBIE) {
 				task[1]->signal |= (1 << (SIGCHLD - 1));
+			}
 			/*
 			 * process group orphan check
 			 * Case ii: Our child is in a different pgrp
@@ -494,20 +514,24 @@ void do_exit(long code)
 
 		if (current->tty >= 0) {
 			tty = TTY_TABLE(current->tty);
-			if (tty->pgrp>0)
+			if (tty->pgrp>0) {
 				kill_pg(tty->pgrp, SIGHUP, 1);
+			}
 			tty->pgrp = 0;
 			tty->session = 0;
 		}
-	 	for (p = &LAST_TASK; p > &FIRST_TASK; --p)
-			if ((*p)->session == current->session)
+	 	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
+			if ((*p)->session == current->session) {
 				(*p)->tty = -1;
+			}
+		}
 	}
 	// 如果当前进程上次使用过协处理器, 则把记录此信息的指针置空. 
 	// 若定义了调试进程树符号, 则调用进程树检测显示函数. 
 	// 最后调用调度函数, 重新调度进程运行, 以让父进程能够处理僵死进程的其他善后事宜. 
-	if (last_task_used_math == current)
+	if (last_task_used_math == current) {
 		last_task_used_math = NULL;
+	}
 #ifdef DEBUG_PROC_TREE
 	audit_ptree();
 #endif
@@ -520,8 +544,7 @@ void do_exit(long code)
 // 低字节中将用来保存 wait() 的状态信息. 
 // 例如, 如果进程处于暂停状态(TASK_STOPPED), 那么其低字节就等于 0x7f. 参见 sys/wait.h 文件. 
 // wait() 或 waitpid() 利用这些宏就可以取得子进程的退出状态码或子进程终止的原因(信号). 
-int sys_exit(int error_code)
-{
+int sys_exit(int error_code) {
 	do_exit((error_code & 0xff) << 8);
 }
 
@@ -536,8 +559,7 @@ int sys_exit(int error_code)
 // 若 options = WNOHANG, 表示如果没有子进程退出或终止就马上返回. 
 // 如果返回状态指针 stat_addr 不为空, 则就将状态信息保存到那里. 
 // 参数 pid 是进程号; *stat_addr 是保存状态信息位置的指针; options 是 waitpid 选项. 
-int sys_waitpid(pid_t pid, unsigned long * stat_addr, int options)
-{
+int sys_waitpid(pid_t pid, unsigned long * stat_addr, int options) {
 	int flag;               				// 该标志用于后面所选出的子进程处于就绪或睡眠态. 
 	struct task_struct * p;
 	unsigned long oldblocked;
@@ -551,17 +573,20 @@ repeat:
 		// 如果等待的子进程号 pid > 0, 但与被扫描子进程 p 的 pid 不相等, 
 		// 说明它是当前进程另外的子进程, 于是跳过该进程, 接着扫描下一个子进程. 
 		if (pid > 0) {
-			if (p->pid != pid) 						// 如果指定了一个正常的 pid, 则要获取对应的子进程.
+			if (p->pid != pid) {					// 如果指定了一个正常的 pid, 则要获取对应的子进程.
 				continue;
+			}
 		// 如果指定等待的 pid = 0, 表示等待同一个进程组的所有子进程. 如果此时被扫描进程 p 的不是同一个进程组, 则跳过. 
 		} else if (!pid) {
-			if (p->pgrp != current->pgrp) 			// 如果 pid = 0, 则要获取同一个进程组的子进程.
+			if (p->pgrp != current->pgrp) { 		// 如果 pid = 0, 则要获取同一个进程组的子进程.
 				continue;
+			}
 		// 否则, 如果指定的 pid < -1, 表示正在等待进程组号等于 pid 绝对值的任何子进程. 
 		// 如果此时被扫描进程 p 的组号与 pid 的绝对值不等, 则跳过. 
 		} else if (pid < -1) {
-			if (p->pgrp != -pid) 					// 如果 pid < -1, 则表示获取进程组号为 -pid 下的子进程.
+			if (p->pgrp != -pid) {					// 如果 pid < -1, 则表示获取进程组号为 -pid 下的子进程.
 				continue;
+			}
 		}
 		// 代码执行到这里时获取到符合条件的子进程, 也可能不会执行到这里, 表示没有找到符合的子进程.
 		// 如果 pid > 0, 则此时 p 是进程号 = pid 的子进程, 
@@ -575,8 +600,9 @@ repeat:
 			// 同状态信息 0x7f 进行或运算(即将低字节设置为 0x7f)后放入 *stat_addr, 在复位子进程退出码后立刻返回子进程号 pid. 
 			// 这里 0x7f 表示的返回状态使 WIFSTOPPED() 宏判断为真. (参见 include/sys/wait.h)
 			case TASK_STOPPED:
-				if (!(options & WUNTRACED) || !p->exit_code) 	// 如果没有设置 WUNTRACED 或者 exit_code == 0, 则继续处理下一子进程.
+				if (!(options & WUNTRACED) || !p->exit_code) {	// 如果没有设置 WUNTRACED 或者 exit_code == 0, 则继续处理下一子进程.
 					continue;
+				}
 				put_fs_long((p->exit_code << 8) | 0x7f, stat_addr);  // 低字节设置为 WIFSTOPPED(子进程处于停止状态).
 				p->exit_code = 0;
 				return p->pid; 									// 立刻返回该子进程的 pid, 当前进程不会挂起.
@@ -606,8 +632,9 @@ repeat:
 	// 然后执行调度程序让出 cpu. 当系统又开始执行本进程时, 如果本进程收到除 SIGCHLD 以外的其他未屏蔽信号, 
 	// 则以退出码 "重新启动系统调用" 返回. 否则跳转到函数开始处 repeat 标号处重复处理. 
 	if (flag) {
-		if (options & WNOHANG) 								// 如果需要在没有停止或僵死的子进程时立刻返回, 则返回 0.
+		if (options & WNOHANG) {							// 如果需要在没有停止或僵死的子进程时立刻返回, 则返回 0.
 			return 0;
+		}
 		current->state = TASK_INTERRUPTIBLE; 				// 可中断睡眠.
 		oldblocked = current->blocked;
 		current->blocked &= ~(1 << (SIGCHLD - 1)); 			// 允许接收 SIGCHLD(子进程停止)信号.
@@ -615,10 +642,11 @@ repeat:
 		// 当前进程再次获得 cpu.
 		current->blocked = oldblocked; 						// 恢复原信号屏蔽码.
 		// 如果有其它信号需要处理, 则在处理完信号(do_signal())后重启本系统调用.
-		if (current->signal & ~(current->blocked | (1 << (SIGCHLD - 1))))
+		if (current->signal & ~(current->blocked | (1 << (SIGCHLD - 1)))) {
 			return -ERESTARTSYS;			// 返回 ERESTARTSYS, 表示本次系统调用被信号中断, 并希望能重启本系统调用.
-		else
+		} else {
 			goto repeat; 					// 如果当前进程没有要处理的信号, 则继续获取子进程状态实现等待操作.
+		}
 	}
 	// 若 flag = 0, 表示没有找到符合要求的子进程, 则返回出错码(子进程不存在). 
 	return -ECHILD;

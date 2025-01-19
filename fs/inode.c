@@ -23,8 +23,7 @@ static void write_inode(struct m_inode * inode);					// 写 inode 信息到高�
 // 等待指定的 inode 可用(解锁).
 // 如果 inode 已被锁定, 则将当前任务置为不可中断的等待状态, 并添加到该 inode 的等待队列 i_wait 中. 
 // 直到该 inode 解锁并明确地唤醒本任务.
-static inline void wait_on_inode(struct m_inode * inode)
-{
+static inline void wait_on_inode(struct m_inode * inode) {
 	cli();
 	while (inode->i_lock) {
 		sleep_on(&inode->i_wait);									// kernel/sched.c
@@ -35,8 +34,7 @@ static inline void wait_on_inode(struct m_inode * inode)
 // 对 inode 上锁(锁定指定的 inode)
 // 如果 inode 已被锁定, 则将当前任务置为不可中断的等待状态, 并添加到该 inode 的等待队列 i_wait 中.
 // 直到该 inode 解锁并明确地唤醒本任务. 然后对其上锁.
-static inline void lock_inode(struct m_inode * inode)
-{
+static inline void lock_inode(struct m_inode * inode) {
 	cli();
 	while (inode->i_lock) {
 		sleep_on(&inode->i_wait);
@@ -47,16 +45,14 @@ static inline void lock_inode(struct m_inode * inode)
 
 // 对指定的 inode 解锁.
 // 复位 inode 的锁定标志, 并明确地唤醒等待在此 inode 等待队列 i_wait 上的所有进程.
-static inline void unlock_inode(struct m_inode * inode)
-{
+static inline void unlock_inode(struct m_inode * inode) {
 	inode->i_lock = 0;
 	wake_up(&inode->i_wait);										// kernel/sched.c
 }
 
 // 释放设备 dev 在内存 inode 表中的所有 inode. 
 // 扫描内存中的 inode 表数组, 如果是指定设备使用的 inode 就释放之. 
-void invalidate_inodes(int dev)
-{
+void invalidate_inodes(int dev) {
 	int i;
 	struct m_inode * inode;
 
@@ -69,8 +65,9 @@ void invalidate_inodes(int dev)
 	for(i = 0; i < NR_INODE; i++, inode++) {
 		wait_on_inode(inode);           							// 等待该 inode 可用(解锁). 
 		if (inode->i_dev == dev) {
-			if (inode->i_count)     								// 若其引用数不为 0, 则显示出错警告. 
+			if (inode->i_count) {    								// 若其引用数不为 0, 则显示出错警告. 
 				printk("inode in use on removed disk\n\r");
+			}
 			inode->i_dev = inode->i_dirt = 0;       				// 释放 inode(置设备号为 0). 
 		}
 	}
@@ -78,8 +75,7 @@ void invalidate_inodes(int dev)
 
 // 同步所有 inode. 
 // 把内存 inode 表中所有 inode 与设备上 inode 作同步操作. 
-void sync_inodes(void)
-{
+void sync_inodes(void) {
 	int i;
 	struct m_inode * inode;
 
@@ -99,17 +95,18 @@ void sync_inodes(void)
 // 参数: inode - 文件的 inode 指针; block - 文件的数据块号; create - 创建块标志. 
 // 该函数把指定的文件数据块 block 对应到设备上逻辑块上, 并返回逻辑块号.
 // 如果创建标志置位, 则在设备上对应逻辑块不存在时就申请新磁盘块, 返回文件数据块 block 对应在设备上的逻辑块号(盘块号).
-static int _bmap(struct m_inode * inode, int block, int create)
-{
+static int _bmap(struct m_inode * inode, int block, int create) {
 	struct buffer_head * bh;
 	int i;
 
 	// 首先判断参数文件数据块号 block 的有效性. 如果块号小于 0, 则停机. 
 	// 如果块号大于直接块数 + 间接块数 + 二次间接块数, 超出文件系统表示范围, 则停机.
-	if (block < 0)
+	if (block < 0) {
 		panic("_bmap: block < 0");
-	if (block >= 7 + 512 + 512 * 512)
+	}
+	if (block >= 7 + 512 + 512 * 512) {
 		panic("_bmap: block > (7 + 512 + 512 * 512)");
+	}
 	// 然后根据文件块号的大小值和是否设置了创建标志分别进行处理. 如果该块号小于 7, 则使用直接块表示. 
 	// 如果创建标志置位, 并且 inode 中对应该块的逻辑块(区段)字段为 0, 则向相应设备申请一磁盘块(逻辑块),
 	// 并且将盘上逻辑块号(盘块号)填入逻辑块字段中. 然后设置 inode 改变时间, 置 inode 已修改标志. 
@@ -216,29 +213,25 @@ static int _bmap(struct m_inode * inode, int block, int create)
 // 取文件数据块 block 在设备上对应的逻辑块号.
 // 参数: inode - 文件的内存 inode 指针; block - 文件中的数据块号.
 // 若操作成功则返回对应的逻辑块号, 否则返回 0.
-int bmap(struct m_inode * inode, int block)
-{
+int bmap(struct m_inode * inode, int block) {
 	return _bmap(inode, block, 0);
 }
 
 // 取文件数据块 block 在设备上对应的逻辑块号. 如果对应的逻辑块不存在就创建一块. 并返回设备上对应的逻辑块号. 
 // 参数: inode - 文件对应的 inode 指针; block - 文件中的数据块号. 
 // 若操作成功则返回对应的逻辑块号, 否则返回 0.
-int create_block(struct m_inode * inode, int block)
-{
+int create_block(struct m_inode * inode, int block) {
 	return _bmap(inode, block, 1);
 }
 
 // 放回(放置)一个 inode (并将 inode 元数据写入设备). 主要是把 inode 的引用计数 -1.
 // 若是管道 inode, 则唤醒等待的进程.若是块设备文件 inode 则刷新设备. 
 // 如果 inode 的链接计数(i_nlinks)为 0, 则释放该 inode 占用的所有磁盘逻辑块, 并释放该 inode.
-void iput(struct m_inode * inode)
-{
+void iput(struct m_inode * inode) {
 	// 首先判断参数给出的 inode 的有效性, 并等待 inode 节点解锁(如果已经上锁的话). 
 	// 如果 inode 的引用计数为 0, 表示该 inode 已经是空闲的. 
 	// 内核再要求对其进行放回操作, 说明内核中其他代码有问题. 于是显示错误信息并停机.
-	if (!inode)
-		return;
+	if (!inode) return;
 	wait_on_inode(inode);
 	if (!inode->i_count) {
 		panic("iput: trying to free free inode");
@@ -302,8 +295,7 @@ repeat:
 // 从 inode 表(inode_table)中获取一个空闲 inode 项(脏标志为 0, 且未上锁).
 // 寻找空闲的 inode 项(引用计数 i_count 为 0 的 inode ), 并将其写盘(在 i_dirt = 1 的情况下写盘, 否则不需要写), 
 // 清零该 inode 的信息, 为新的 inode 准备, 引用计数被置 1, 返回其指针. 
-struct m_inode * get_empty_inode(void)
-{
+struct m_inode * get_empty_inode(void) {
 	struct m_inode * inode;
 	static struct m_inode * last_inode = inode_table;			// 指向 inode 表第 0 项.
 	int i;
@@ -354,8 +346,7 @@ struct m_inode * get_empty_inode(void)
 // 首先扫描 inode 表, 寻找一个空闲 inode 项, 然后取得一页空闲内存供管道使用. 
 // 然后将得到的 inode 的引用计数置为 2(读者和写者), 初始化管道头和尾, 置 inode 的管道类型标志. 
 // 返回 inode 指针, 如果失败则返回 NULL. 
-struct m_inode * get_pipe_inode(void)
-{
+struct m_inode * get_pipe_inode(void) {
 	struct m_inode * inode;
 
 	// 首先从内存 inode 表中取得一个空闲 inode. 如果找不到空闲 inode 则返回 NULL. 
@@ -384,8 +375,7 @@ struct m_inode * get_pipe_inode(void)
 // 如果该 inode 是其它文件系统的挂载点(i_mount == 1)则查找并返回该文件系统的根 inode 指针,
 // 如果不是其它文件系统的挂载点, 则直接返回该 inode 指针.
 // 如果没有在 inode 列表中找到, 则从设备 dev 上读取指定 inode 号的 inode 信息放入 inode 表中, 并返回该 inode 指针.
-struct m_inode * iget(int dev, int nr)
-{
+struct m_inode * iget(int dev, int nr) {
 	struct m_inode * inode, * empty;
 
 	// 首先判断参数有效性. 若设备号是 0, 则表明内核代码问题, 显示出错信息并停机. 
@@ -466,8 +456,7 @@ struct m_inode * iget(int dev, int nr)
 // 以获取用于计算逻辑块号的每块 inode 数信息 INODES_PER_BLOCK. 
 // 在计算出 inode 所在的逻辑块号后, 就把该逻辑块读入一缓冲块中. 
 // 然后把缓冲块中相应位置处的 inode 内容复制到指定的位置处.
-static void read_inode(struct m_inode * inode)
-{
+static void read_inode(struct m_inode * inode) {
 	struct super_block * sb;
 	struct buffer_head * bh;
 	int block;
@@ -509,8 +498,7 @@ static void read_inode(struct m_inode * inode)
 // 为了确定 inode 所在的设备逻辑块号(或缓冲块), 必须首先读取相应设备上的超级块,
 // 以获取用于计算逻辑块号的每块 inode 数信息 INODES_PER_BLOCK. 
 // 在计算出 inode 所在的逻辑块号后, 就把该逻辑块读入缓冲块中. 然后把 inode 内容复制到缓冲块的相应位置处.
-static void write_inode(struct m_inode * inode)
-{
+static void write_inode(struct m_inode * inode) {
 	struct super_block * sb;
 	struct buffer_head * bh;
 	int block;
