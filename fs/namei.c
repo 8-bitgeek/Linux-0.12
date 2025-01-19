@@ -67,24 +67,25 @@ static struct m_inode * _namei(const char * filename, struct m_inode * base, int
 // 检测文件访问许可权限(rwx).
 // 参数: inode - 文件的 inode 指针; mask - 访问属性屏蔽码.
 // 返回: 访问许可返回 1, 否则返回 0. (如果给定的 inode 的 i_mode 宿主访问权限(rwx)与 mask 指定权限相同，则表示有权限).
-static int permission(struct m_inode * inode, int mask)
-{
+static int permission(struct m_inode * inode, int mask) {
 	int mode = inode->i_mode;								// 文件访问属性.
 
 	/* special case: not even root can read/write a deleted file */
 	/* 特殊情况: 即使是超级用户(root)也不能读/写一个已被删除的文件. */
 	// 如果 inode 有对应的设备, 但该 inode 的链接计数值等于 0, 表示该文件已被删除, 则返回.
-	if (inode->i_dev && !inode->i_nlinks)
+	if (inode->i_dev && !inode->i_nlinks) {
 		return 0;
 	// 如果进程的有效用户 id(euid) 与 inode 的用户 id 相同, 则取文件宿主的访问权限.
-	else if (current->euid == inode->i_uid)
+	} else if (current->euid == inode->i_uid) {
 		mode >>= 6; 			// 右移 6 位得到文件宿主信息等. (i_mode 低 6 位分别是其他人和组员访问权限)
 	// 如果进程有效组 id(egid) 与 inode 的组 id 相同, 则取组用户的访问权限
-	else if (in_group_p(inode->i_gid))
+	} else if (in_group_p(inode->i_gid)) {
 		mode >>= 3;
+	}
 	// 最后判断如果所取的的访问权限与屏蔽码相同, 或者是超级用户, 则返回 1, 否则返回 0.
-	if (((mode & mask & 0007) == mask) || suser())
+	if (((mode & mask & 0007) == mask) || suser()) {
 		return 1;
+	}
 	return 0;
 }
 
@@ -104,26 +105,28 @@ static int permission(struct m_inode * inode, int mask)
 // 指定长度字符串比较函数.
 // 参数: len - 比较的字符串长度; name - 文件名指针; de - 目录项结构.
 // 返回: 相同返回 1, 不同返回 0.
-static int match(int len, const char * name, struct dir_entry * de)
-{
+static int match(int len, const char * name, struct dir_entry * de) {
 	register int same __asm__("ax");
 
 	// 首先判断函数参数的有效性. 
 	// 如果目录项指针空, 或者目录项 inode 等于 0, 或者要比较的字符串长度超过文件名长度, 则返回 0(不匹配).
-	if (!de || !de->inode || len > NAME_LEN)
+	if (!de || !de->inode || len > NAME_LEN) {
 		return 0;
+	}
 	/* "" means "." ---> so paths like "/usr/lib//libc.a" work */
     /* ""当作 "." 来看待 ---> 这样就能处理像 "/usr/lib//libc.a" 那样的路径名 */
     // 如果比较的长度 len 等于 0 并且目录项中文件名的第 1 个字符是 '.', 
 	// 并且只有这么一个字符, 那么我们就认为是相同的, 因此返回 1(匹配)
-	if (!len && (de->name[0] == '.') && (de->name[1] == '\0'))
+	if (!len && (de->name[0] == '.') && (de->name[1] == '\0')) {
 		return 1;
+	}
 	// 如果要比较的长度 len 小于 NAME_LEN, 但是目录项中文件名长度超过 len, 则也返回 0(不匹配)
 	// 第 75 行上对目录项中文件名长度是否超过 len 的判断方法是检测 name[len] 是否为 NULL. 
 	// 若长度超过 len, 则 name[len] 处就是一个不是 NULL 的普通字符. 
 	// 而对于长度为 len 的字符串 name, 字符 name[len] 就应该是 NULL.
-	if (len < NAME_LEN && de->name[len])
+	if (len < NAME_LEN && de->name[len]) {
 		return 0;
+	}
 	// 然后使用嵌入汇编语句进行快速比较操作. 它会在用户数据空间(fs 段)执行字符串的比较操作. 
 	// %0 - eax(比较结果 same); %1 - eax(eax 初值 0); %2 - esi(名字指针);
 	// %3 - edi(目录项名指针); %4 - ecs(比较的字节长度值 len).
@@ -137,7 +140,7 @@ static int match(int len, const char * name, struct dir_entry * de)
 }
 
 /*
- *	find_entry()
+ * find_entry()
  *
  * finds an entry in the specified directory with the wanted name. It
  * returns the cache buffer in which the entry was found, and the entry
@@ -148,7 +151,7 @@ static int match(int len, const char * name, struct dir_entry * de)
  * over a pseudo-root and a mount point.
  */
 /*
- *	find_entry()
+ * find_entry()
  *
  * 在指定目录中寻找一个与名字匹配的目录项. 返回一个含有找到目录项的高速缓冲块以及目录项本身(参数 -- res_dir). 
  * 该函数并不读取目录项的 inode  -- 如果需要的话则自己操作.
@@ -163,8 +166,7 @@ static int match(int len, const char * name, struct dir_entry * de)
 // 		比如 'dev/tty1' 则返回 'dev' 对应的目录项所在的数据块的高速缓冲区指针), 
 // 并在 *res_dir 处返回的目录项结构指针. 失败则返回空指针 NULL.
 static struct buffer_head * find_entry(struct m_inode ** dir, const char * name, 
-									   int namelen, struct dir_entry ** res_dir)
-{
+										int namelen, struct dir_entry ** res_dir) {
 	int entries;
 	int block, i;
 	struct buffer_head * bh;
@@ -176,14 +178,16 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 	// 那么如果文件名长度超过最大长度 NAME_LEN, 则不予处理. 
 	// 如果没有定义过 NO_TRUNCATE, 那么在文件名长度超过最大长度 NAME_LEN 时截短之.
 #ifdef NO_TRUNCATE
-	if (namelen > NAME_LEN)
+	if (namelen > NAME_LEN) {
 		return NULL;
+	}
 #else
-	if (namelen > NAME_LEN)
+	if (namelen > NAME_LEN) {
 		namelen = NAME_LEN;
+	}
 #endif
 	// 首先计算本目录中目录项数 entries. 目录 inode  i_size 字段表示本目录的数据长度, 
-	entries = (*dir)->i_size / (sizeof (struct dir_entry)); 	// 该目录(文件)可以保存多少个目录项(dir_entry).
+	entries = (*dir)->i_size / (sizeof(struct dir_entry)); 	// 该目录(文件)可以保存多少个目录项(dir_entry).
 	*res_dir = NULL; 											// 先置空目录项指针.
 	// 接下来我们对目录项文件名是 '..' 的情况进行特殊处理. 如果当前进程指定的根 inode 就是函数参数指定的目录, 
 	// 则说明对于本进程来说, 这个目录就是它的伪根目录, 即进程只能访问该目录中的项而不能退到其父目录中去. 
@@ -198,9 +202,9 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 		/* '..' in a pseudo-root results in a faked '.' (just change namelen) */
 		// 在给定 inode 是进程根节点('/' 目录对应的 inode)的情况下， 如果再查找 '..' 目录项是不行的, 
 		// 因为已在 '/' 目录下了, 没有上级目录了， 那么要获取的目录项名就只取 '.'
-		if ((*dir) == current->root) 	
+		if ((*dir) == current->root) {
 			namelen = 1;
-		else if ((*dir)->i_num == ROOT_INO) { 	// 如果是真正的根 inode 的情况(inode 号为 1)下.
+		} else if ((*dir)->i_num == ROOT_INO) { 	// 如果是真正的根 inode 的情况(inode 号为 1)下.
 			/* '..' over a mount-point results in 'dir' being exchanged for the mounted
 			   directory-inode. NOTE! We set mounted, so that we can iput the new dir */
 			/* 在一个挂载点上的 '..' 需要将目录切换到挂载到的目录 inode 上. 
@@ -216,11 +220,13 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 	// 现在我们开始正常操作, 查找指定名字的目录项在什么地方. 
 	// 我们需要读取当前 inode 的数据区, 即取出当前 inode 在块设备中的数据块(逻辑块)信息. 
 	// 这些逻辑块的块号保存在 inode 结构的 i_zone[] 数组中. 我们先取其中第 1 个块号. 
-	if (!(block = (*dir)->i_zone[0])) 			// 如果第一个逻辑块号为 0, 则表示出错.
+	if (!(block = (*dir)->i_zone[0])) {			// 如果第一个逻辑块号为 0, 则表示出错.
 		return NULL;
+	}
 	// 从设备中读取指定的目录项数据块. 如果不成功, 则返回 NULL 退出.
-	if (!(bh = bread((*dir)->i_dev, block)))
+	if (!(bh = bread((*dir)->i_dev, block))) {
 		return NULL;
+	}
 	// 在当前的目录 inode 数据块中搜索匹配指定名字的目录项. 首先让 de 指向缓冲块中的数据块部分, 
 	// 并在不超过当前 inode 的数据长度条件下, 循环执行搜索. 其中 i 是 inode 中的目录项索引号, 在循环开始时初始化为 0.
 	i = 0;
@@ -276,8 +282,7 @@ static struct buffer_head * find_entry(struct m_inode ** dir, const char * name,
 // 根据指定的目录和文件名添加目录项. 
 // 参数: dir - 指定目录的 inode ; name - 文件名; namelen - 文件名长度; 
 // 返回: 高速缓冲区指针; res_dir - 返回的目录项结构指针. 
-static struct buffer_head * add_entry(struct m_inode * dir, const char * name, int namelen, struct dir_entry ** res_dir)
-{
+static struct buffer_head * add_entry(struct m_inode * dir, const char * name, int namelen, struct dir_entry ** res_dir) {
 	int block, i;
 	struct buffer_head * bh;
 	struct dir_entry * de;
@@ -287,23 +292,27 @@ static struct buffer_head * add_entry(struct m_inode * dir, const char * name, i
 	// 如果没有定义过 NO_TRUNCATE, 那么在文件长度超过最大长度 NAME_LEN 时截断之. 
 	*res_dir = NULL;                							// 用于返回目录项结构指针. 
 #ifdef NO_TRUNCATE
-	if (namelen > NAME_LEN)
+	if (namelen > NAME_LEN) {
 		return NULL;
+	}
 #else
-	if (namelen > NAME_LEN)
+	if (namelen > NAME_LEN) {
 		namelen = NAME_LEN;
+	}
 #endif
 	// 现在我们开始操作, 向指定目录中添加一个指定文件名的目录项. 因此我们需要先读取目录的数据, 
 	// 即取出目录 inode 对应块设备数据区中的数据块(逻辑块)信息. 这些逻辑块的块号保存在 inode 结构的 i_zone[9] 数组中. 
 	// 我们先取其第 1 个块号. 如果目录 inode 指向的第一个直接磁盘块号为 0, 则说明该目录竟然不含数据, 这不正常. 
 	// 于是返回 NULL 退出. 否则我们就从节点所在设备读取指定的目录项数据块. 如果不成功, 则也返回 NULL 退出. 
 	// 另外, 如果参数提供的文件名长度等于 0, 则也返回 NULL 退出. 
-	if (!namelen)
+	if (!namelen) return NULL;
+
+	if (!(block = dir->i_zone[0])) {
 		return NULL;
-	if (!(block = dir->i_zone[0]))
+	}
+	if (!(bh = bread(dir->i_dev, block))) {
 		return NULL;
-	if (!(bh = bread(dir->i_dev, block)))
-		return NULL;
+	}
 	// 此时我们就在这个目录 inode 数据块中循环查找最后未使用的空目录项. 
 	// 首先让目录项结构指针 de 指向缓冲块中的数据块部分, 即第一个目录项处. 
 	// 其中 i 是目录中的目录项索引号, 在循环开始时初始化为 0. 
@@ -345,8 +354,9 @@ static struct buffer_head * add_entry(struct m_inode * dir, const char * name, i
 		// 置含有本目录项的相应高速缓冲块已修改标志. 返回该目录项的指针以及该高速缓冲块的指针, 退出. 
 		if (!de->inode) {
 			dir->i_mtime = CURRENT_TIME;
-			for (i = 0; i < NAME_LEN ; i++)
+			for (i = 0; i < NAME_LEN; i++) {
 				de->name[i] = (i < namelen) ? get_fs_byte(name + i) : 0;
+			}
 			bh->b_dirt = 1;
 			*res_dir = de;
 			return bh;
@@ -362,8 +372,7 @@ static struct buffer_head * add_entry(struct m_inode * dir, const char * name, i
 // 查找符号链接文件对应的真实的 inode.
 // 参数: dir - 目录 inode ; inode - 目录项 inode.
 // 返回: 返回符号链接到的真实文件的 inode 指针. 出错返回 NULL.
-static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode)
-{
+static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode) {
 	unsigned short fs;							// 用于临时保存 fs 段寄存器值.
 	struct buffer_head * bh;
 
@@ -409,7 +418,7 @@ static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode
 }
 
 /*
- *	get_dir()
+ * get_dir()
  *
  * Getdir traverses the pathname until it hits the topmost directory.
  * It returns NULL on failure.
@@ -421,8 +430,7 @@ static struct m_inode * follow_link(struct m_inode * dir, struct m_inode * inode
 // 从指定目录开始获取给定路径名的最深层目录的 inode. 
 // 参数: pathname - 路径名; inode - 指定起始目录的 inode.
 // 返回: 给定目录名最深层目录的 inode 指针. 失败时返回 NULL.
-static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
-{
+static struct m_inode * get_dir(const char * pathname, struct m_inode * inode) {
 	char c;
 	const char * thisname;
 	struct buffer_head * bh;
@@ -468,11 +476,13 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 		// 注意! 如果路径名中最后一个名称也是一个目录名, 但其后面没有加上 '/' 字符, 
 		// 则函数不会返回该最后目录名的 inode ! 
 		// 例如: 对于目录 /usr/src/linux, 该函数将只返回 src/ 目录名的 inode.
-		for(namelen = 0; (c = get_fs_byte(pathname++)) && (c != '/'); namelen++) 	
+		for(namelen = 0; (c = get_fs_byte(pathname++)) && (c != '/'); namelen++) {
 			/* nothing */; // 每次该循环结束都将得到 pathname 中的一部分(比如 'dev/'[目录] 或者 'tty1'[文件]).
+		}
 		/* 循环处理, 直至获取到最深层目录的 inode 后返回其指针 */
-		if (!c) 						// 如果当前到达 pathname 末尾('\0'), 则直接返回本次循环前的 inode(最深层目录的 inode).
+		if (!c) {						// 如果当前到达 pathname 末尾('\0'), 则直接返回本次循环前的 inode(最深层目录的 inode).
 			return inode; 				// 比如 '/dev/tty1' -> 则返回的是 'dev/' 对应的 inode.
+		}
 		// 在得到当前目录名部分(或文件名)后, 
 		// 我们调用查找目录项函数 find_entry() 在当前 inode 中寻找指定名称的目录项(dir_entry). 
 		// 如果没有找到, 则放回该 inode, 并返回 NULL 退出. 如果找到, 
@@ -513,8 +523,7 @@ static struct m_inode * get_dir(const char * pathname, struct m_inode * inode)
 // 		比如 '/dev/tty1' 返回的文件名是 'tty1', 返回的 inode 是 'dev/' 的 inode. 出错时返回 NULL.
 // 注意!! 这里 "最深层目录" 是指路径名中最靠近末端的目录(比如 '/dev/tty1' 的最深层目录为 'dev/' 而不是 '/').
 static struct m_inode * dir_namei(const char * pathname, int * namelen, 
-								  const char ** name, struct m_inode * base)
-{
+								  const char ** name, struct m_inode * base) {
 	char c;
 	const char * basename;
 	struct m_inode * dir; 		// 最深层的目录对应的 inode. 比如 '/dev/tty1' -> '/dev/' 对应的 inode.
@@ -525,14 +534,16 @@ static struct m_inode * dir_namei(const char * pathname, int * namelen,
 	// 注意! 如果路径名最后一个字符是斜杠字符 '/', 那么返回的文件名为空, 并且长度为 0. 
 	// 但返回的 inode 指针仍然指向最后一个 '/' 字符前目录名的 inode. 
 	// 比如 '/dev/tty1' 则返回的是 'dev/' 对应的 inode.
-	if (!(dir = get_dir(pathname, base)))		// base 是指定的起始目录 inode. (获取最深层目录的 inode 指针)
+	if (!(dir = get_dir(pathname, base))) {		// base 是指定的起始目录 inode. (获取最深层目录的 inode 指针)
 		return NULL;
+	}
 	basename = pathname;
 	while (c = get_fs_byte(pathname++)) {
-		if (c == '/')
+		if (c == '/') {
 			// 更新并最终得到路径最深层的一个目录或文件名, 比如 '/dev/tty1' 则 basename 是 'tty1', 
 			// 如果是 '/dev/' 则 basename 为空, 如果是 '/dev' 则 basename 是 'dev'.
 			basename = pathname; 				
+		}
 	}
 	*namelen = pathname - basename - 1; 		// 得到最深层目录或文件名的长度.
 	*name = basename; 							// 最深层的目录或文件名字符指针.
@@ -542,8 +553,7 @@ static struct m_inode * dir_namei(const char * pathname, int * namelen,
 // 取指定路径名的 inode 内部函数.
 // 参数: pathname - 路径名; base - 搜索起点目录 inode ; 
 // 		follow_links - 是否跟随符号链接的标志, 1 - 需要, 0 - 不需要.
-struct m_inode * _namei(const char * pathname, struct m_inode * base, int follow_links)
-{
+struct m_inode * _namei(const char * pathname, struct m_inode * base, int follow_links) {
 	const char * basename;
 	int inr, namelen;
 	struct m_inode * inode;
@@ -553,10 +563,12 @@ struct m_inode * _namei(const char * pathname, struct m_inode * base, int follow
 	// 首先查找指定路径名中最深层目录的目录名并得到其 inode. 若不存在, 则返回 NULL 退出. 
 	// 如果返回的最深层文件名字的长度是 0, 则表示该路径名以一个目录名为结尾(比如 '/dev/'). 
 	// 因此说明我们已经找到对应目录的 inode, 可以直接返回该 inode 退出.
-	if (!(base = dir_namei(pathname, &namelen, &basename, base)))
+	if (!(base = dir_namei(pathname, &namelen, &basename, base))) {
 		return NULL;
-	if (!namelen)										/* special case: '/usr/' etc */
+	}
+	if (!namelen) {										/* special case: '/usr/' etc */
 		return base;									/* 对应于 '/usr/' 等情况 */
+	}
 	// 然后在返回的顶层目录中寻找指定文件名目录项的 inode. 
 	// 注意! 因为如果最后也是一个目录名, 但其后没有加 '/', 则不会返回该最后目录的 inode ! 
 	// 例如: /usr/src/linux, 将只返回 src/ 目录名的 inode. 
@@ -578,10 +590,11 @@ struct m_inode * _namei(const char * pathname, struct m_inode * base, int follow
 		iput(base);
 		return NULL;
 	}
-	if (follow_links)
+	if (follow_links) {
 		inode = follow_link(base, inode);
-	else
+	} else {
 		iput(base);
+	}
 	inode->i_atime = CURRENT_TIME;
 	inode->i_dirt = 1;
 	return inode;
@@ -590,8 +603,7 @@ struct m_inode * _namei(const char * pathname, struct m_inode * base, int follow
 // 取指定路径名的 inode, 不跟随符号链接. 
 // 参数: pathname - 路径名. 
 // 返回: 对应的 inode. 
-struct m_inode * lnamei(const char * pathname)
-{
+struct m_inode * lnamei(const char * pathname) {
 	return _namei(pathname, NULL, 0);
 }
 
@@ -611,8 +623,7 @@ struct m_inode * lnamei(const char * pathname)
 // 取指定路径名的 inode, 跟随符号链接.
 // 参数: pathname - 路径名.
 // 返回: 对应的 inode.
-struct m_inode * namei(const char * pathname)
-{
+struct m_inode * namei(const char * pathname) {
 	return _namei(pathname, NULL, 1); 			// 起始目录 inode 为 NULL, 1 - 需要追踪符号链接信息.
 }
 
@@ -637,8 +648,7 @@ struct m_inode * namei(const char * pathname)
 // 如果调用操作成功, 则返回文件句柄(文件描述符 fd), 否则返回出错码. 参见 (sys/stat.h, include/fcntl.h).
 // res_inode - 文件路径名的 inode 指针的指针(比如 '/dev/tty1' 则返回 'tty1' 对应的 inode).
 // 返回: 成功返回 0, 否则返回出错码; 
-int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_inode)
-{
+int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_inode) {
 	const char * basename;
 	int inr, dev, namelen;
 	struct m_inode * dir, * inode;
@@ -647,8 +657,9 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 
 	// 首先对函数参数进行合规处理. 如果文件访问标志是只读(O_RDONLY, flag == 0), 但是清空文件标志 O_TRUNC 却置位了, 
 	// 则在文件访问标志中添加只写标志 O_WRONLY. 这样做的原因是由于清空文件标志 O_TRUNC 必须在文件可写情况下有效.
-	if ((flag & O_TRUNC) && !(flag & O_ACCMODE)) 	// !(flag & O_ACCMODE) 成立则表示 flag == 0, 即 O_RDONLY.
+	if ((flag & O_TRUNC) && !(flag & O_ACCMODE)) { 	// !(flag & O_ACCMODE) 成立则表示 flag == 0, 即 O_RDONLY.
 		flag |= O_WRONLY;							// 访问标志添加只写标志.
+	}
 	// 使用当前进程的文件访问许可屏蔽码, 屏蔽掉给定 mode 中的相应位, 并添上普通文件标志 I_REGULAR(include/const.h).
 	// 该 mode 将用于打开的文件不存在, 需要创建文件时, 作为*新文件的默认属性*.
 	mode &= (0777 & ~current->umask);
@@ -660,8 +671,9 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 	// 如果是这四种操作之一, 则说明进程操作非法, 于是放回该 inode, 返回出错码. 
 	// 下面得到的 dir 为最顶层目录的 inode (比如 '/dev/tty1' 时得到 'dev/' 的 inode).
 	// 示例: pathname = '/dev/tty1' 时, 得到 basename = 'tty1'.
-	if (!(dir = dir_namei(pathname, &namelen, &basename, NULL))) 
+	if (!(dir = dir_namei(pathname, &namelen, &basename, NULL))) {
 		return -ENOENT;
+	}
 	// 如果文件名字为空(指定的 pathname 是一个目录路径, 比如: '/usr/'), 则返回.
 	if (!namelen) {												/* special case: '/usr/' etc */
 		if (!(flag & (O_ACCMODE | O_CREAT | O_TRUNC))) { 		// 如果 flag 不是其中的任何一个, 则表示是在执行打开目录的操作.
@@ -750,8 +762,7 @@ int open_namei(const char * pathname, int flag, int mode, struct m_inode ** res_
 // 创建一个设备特殊文件或普通文件节点(node). 
 // 该函数创建名称为 filename, 由 mode 和 dev 指定的文件系统节点(普通文件, 设备特殊文件或命名管道). 
 // 参数: filename - 路径名; mode - 指定使用许可以及所创建节点的类型; dev - 设备号. 
-int sys_mknod(const char * filename, int mode, int dev)
-{
+int sys_mknod(const char * filename, int mode, int dev) {
 	const char * basename;
 	int namelen;
 	struct m_inode * dir, * inode;
@@ -760,11 +771,13 @@ int sys_mknod(const char * filename, int mode, int dev)
 
 	// 首先检查操作许可和参数的有效性并取路径名中顶层目录的 inode. 
 	// 如果不是超级用户, 则返回访问许可出错码. 
-	if (!suser())
+	if (!suser()) {
 		return -EPERM;
+	}
 	// 如果找不到对应路径名中顶层目录的 inode, 则返回出错码. 
-	if (!(dir = dir_namei(filename, &namelen, &basename, NULL)))
+	if (!(dir = dir_namei(filename, &namelen, &basename, NULL))) {
 		return -ENOENT;
+	}
 	// 如果最顶端的文件名长度为 0, 则说明给出的路径名最后没有指定文件名, 放回该目录 inode, 返回出错码退出. 
 	if (!namelen) {
 		iput(dir);
@@ -793,8 +806,9 @@ int sys_mknod(const char * filename, int mode, int dev)
 	inode->i_mode = mode;
 	// 如果要创建的是块设备文件或者是字符设备文件, 则令 inode 的直接逻辑块指针 0 等于设备号. 
 	// 即对于设备文件来说, 其 inode 的 i_zone[0] 中存放的是该设备文件所定义设备的设备号. 
-	if (S_ISBLK(mode) || S_ISCHR(mode))
+	if (S_ISBLK(mode) || S_ISCHR(mode)) {
 		inode->i_zone[0] = dev;
+	}
 	// 设置该 inode 的修改时间, 访问时间为当前时间, 并设置 inode 已修改标志. 
 	inode->i_mtime = inode->i_atime = CURRENT_TIME;
 	inode->i_dirt = 1;
@@ -820,8 +834,7 @@ int sys_mknod(const char * filename, int mode, int dev)
 // 创建一个目录. 
 // 参数: pathname - 路径名; mode - 目录使用的权限属性. 
 // 返回: 成功则返回 0, 否则返回出错码. 
-int sys_mkdir(const char * pathname, int mode)
-{
+int sys_mkdir(const char * pathname, int mode) {
 	const char * basename;
 	int namelen;
 	struct m_inode * dir, * inode;
@@ -829,8 +842,9 @@ int sys_mkdir(const char * pathname, int mode)
 	struct dir_entry * de;
 
 	// 首先检查参数的有效性并取路径名中顶层目录的 inode. 如果找不到对应路径名中顶层目录的 inode, 则返回出错码. 
-	if (!(dir = dir_namei(pathname,&namelen,&basename, NULL)))
+	if (!(dir = dir_namei(pathname,&namelen,&basename, NULL))) {
 		return -ENOENT;
+	}
 	// 如果最顶端文件名长度为 0, 则说明给出的路径名最后没有指定文件名, 放回该目录 inode, 返回出错码退出. 
 	if (!namelen) {
 		iput(dir);
@@ -843,7 +857,7 @@ int sys_mkdir(const char * pathname, int mode)
 		return -EPERM;
 	}
 	// 然后我们搜索一下路径名指定的目录名是否已经存在. 若已经存在则不能创建同名目录节点. 
-	// 如果对应路径名上最后的目录名的目录项已经存在, 则释放包含该目录项的缓冲区块并放回目录的 i节点, 
+	// 如果对应路径名上最后的目录名的目录项已经存在, 则释放包含该目录项的缓冲区块并放回目录的 inode, 
 	// 返回文件已经存在的出错码退出. 否则我们就申请一个新的 inode, 
 	// 并设置该 inode 的属性模式: 置该新 inode 对应的文件长度为 32 字节(2 个目录项的大小), 置节点已修改标志, 
 	// 以及节点的修改时间和访问时间. 2 个目录项分别用于 '.' 和 '..' 目录. 
@@ -862,7 +876,7 @@ int sys_mkdir(const char * pathname, int mode)
 	inode->i_dirt = 1;
 	inode->i_mtime = inode->i_atime = CURRENT_TIME;
 	// 接着为该新 inode 申请一用于保存目录项数据的磁盘块, 并令 inode 的第一个直接块指针等于该块号. 
-	// 如果申请失败则放回对应目录的 inode ; 复位新申请的 inode 连接计数; 放回该新的 inode, 返回没有空间出错码退出. 
+	// 如果申请失败则放回对应目录的 inode; 复位新申请的 inode 连接计数; 放回该新的 inode, 返回没有空间出错码退出. 
 	// 否则置该新的 inode 已修改标志. 
 	if (!(inode->i_zone[0] = new_block(inode->i_dev))) {
 		iput(dir);
@@ -871,7 +885,7 @@ int sys_mkdir(const char * pathname, int mode)
 		return -ENOSPC;
 	}
 	inode->i_dirt = 1;
-	// 从设备上读取新申请的磁盘块(目的是把对应块放到高速缓冲区中). 若出错, 则放回对应目录的 inode ; 
+	// 从设备上读取新申请的磁盘块(目的是把对应块放到高速缓冲区中). 若出错, 则放回对应目录的 inode; 
 	// 释放申请的磁盘块; 复位新申请的 inode 连接计数; 放回该新的 inode, 返回没有空间出错码退出. 
 	if (!(dir_block = bread(inode->i_dev, inode->i_zone[0]))) {
 		iput(dir);
@@ -895,7 +909,7 @@ int sys_mkdir(const char * pathname, int mode)
 	inode->i_mode = I_DIRECTORY | (mode & 0777 & ~current->umask);
 	inode->i_dirt = 1;
 	// 现在我们在指定目录中新添加一个目录项, 用于存放新建目录的 inode 和目录名. 
-	// 如果失败(包含该目录项的高速缓冲区指针为 NULL), 则放回目录的 inode ; 
+	// 如果失败(包含该目录项的高速缓冲区指针为 NULL), 则放回目录的 inode; 
 	// 所申请的 inode 引用连接计数复位, 并放回该 inode. 返回出错码退出. 
 	bh = add_entry(dir, basename, namelen, &de);
 	if (!bh) {
@@ -925,8 +939,7 @@ int sys_mkdir(const char * pathname, int mode)
 // 检查指定目录是否为空. 
 // 参数: inode - 指定目录的 inode 指针. 
 // 返回: 1 - 目录中是空的; 0 - 不空. 
-static int empty_dir(struct m_inode * inode)
-{
+static int empty_dir(struct m_inode * inode) {
 	int nr, block;
 	int len;
 	struct buffer_head * bh;
@@ -936,7 +949,7 @@ static int empty_dir(struct m_inode * inode)
 	// 一个目录中应该起码有 2 个目录项: 即 “.” 和 “..”. 
 	// 如果目录项个数少于 2 个或者该目录 inode 的第 1 个直接块没有指向任何磁盘块号, 或者该直接块读不出, 
 	// 则显示警告信息 “设备dev上目录错”, 返回 0(失败). 
-	len = inode->i_size / sizeof (struct dir_entry);        		// 目录中目录项个数. 
+	len = inode->i_size / sizeof(struct dir_entry);        		// 目录中目录项个数. 
 	if (len < 2 || !inode->i_zone[0] || !(bh = bread(inode->i_dev, inode->i_zone[0]))) {
 	    printk("warning - bad directory on dev %04x\n", inode->i_dev);
 		return 0;
@@ -946,7 +959,7 @@ static int empty_dir(struct m_inode * inode)
 	// 节点号字段 inode 应该等于上一层目录的 inode 号, 不会为 0. 
 	// 因此, 如果第 1 个目录项的 inode 号字段值不等于该目录的 inode 号, 或者第 2 个目录项的 inode 号字段为零, 
 	// 或者两个目录项的名字字段不分别等于 “.” 和 “..”, 则显示出错警告信息 “设备 dev 上目录错”, 并返回 0. 
-	de = (struct dir_entry *) bh->b_data;
+	de = (struct dir_entry *)bh->b_data;
 	if (de[0].inode != inode->i_num || !de[1].inode || strcmp(".", de[0].name) || strcmp("..", de[1].name)) {
 	    printk("warning - bad directory on dev %04x\n", inode->i_dev);
 		return 0;
@@ -968,8 +981,9 @@ static int empty_dir(struct m_inode * inode)
 				nr += DIR_ENTRIES_PER_BLOCK;
 				continue;
 			}
-			if (!(bh = bread(inode->i_dev, block)))
+			if (!(bh = bread(inode->i_dev, block))) {
 				return 0;
+			}
 			de = (struct dir_entry *)bh->b_data;
 		}
 		// 对于 de 指向的当前目录项, 如果该目录项的 inode 号字段不等于 0, 
@@ -990,8 +1004,7 @@ static int empty_dir(struct m_inode * inode)
 // 删除目录. 
 // 参数: name - 目录名(路径名). 
 // 返回: 返回 0 表示成功, 否则返回出错号. 
-int sys_rmdir(const char * name)
-{
+int sys_rmdir(const char * name) {
 	const char * basename;
 	int namelen;
 	struct m_inode * dir, * inode;
@@ -1001,8 +1014,9 @@ int sys_rmdir(const char * name)
 	// 首先检查参数的有效性并取路径名中顶层目录的 inode. 如果找不到对应路径名中顶层目录的 inode, 则返回出错码. 
 	// 如果最顶端文件名长度为 0, 则说明给出的路径名最后没有指定文件名, 放回该目录 inode, 返回出错码退出. 
 	// 如果在该目录中没有写的权限, 则放回该目录 inode, 返回访问许可出错码退出. 如果不是超级用户, 则返回访问许可出错码. 
-	if (!(dir = dir_namei(name, &namelen, &basename, NULL)))
+	if (!(dir = dir_namei(name, &namelen, &basename, NULL))) {
 		return -ENOENT;
+	}
 	if (!namelen) {
 		iput(dir);
 		return -ENOENT;
@@ -1076,8 +1090,9 @@ int sys_rmdir(const char * name)
 	// 于是置该需删除目录的目录项的 inode 号字段为 0, 表示该目录项不再使用, 
 	// 并置含有该目录项的调整缓冲块已修改标志, 并释放该缓冲块. 
 	// 然后再置被删除目录 inode 的链接数为 0(表示空闲), 并置 inode 已修改标志. 
-	if (inode->i_nlinks != 2)
+	if (inode->i_nlinks != 2) {
 		printk("empty directory has nlink!=2 (%d)", inode->i_nlinks);
+	}
 	de->inode = 0;
 	bh->b_dirt = 1;
 	brelse(bh);
@@ -1097,8 +1112,7 @@ int sys_rmdir(const char * name)
 // 如果是文件的最后一个链接, 并且没有进程正打开该文件, 则该文件也将被删除, 并释放所占用的设备空间. 
 // 参数: name - 文件名(路径名). 
 // 返回: 成功则返回 0, 否则返回出错号. 
-int sys_unlink(const char * name)
-{
+int sys_unlink(const char * name) {
 	const char * basename;
 	int namelen;
 	struct m_inode * dir, * inode;
@@ -1108,8 +1122,9 @@ int sys_unlink(const char * name)
 	// 首先检查参数的有效性并取路径名中顶层目录的 inode. 如果找不到对应路径名中顶层目录的 inode, 则返回出错码. 
 	// 如果最顶端文件名长度为 0, 则说明给出的路径名最后没有指定文件名, 放回该目录 inode, 返回出错码退出. 
 	// 如果在该目录中没有写的权限, 则放回该目录 inode, 返回访问许可出错码退出. 如果不是超级用户, 则返回访问许可出错码. 
-	if (!(dir = dir_namei(name, &namelen, &basename, NULL)))
+	if (!(dir = dir_namei(name, &namelen, &basename, NULL))) {
 		return -ENOENT;
+	}
 	if (!namelen) {
 		iput(dir);
 		return -ENOENT;
@@ -1180,8 +1195,7 @@ int sys_unlink(const char * name)
 // 为一个已存在文件创建一个符号链接(也称为软连接 - hard link). 
 // 参数: oldname - 原路径名; newname - 新的路径名. 
 // 返回: 若成功则返回 0, 否则返回出错号. 
-int sys_symlink(const char * oldname, const char * newname)
-{
+int sys_symlink(const char * oldname, const char * newname) {
 	struct dir_entry * de;
 	struct m_inode * dir, * inode;
 	struct buffer_head * bh, * name_block;
@@ -1189,12 +1203,13 @@ int sys_symlink(const char * oldname, const char * newname)
 	int namelen, i;
 	char c;
 
-	// 首先查找新路径名的最顶层目录的 inode  dir, 并返回最后的文件名及其长度. 如果目录的 inode 没有找到, 则返回出错号. 
+	// 首先查找新路径名的最顶层目录的 inode, 并返回最后的文件名及其长度. 如果目录的 inode 没有找到, 则返回出错号. 
 	// 如果新路径名中不包括文件名, 则放回新路径名目录的 inode, 返回出错号. 
 	// 另外, 如果用户没有在新目录中写的权限, 则也不能建立连接, 于是放回新路径名目录的 inode, 返回出错号. 
 	dir = dir_namei(newname, &namelen, &basename, NULL);
-	if (!dir)
+	if (!dir) {
 		return -EACCES;
+	}
 	if (!namelen) {
 		iput(dir);
 		return -EPERM;
@@ -1213,7 +1228,7 @@ int sys_symlink(const char * oldname, const char * newname)
 	inode->i_dirt = 1;
 	// 为了保存符号链接路径名字符串信息, 我们需要为该 inode 申请一个磁盘块, 
 	// 并让 inode 的第 1 个直接块号 i_zone[0] 等于得到的逻辑块号. 
-	// 然后置 inode 已修改标志. 如果申请失败则放回对应目录的 inode ; 
+	// 然后置 inode 已修改标志. 如果申请失败则放回对应目录的 inode; 
 	// 复位新申请的 inode 链接计数; 放回该新的 inode, 返回没有空间出错码退出. 
 	if (!(inode->i_zone[0] = new_block(inode->i_dev))) {
 		iput(dir);
@@ -1280,8 +1295,7 @@ int sys_symlink(const char * oldname, const char * newname)
 // 为一个已存在的文件创建一个新链接(也称为硬连接 - hard link). 
 // 参数: oldname - 原路径名; newname - 新的路径名. 
 // 返回: 若成功则返回 0, 否则返回出错号. 
-int sys_link(const char * oldname, const char * newname)
-{
+int sys_link(const char * oldname, const char * newname) {
 	struct dir_entry * de;
 	struct m_inode * oldinode, * dir;
 	struct buffer_head * bh;
@@ -1291,8 +1305,8 @@ int sys_link(const char * oldname, const char * newname)
 	// 首先对原文件名进行有效性验证, 它应该存在并且不是一个目录名. 所以我们先取原文件路径名对应的 inode(oldinode). 
 	// 如果为0, 则表示出错, 返回出错号. 如果原路径名对应的是一个目录名, 则放回该 inode, 也返回出错号. 
 	oldinode = namei(oldname);
-	if (!oldinode)
-		return -ENOENT;
+	if (!oldinode) return -ENOENT;
+
 	if (S_ISDIR(oldinode->i_mode)) {
 		iput(oldinode);
 		return -EPERM;
