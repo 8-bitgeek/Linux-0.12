@@ -44,12 +44,12 @@ void verify_area(void * addr, int size) {
 	// 下句中的 start & 0xfff 用来获得指定起始位置 addr(也即 start) 在所在页面中的偏移值, 
 	// 原验证范围 size 加上这个偏移值即扩展成以 addr 所在页面起始位置开始的范围值. 
 	// 因此在 30 行上也需要把验证开始位置 start 调整成页面边界值.
-	start = (unsigned long) addr;
+	start = (unsigned long)addr;
 	size += start & 0xfff;
 	start &= 0xfffff000;					// 此时 start 是当前进程空间中的逻辑地址.
 	// 下面把 start 加上进程数据段在线性地址空间中的起始基址, 变成系统整个线性空间中的地址位置. 
-	// 对于 Linux0.1x 内核, 其数据段和代码段在线性地址空间中的基址和限长均相同. 
-	// 然后循环进行写页面验证. 若页面不可写, 则复制页面.(mm/memory.c)
+	// 对于 Linux 0.1x 内核, 其数据段和代码段在线性地址空间中的基址和限长均相同. 
+	// 然后循环进行写页面验证. 若页面不可写, 则复制页面. (mm/memory.c)
 	start += get_base(current->ldt[2]);
 	while (size > 0) {
 		size -= 4096;

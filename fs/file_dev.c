@@ -22,16 +22,16 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 	int left, chars, nr;
 	struct buffer_head * bh;
 
-	// 首先判断参数的有效性. 若需要读取的字节计数 count 小于等于零, 则返回 0. 若还需要读取的字节数不等于 0, 就循环执行下面操作, 
-	// 直到数据全部读出或遇到问题. 在读循环操作过程中, 我们根据 inode 和文件表结构信息, 
-	// 并利用 bmap() 得到包含文件当前读写位置的数据块在设备上对应的逻辑块号 nr. 若 nr 不为 0, 则从 inode 指定的设备上读取该逻辑块. 
-	// 如果读操作失败则退出循环. 若 nr 为 0, 表示指定的数据块不存在, 置缓冲块指针为 NULL. 
+	// 首先判断参数的有效性. 若需要读取的字节计数 count 小于等于零, 则返回 0.
 	if ((left = count) <= 0) {
 		return 0;
 	}
+	// 循环读取, 直到数据全部读出或遇到问题. 在读循环操作过程中, 我们根据 inode 和文件表结构信息, 
+	// 并利用 bmap() 得到当前读写位置在设备上对应的逻辑块号 nr. 若 nr 不为 0, 则从 inode 指定的设备上读取该逻辑块. 
+	// 如果读操作失败则退出循环. 若 nr 为 0, 表示指定的数据块不存在, 置缓冲块指针为 NULL. 
 	while (left) {
-		// 根据文件的读写偏移位置得到当前写位置对应的逻辑块号
-		if (nr = bmap(inode, (filp->f_pos) / BLOCK_SIZE)) {
+		// 根据文件的读写偏移位置得到当前读写位置对应的逻辑块号 i_zone[x].
+		if (nr = bmap(inode, (filp->f_pos) / BLOCK_SIZE)) {		// (filp->f_pos / BLOCK_SIZE) 得到文件逻辑块号索引, 即 i_zone[x] 中的 x.
 			// 得到该逻辑块号对应的高速缓冲区
 			if (!(bh = bread(inode->i_dev, nr))) {
 				break;

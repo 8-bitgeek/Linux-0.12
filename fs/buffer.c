@@ -426,8 +426,9 @@ struct buffer_head * bread(int dev, int block) {
 
 	// 从高速缓冲区(主要是空闲链表 free_list)中申请一块缓冲块. 
 	// 如果返回值是 NULL, 则表示内核出错, 停机. 否则我们判断其中是否已缓存过可用数据.
-	if (!(bh = getblk(dev, block)))
+	if (!(bh = getblk(dev, block))) {
 		panic("bread: getblk() returned NULL\n");
+	}
 	// 如果该缓冲块中数据是有效的(已更新的)可以直接使用, 则返回.
 	if (bh->b_uptodate) {						// 之前已经缓存过的 uptodate == 1.
 		return bh;

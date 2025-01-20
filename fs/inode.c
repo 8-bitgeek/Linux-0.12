@@ -100,24 +100,24 @@ static int _bmap(struct m_inode * inode, int block, int create) {
 	int i;
 
 	// 首先判断参数文件数据块号 block 的有效性. 如果块号小于 0, 则停机. 
-	// 如果块号大于直接块数 + 间接块数 + 二次间接块数, 超出文件系统表示范围, 则停机.
 	if (block < 0) {
 		panic("_bmap: block < 0");
 	}
+	// 如果块号大于直接块数(7) + 间接块数(512) + 二次间接块数(512 * 512), 则超出文件系统表示范围, 停机.
 	if (block >= 7 + 512 + 512 * 512) {
 		panic("_bmap: block > (7 + 512 + 512 * 512)");
 	}
 	// 然后根据文件块号的大小值和是否设置了创建标志分别进行处理. 如果该块号小于 7, 则使用直接块表示. 
-	// 如果创建标志置位, 并且 inode 中对应该块的逻辑块(区段)字段为 0, 则向相应设备申请一磁盘块(逻辑块),
-	// 并且将盘上逻辑块号(盘块号)填入逻辑块字段中. 然后设置 inode 改变时间, 置 inode 已修改标志. 
-	// 最后返回逻辑块号. 函数 new_block() 定义在 bitmap.c 程序中.
-	if (block < 7) {
-		if (create && !inode->i_zone[block]) {
-			if (inode->i_zone[block] = new_block(inode->i_dev)) {
+	if (block < 7) { 												// 直接块.
+		// 如果该块不存在, 并且有创建标志, 则向设备申请一个数据块. 并将该块号添加到 inode 的数据块列表中.
+		// 然后设置 inode 改变时间, 置 inode 已修改标志. 
+		if (create && !inode->i_zone[block]) { 						
+			if (inode->i_zone[block] = new_block(inode->i_dev)) { 	// 函数 new_block() 定义在 fs/bitmap.c 中.
 				inode->i_ctime = CURRENT_TIME;
 				inode->i_dirt = 1;
 			}
 		}
+		// 最后返回逻辑块号. 
 		return inode->i_zone[block];
 	}
 	// 如果该块号 >= 7, 且小于 7 + 512, 则说明使用的是一次间接块. 下面对一次间接块进行处理. 
