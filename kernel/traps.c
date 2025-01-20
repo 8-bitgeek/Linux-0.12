@@ -77,9 +77,8 @@ void alignment_check(void);					// int46(kernel/asm.s)
 // 该子程序用来打印出错中断的名称, 出错号, 调用程序的 EIP, EFLAGS, ESP, 
 // fs 段寄存器值, 段的基址, 段的长度, 进程号 pid, 任务号, 10 字节指令码. 
 // 如果堆栈在用户数据段, 则还打印 16 字节堆栈内容. 这些信息可用于程序调试.
-static void die(char * str, long esp_ptr, long nr)
-{
-	long * esp = (long *) esp_ptr;
+static void die(char * str, long esp_ptr, long nr) {
+	long * esp = (long *)esp_ptr;
 	int i;
 
 	printk("%s: %04x\n\r", str, nr & 0xffff);
@@ -87,14 +86,14 @@ static void die(char * str, long esp_ptr, long nr)
 	// (1) EIP:\t%04x:%p\n	-- esp[1] 是段选择符(cs), esp[0] 是 eip
 	// (2) EFLAGS:\t%p	-- esp[2] 是 eflags
 	// (2) ESP:\t%04x:%p\n	-- esp[4] 是原 ss, esp[3] 是原 esp
-	printk("EIP:\t%04x:%p\nEFLAGS:\t%p\nESP:\t%04x:%p\n",
-			esp[1], esp[0], esp[2], esp[4], esp[3]);
+	printk("EIP:\t%04x:%p\nEFLAGS:\t%p\nESP:\t%04x:%p\n", esp[1], esp[0], esp[2], esp[4], esp[3]);
 	printk("fs: %04x\n", _fs());
 	printk("base: %p, limit: %p\n", get_base(current->ldt[1]), get_limit(0x17));
 	if (esp[4] == 0x17) {				// 或原 ss 值为 0x17(用户栈), 则还打印出用户栈的 4 个长字值(16 字节).
 		printk("Stack: ");
-		for (i = 0; i < 4; i++)
+		for (i = 0; i < 4; i++) {
 			printk("%p ", get_seg_long(0x17, i + (long *)esp[3]));
+		}
 		printk("\n");
 	}
 	str(i);								// 取当前运行任务的任务号(include/linux/sched.h).
@@ -106,23 +105,19 @@ static void die(char * str, long esp_ptr, long nr)
 }
 
 // 以下这些以 do_ 开头的函数是 asm.s 中对应中断处理程序调用的 C 函数.
-void do_double_fault(long esp, long error_code)
-{
+void do_double_fault(long esp, long error_code) {
 	die("double fault", esp, error_code);
 }
 
-void do_general_protection(long esp, long error_code)
-{
+void do_general_protection(long esp, long error_code) {
 	die("general protection", esp, error_code);
 }
 
-void do_alignment_check(long esp, long error_code)
-{
+void do_alignment_check(long esp, long error_code) {
     die("alignment check", esp, error_code);
 }
 
-void do_divide_error(long esp, long error_code)
-{
+void do_divide_error(long esp, long error_code) {
 	die("divide error", esp, error_code);
 }
 
@@ -130,79 +125,65 @@ void do_divide_error(long esp, long error_code)
 void do_int3(long * esp, long error_code,
 		long fs, long es, long ds,
 		long ebp, long esi, long edi,
-		long edx, long ecx, long ebx, long eax)
-{
+		long edx, long ecx, long ebx, long eax) {
+
 	int tr;
 
 	__asm__("str %%ax" : "=a" (tr) : "0" (0));		// 取任务寄存器值 -> tr
-	printk("eax\t\tebx\t\tecx\t\tedx\n\r%8x\t%8x\t%8x\t%8x\n\r",
-			eax, ebx, ecx, edx);
-	printk("esi\t\tedi\t\tebp\t\tesp\n\r%8x\t%8x\t%8x\t%8x\n\r",
-			esi, edi, ebp, (long) esp);
-	printk("\n\rds\tes\tfs\ttr\n\r%4x\t%4x\t%4x\t%4x\n\r",
-			ds, es, fs, tr);
+	printk("eax\t\tebx\t\tecx\t\tedx\n\r%8x\t%8x\t%8x\t%8x\n\r", eax, ebx, ecx, edx);
+	printk("esi\t\tedi\t\tebp\t\tesp\n\r%8x\t%8x\t%8x\t%8x\n\r", esi, edi, ebp, (long) esp);
+	printk("\n\rds\tes\tfs\ttr\n\r%4x\t%4x\t%4x\t%4x\n\r", ds, es, fs, tr);
 	printk("EIP: %8x   CS: %4x  EFLAGS: %8x\n\r", esp[0], esp[1], esp[2]);
 }
 
-void do_nmi(long esp, long error_code)
-{
+void do_nmi(long esp, long error_code) {
 	die("nmi", esp, error_code);
 }
 
-void do_debug(long esp, long error_code)
-{
+void do_debug(long esp, long error_code) {
 	die("debug", esp, error_code);
 }
 
-void do_overflow(long esp, long error_code)
-{
+void do_overflow(long esp, long error_code) {
 	die("overflow", esp, error_code);
 }
 
-void do_bounds(long esp, long error_code)
-{
+void do_bounds(long esp, long error_code) {
 	die("bounds", esp, error_code);
 }
 
-void do_invalid_op(long esp, long error_code)
-{
+void do_invalid_op(long esp, long error_code) {
 	die("invalid operand", esp, error_code);
 }
 
-void do_device_not_available(long esp, long error_code)
-{
+void do_device_not_available(long esp, long error_code) {
 	die("device not available", esp, error_code);
 }
 
-void do_coprocessor_segment_overrun(long esp, long error_code)
-{
+void do_coprocessor_segment_overrun(long esp, long error_code) {
 	die("coprocessor segment overrun", esp, error_code);
 }
 
-void do_invalid_TSS(long esp, long error_code)
-{
+void do_invalid_TSS(long esp, long error_code) {
 	die("invalid TSS", esp, error_code);
 }
 
-void do_segment_not_present(long esp, long error_code)
-{
+void do_segment_not_present(long esp, long error_code) {
 	die("segment not present", esp, error_code);
 }
 
-void do_stack_segment(long esp, long error_code)
-{
+void do_stack_segment(long esp, long error_code) {
 	die("stack segment", esp, error_code);
 }
 
-void do_coprocessor_error(long esp, long error_code)
-{
-	if (last_task_used_math != current)
+void do_coprocessor_error(long esp, long error_code) {
+	if (last_task_used_math != current) {
 		return;
+	}
 	die("coprocessor error", esp, error_code);
 }
 
-void do_reserved(long esp, long error_code)
-{
+void do_reserved(long esp, long error_code) {
 	die("reserved (15,17-47) error", esp, error_code);
 }
 
@@ -212,8 +193,7 @@ void do_reserved(long esp, long error_code)
 // 因此断点陷阱中断 int3, 溢出中断 overflow 和边界出错中断 bounds 可以由任何程序调用. 
 // 这两个函数均是嵌入式汇编宏程序, 参见 include/asm/system.h;
 // 一个中断描述符(IDT 项)占 8 个字节.
-void trap_init(void)
-{
+void trap_init(void) {
 	int i;
 	// 陷阱门和中断门是调用门的特殊类. 调用门用于在不同特权级之间实现受控的程序控制转移.
 	set_trap_gate(0, &divide_error);							// 设置除操作出错的中断向量值.
@@ -235,11 +215,12 @@ void trap_init(void)
 	set_trap_gate(16, &coprocessor_error);						// 函数未实现
 	set_trap_gate(17, &alignment_check);
 	// 下面把 int 17-47 的陷阱门先均设置为 reserved, 以后各硬件初始化时会重新设置自己的陷阱门.
-	for (i = 18; i < 48; i++)
+	for (i = 18; i < 48; i++) {
 		set_trap_gate(i, &reserved);
+	}
 	// 设置协处理器中断 0x2d(45)陷阱门描述符, 并允许其产生中断请求. 设置并行口中断描述符.
 	set_trap_gate(45, &irq13);
-	outb_p(inb_p(0x21)&0xfb, 0x21);								// 允许 8259A 主芯片的 IRQ2 中断请求(连接从芯片)
-	outb(inb_p(0xA1)&0xdf, 0xA1);								// 允许 8259A 从芯片的 IRQ13 中断请求(协处理器中断)
+	outb_p(inb_p(0x21) & 0xfb, 0x21);							// 允许 8259A 主芯片的 IRQ2 中断请求(连接从芯片)
+	outb(inb_p(0xA1) & 0xdf, 0xA1);								// 允许 8259A 从芯片的 IRQ13 中断请求(协处理器中断)
 	set_trap_gate(39, &parallel_interrupt);						// 设置并行口 1 的中断 0x27 陷阱门描述符.
 }

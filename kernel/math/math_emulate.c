@@ -68,8 +68,7 @@ static temp_real_unaligned * __st(int i);
 // 然后把指令指针保存起来, 并取出代码指针 EIP 处的 2 字节浮点指令代码 code. 接着分析代码 code, 并根据其含义进行处理. 
 // 针对不同代码类型值, Linus 使用了几个不同的 switch 程序块进行仿真处理. 
 // 参数是 info 结构指针. 
-static void do_emu(struct info * info)
-{
+static void do_emu(struct info * info) {
 	unsigned short code;
 	temp_real tmp;
 	char * address;
@@ -78,14 +77,15 @@ static void do_emu(struct info * info)
 // 否则复位 B 标志. 然后我们把指令指针保存起来. 再看看执行本函数的代码是不是用户代码. 
 // 如是不是, 即调用者的代码段选择符不等于 0x0f, 则说明内核中有代码使用了浮点指令. 
 // 于是在显示出浮点指令处的 CS, EIP 值和信息 "内核中需要数学仿真" 后停机. 
-	if (I387.cwd & I387.swd & 0x3f)
+	if (I387.cwd & I387.swd & 0x3f) {
 		I387.swd |= 0x8000;             	// 设置忙标志 B. 
-	else
+	} else {
 		I387.swd &= 0x7fff;             	// 清忙标志 B. 
+	}
 	ORIG_EIP = EIP;                         // 保存浮点指令指针. 
 /* 0x0007 means user code space */
 	if (CS != 0x000F) {                     // 不是用户代码则停机. 
-		printk("math_emulate: %04x:%08x\n\r",CS,EIP);
+		printk("math_emulate: %04x:%08x\n\r", CS, EIP);
 		panic("Math emulation needed in kernel");
 	}
 // 然后我们取出代码指针 EIP 处的 2 字节浮点指令代码 code. 由于 Inter CPU 存储数据时是 "小头"(Little endian) 在前的, 
@@ -94,19 +94,19 @@ static void do_emu(struct info * info)
 // 而 CS 保存到 fcs 字段中, 同时把略微处理过的浮点指令代码 code 放到 fcs 字段的高 16 位中. 
 // 保存这些值是为了在出现仿真的处理器异常时程序可以像使用真实的协处理器一样进行处理. 
 // 最后让 EIP 指向随后的浮点指令或操作数. 
-	code = get_fs_word((unsigned short *) EIP);     // 取 2 字节的浮点指令或操作数. 
+	code = get_fs_word((unsigned short *)EIP);     	// 取 2 字节的浮点指令或操作数. 
 	bswapw(code);                                   // 交换高低字节. 
 	code &= 0x7ff;                                  // 屏蔽代码中的 ESC 码. 
 	I387.fip = EIP;                                 // 保存指令指针. 
-	*(unsigned short *) &I387.fcs = CS;             // 保存代码段选择符. 
-	*(1+(unsigned short *) &I387.fcs) = code;       // 保存代码. 
+	*(unsigned short *)&I387.fcs = CS;             	// 保存代码段选择符. 
+	*(1+(unsigned short *)&I387.fcs) = code;       	// 保存代码. 
 	EIP += 2;                                       // 指令指针指向下一个字节. 
-        switch (code) {
+	switch (code) {
 		case 0x1d0: /* fnop */          			// 空操作指令 FNOP
 			return;
 		case 0x1d1: case 0x1d2: case 0x1d3:     	// 无效指令代码. 必信号, 退出. 
 		case 0x1d4: case 0x1d5: case 0x1d6: case 0x1d7:
-			math_abort(info,1<<(SIGILL-1));
+			math_abort(info, 1 << (SIGILL - 1));
 		case 0x1e0:                     			// FCHS - 改变 ST 符号位. 即 ST = -ST. 
 			ST(0).exponent ^= 0x8000;
 			return;
@@ -114,15 +114,15 @@ static void do_emu(struct info * info)
 			ST(0).exponent &= 0x7fff;
 			return;
 		case 0x1e2: case 0x1e3:         			// 无效指令代码. 发信号, 退出. 
-			math_abort(info,1<<(SIGILL-1));
+			math_abort(info, 1 << (SIGILL - 1));
 		case 0x1e4:                     			// FTST - 测试 TS, 同时设置状态字中 Cn. 
 			ftst(PST(0));
 			return;
 		case 0x1e5:                     			// FXAM - 检查 TS 值, 同时修改状态字中 Cn. 
 			printk("fxam not implemented\n\r");     // 未实现. 发信号退出. 
-			math_abort(info,1<<(SIGILL-1));
+			math_abort(info, 1 << (SIGILL - 1));
 		case 0x1e6: case 0x1e7:         			// 无效指令代码. 发信号, 退出. 
-			math_abort(info,1<<(SIGILL-1));
+			math_abort(info, 1 << (SIGILL - 1));
 		case 0x1e8:                     			// FLD1 - 加载常数1.0到累加器ST. 
 			fpush();
 			ST(0) = CONST1;
@@ -152,15 +152,15 @@ static void do_emu(struct info * info)
 			ST(0) = CONSTZ;
 			return;
 		case 0x1ef:                     			// 无效和未实现仿真指令代码. 发信号, 退出. 
-			math_abort(info,1<<(SIGILL-1));
+			math_abort(info, 1 << (SIGILL - 1));
 		case 0x1f0: case 0x1f1: case 0x1f2: case 0x1f3:
 		case 0x1f4: case 0x1f5: case 0x1f6: case 0x1f7:
 		case 0x1f8: case 0x1f9: case 0x1fa: case 0x1fb:
 		case 0x1fc: case 0x1fd: case 0x1fe: case 0x1ff:
-			printk("%04x fxxx not implemented\n\r",code + 0xc800);
-			math_abort(info,1<<(SIGILL-1));
+			printk("%04x fxxx not implemented\n\r", code + 0xc800);
+			math_abort(info, 1 << (SIGILL - 1));
 		case 0x2e9:                     			// FUCOMPP - 无次序比较. 
-			fucom(PST(1),PST(0));
+			fucom(PST(1), PST(0));
 			fpop(); fpop();
 			return;
 		case 0x3d0: case 0x3d1:         			// FNOP - 对 387. !! 应该是 0x3e0, 0x3e1. 
@@ -176,101 +176,101 @@ static void do_emu(struct info * info)
 		case 0x3e4:                     			// FNOP - 对 80387. 
 			return;
 		case 0x6d9:                     			// FCOMPP - ST(i) 与 ST 比较, 出栈操作两次. 
-			fcom(PST(1),PST(0));
+			fcom(PST(1), PST(0));
 			fpop(); fpop();
 			return;
 		case 0x7e0:                     			// FSTSW AX - 保存当前状态字到 AX 寄存器中. 
-			*(short *) &EAX = I387.swd;
+			*(short *)&EAX = I387.swd;
 			return;
 	}
 // 下面开始处理第 2 字节最后 3 位是 REG 的指令. 即 11011, XXXXXXXX, REG 形式的代码. 
 	switch (code >> 3) {
 		case 0x18:                      			// FADD ST, ST(i). 
-			fadd(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fadd(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0x19:                      			// FMUL ST, ST(i). 
-			fmul(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fmul(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0x1a:                      			// FCOM ST(i). 
-			fcom(PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fcom(PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0x1b:                      			// FCOMP ST(i). 
-			fcom(PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fcom(PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(0));
 			fpop();
 			return;
 		case 0x1c:                      			// FSUB ST, ST(i). 
-			real_to_real(&ST(code & 7),&tmp);
+			real_to_real(&ST(code & 7), &tmp);
 			tmp.exponent ^= 0x8000;
-			fadd(PST(0),&tmp,&tmp);
-			real_to_real(&tmp,&ST(0));
+			fadd(PST(0), &tmp, &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0x1d:                      			// FSUBR ST, ST(i). 
 			ST(0).exponent ^= 0x8000;
-			fadd(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fadd(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0x1e:                      			// FDIV ST, ST(i). 
-			fdiv(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fdiv(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0x1f:                      			// FDIVR ST, ST(i). 
-			fdiv(PST(code & 7),PST(0),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fdiv(PST(code & 7), PST(0), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0x38:                      			// FLD ST(i). 
 			fpush();
-			ST(0) = ST((code & 7)+1);
+			ST(0) = ST((code & 7) + 1);
 			return;
 		case 0x39:                      			// FXCH ST(i). 
-			fxchg(&ST(0),&ST(code & 7));
+			fxchg(&ST(0), &ST(code & 7));
 			return;
 		case 0x3b:                      			// FSTP ST(i). 
 			ST(code & 7) = ST(0);
 			fpop();
 			return;
 		case 0x98:                      			// FADD ST(i), ST. 
-			fadd(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fadd(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			return;
 		case 0x99:                      			// FMUL ST(i), ST. 
-			fmul(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fmul(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			return;
 		case 0x9a:                      			// FCOM ST(i). 
-			fcom(PST(code & 7),PST(0));
+			fcom(PST(code & 7), PST(0));
 			return;
 		case 0x9b:                      			// FCOMP ST(i). 
-			fcom(PST(code & 7),PST(0));
+			fcom(PST(code & 7), PST(0));
 			fpop();
 			return;			
 		case 0x9c:                      			// FSUBR ST(i), ST. 
 			ST(code & 7).exponent ^= 0x8000;
-			fadd(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fadd(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			return;
 		case 0x9d:                      			// FSUB ST(i), ST. 
-			real_to_real(&ST(0),&tmp);
+			real_to_real(&ST(0), &tmp);
 			tmp.exponent ^= 0x8000;
-			fadd(PST(code & 7),&tmp,&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fadd(PST(code & 7), &tmp, &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			return;
 		case 0x9e:                      			// FDIVR ST(i), ST. 
-			fdiv(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fdiv(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			return;
 		case 0x9f:                      			// FDIV ST(i), ST. 
-			fdiv(PST(code & 7),PST(0),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fdiv(PST(code & 7), PST(0), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			return;
 		case 0xb8:                      			// FFREE ST(i), ST. 未实现. 
 			printk("ffree not implemented\n\r");
-			math_abort(info,1<<(SIGILL-1));
+			math_abort(info, 1 << (SIGILL - 1));
 		case 0xb9:                      			// FXCH ST(i). 
-			fxchg(&ST(0),&ST(code & 7));
+			fxchg(&ST(0), &ST(code & 7));
 			return;
 		case 0xba:                      			// FST ST(i). 
 			ST(code & 7) = ST(0);
@@ -280,56 +280,56 @@ static void do_emu(struct info * info)
 			fpop();
 			return;
 		case 0xbc:                      			// FUCOM ST(i). 
-			fucom(PST(code & 7),PST(0));
+			fucom(PST(code & 7), PST(0));
 			return;
 		case 0xbd:                      			// FUCOMP ST(i). 
-			fucom(PST(code & 7),PST(0));
+			fucom(PST(code & 7), PST(0));
 			fpop();
 			return;
 		case 0xd8:                      			// FADDP ST(i), ST. 
-			fadd(PST(code & 7),PST(0),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fadd(PST(code & 7), PST(0), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			fpop();
 			return;
 		case 0xd9:                      			// FMULP ST(i), ST. 
-			fmul(PST(code & 7),PST(0),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fmul(PST(code & 7), PST(0), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			fpop();
 			return;
 		case 0xda:                      			// FCOMP ST(i). 
-			fcom(PST(code & 7),PST(0));
+			fcom(PST(code & 7), PST(0));
 			fpop();
 			return;
 		case 0xdc:                      			// FSUBRP ST(i). 
 			ST(code & 7).exponent ^= 0x8000;
-			fadd(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fadd(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			fpop();
 			return;
 		case 0xdd:                      			// FSUBP ST(I), ST. 
-			real_to_real(&ST(0),&tmp);
+			real_to_real(&ST(0), &tmp);
 			tmp.exponent ^= 0x8000;
-			fadd(PST(code & 7),&tmp,&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fadd(PST(code & 7), &tmp, &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			fpop();
 			return;
 		case 0xde:                      			// FDIVRP ST(i), ST. 
-			fdiv(PST(0),PST(code & 7),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fdiv(PST(0), PST(code & 7), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			fpop();
 			return;
 		case 0xdf:                      			// FDIVP ST(i), ST. 
-			fdiv(PST(code & 7),PST(0),&tmp);
-			real_to_real(&tmp,&ST(code & 7));
+			fdiv(PST(code & 7), PST(0), &tmp);
+			real_to_real(&tmp, &ST(code & 7));
 			fpop();
 			return;
 		case 0xf8:                      			// FFREE ST(i). 未实现. 
 			printk("ffree not implemented\n\r");
-			math_abort(info,1<<(SIGILL-1));
+			math_abort(info, 1 << (SIGILL - 1));
 			fpop();
 			return;
 		case 0xf9:                      			// FXCH ST(i). 
-			fxchg(&ST(0),&ST(code & 7));
+			fxchg(&ST(0), &ST(code & 7));
 			return;
 		case 0xfa:                      			// FSTP ST(i). 
 		case 0xfb:                      			// FSTP ST(i). 
@@ -342,76 +342,71 @@ static void do_emu(struct info * info)
 	switch ((code>>3) & 0xe7) {
 		case 0x22:
 //			put_short_real(PST(0),info,code);
-                    panic("kernel/math/math_emulate.c->do_emu(),394");
+			panic("kernel/math/math_emulate.c->do_emu(), 394");
 			return;
 		case 0x23:                      // FSTP - 保存单精度实数(短实数). 
-			put_short_real(PST(0),info,code);
+			put_short_real(PST(0), info, code);
 			fpop();
 			return;
 		case 0x24:                      // FLDENV - 加载协处理器状态和控制寄存器等. 
-			address = ea(info,code);
-			for (code = 0 ; code < 7 ; code++) {
-				((long *) & I387)[code] =
-				   get_fs_long((unsigned long *) address);
+			address = ea(info, code);
+			for (code = 0; code < 7; code++) {
+				((long *)&I387)[code] = get_fs_long((unsigned long *)address);
 				address += 4;
 			}
 			return;
 		case 0x25:                      // FLDCW - 加载控制字. 
-			address = ea(info,code);
-			*(unsigned short *) &I387.cwd =
-				get_fs_word((unsigned short *) address);
+			address = ea(info, code);
+			*(unsigned short *)&I387.cwd = get_fs_word((unsigned short *)address);
 			return;
 		case 0x26:                      // FSTENV - 储存协处理器状态和控制寄存器等. 
-			address = ea(info,code);
-			verify_area(address,28);
-			for (code = 0 ; code < 7 ; code++) {
-				put_fs_long( ((long *) & I387)[code],
-					(unsigned long *) address);
+			address = ea(info, code);
+			verify_area(address, 28);
+			for (code = 0; code < 7; code++) {
+				put_fs_long(((long *)&I387)[code], (unsigned long *)address);
 				address += 4;
 			}
 			return;
 		case 0x27:                      // FSTCW - 存储控制字. 
-			address = ea(info,code);
-			verify_area(address,2);
-			put_fs_word(I387.cwd,(short *) address);
+			address = ea(info, code);
+			verify_area(address, 2);
+			put_fs_word(I387.cwd, (short *)address);
 			return;
 		case 0x62:                      // FIST - 存储短整形数. 
-			put_long_int(PST(0),info,code);
+			put_long_int(PST(0), info, code);
 			return;
 		case 0x63:                      // FISTP - 存储短整型数. 
-			put_long_int(PST(0),info,code);
+			put_long_int(PST(0), info, code);
 			fpop();
 			return;
 		case 0x65:                      // FLD - 加载扩展(临时)实数. 
 			fpush();
-			get_temp_real(&tmp,info,code);
-			real_to_real(&tmp,&ST(0));
+			get_temp_real(&tmp, info, code);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0x67:                      // FSTP - 储存扩展实数. 
-			put_temp_real(PST(0),info,code);
+			put_temp_real(PST(0), info, code);
 			fpop();
 			return;
 		case 0xa2:                      // FST - 储存双精度实数. 
-			put_long_real(PST(0),info,code);
+			put_long_real(PST(0), info, code);
 			return;
 		case 0xa3:                      // FSTP - 存储双精度实数. 
-			put_long_real(PST(0),info,code);
+			put_long_real(PST(0), info, code);
 			fpop();
 			return;
 		case 0xa4:                      // FRSTOR - 恢复所有 108 字节的寄存器内容. 
-			address = ea(info,code);
-			for (code = 0 ; code < 27 ; code++) {
-				((long *) & I387)[code] =
-				   get_fs_long((unsigned long *) address);
+			address = ea(info, code);
+			for (code = 0; code < 27; code++) {
+				((long *)&I387)[code] = get_fs_long((unsigned long *)address);
 				address += 4;
 			}
 			return;
 		case 0xa6:                      // FSAVE - 保存所有 108 字节寄存器内容. 
 			address = ea(info,code);
 			verify_area(address,108);
-			for (code = 0 ; code < 27 ; code++) {
-				put_fs_long( ((long *) & I387)[code],
-					(unsigned long *) address);
+			for (code = 0; code < 27; code++) {
+				put_fs_long( ((long *)&I387)[code], (unsigned long *)address);
 				address += 4;
 			}
 			I387.cwd = 0x037f;
@@ -419,33 +414,33 @@ static void do_emu(struct info * info)
 			I387.twd = 0x0000;
 			return;
 		case 0xa7:                      // FSTSW - 保存状态状态字. 
-			address = ea(info,code);
-			verify_area(address,2);
-			put_fs_word(I387.swd,(short *) address);
+			address = ea(info, code);
+			verify_area(address, 2);
+			put_fs_word(I387.swd, (short *)address);
 			return;
 		case 0xe2:                      // FIST - 保存短整型数. 
-			put_short_int(PST(0),info,code);
+			put_short_int(PST(0), info, code);
 			return;
 		case 0xe3:                      // FISTP - 保存短整型数. 
-			put_short_int(PST(0),info,code);
+			put_short_int(PST(0), info, code);
 			fpop();
 			return;
 		case 0xe4:                      // FBLD - 加载 BCD 类型数. 
 			fpush();
-			get_BCD(&tmp,info,code);
-			real_to_real(&tmp,&ST(0));
+			get_BCD(&tmp, info, code);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0xe5:                      // FILD - 加载长整型数. 
 			fpush();
-			get_longlong_int(&tmp,info,code);
-			real_to_real(&tmp,&ST(0));
+			get_longlong_int(&tmp, info, code);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 0xe6:                      // FBSTP - 保存 BCD 类型数. 
-			put_BCD(PST(0),info,code);
+			put_BCD(PST(0), info, code);
 			fpop();
 			return;
 		case 0xe7:                      // BISTP - 保存长整型数. 
-			put_longlong_int(PST(0),info,code);
+			put_longlong_int(PST(0), info, code);
 			fpop();
 			return;
 	}
@@ -453,69 +448,68 @@ static void do_emu(struct info * info)
 // 即处理 11011, MF, 000, XXX, R/M 形式的指令代码. 
 	switch (code >> 9) {
 		case 0:                 // MF = 00, 短实数(32 位整数). 
-			get_short_real(&tmp,info,code);
+			get_short_real(&tmp, info, code);
 			break;
 		case 1:                 // MF = 01, 短整数(32 位整数). 
-			get_long_int(&tmp,info,code);
+			get_long_int(&tmp, info, code);
 			break;
 		case 2:                 // MF = 10, 长实数(64 位实数). 
-			get_long_real(&tmp,info,code);
+			get_long_real(&tmp, info, code);
 			break;
 		case 4:                 // MF = 11, 长整数(64 位整数)! 应该是 case 3. 
-			get_short_int(&tmp,info,code);
+			get_short_int(&tmp, info, code);
 	}
-	switch ((code>>3) & 0x27) {
+	switch ((code >> 3) & 0x27) {
 		case 0:                 // FADD. 
-			fadd(&tmp,PST(0),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fadd(&tmp, PST(0), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 1:                 // FMUL. 
-			fmul(&tmp,PST(0),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fmul(&tmp, PST(0), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 2:                 // FCOM. 
-			fcom(&tmp,PST(0));
+			fcom(&tmp, PST(0));
 			return;
 		case 3:                 // FCOMP. 
-			fcom(&tmp,PST(0));
+			fcom(&tmp, PST(0));
 			fpop();
 			return;
 		case 4:                 // FSUB. 
 			tmp.exponent ^= 0x8000;
-			fadd(&tmp,PST(0),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fadd(&tmp, PST(0), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 5:                 // FSUBR. 
 			ST(0).exponent ^= 0x8000;
-			fadd(&tmp,PST(0),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fadd(&tmp, PST(0), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 6:                 // FDIV. 
-			fdiv(PST(0),&tmp,&tmp);
-			real_to_real(&tmp,&ST(0));
+			fdiv(PST(0), &tmp, &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 		case 7:                 // FDIVR. 
-			fdiv(&tmp,PST(0),&tmp);
-			real_to_real(&tmp,&ST(0));
+			fdiv(&tmp, PST(0), &tmp);
+			real_to_real(&tmp, &ST(0));
 			return;
 	}
 // 处理形如 11011, XX, 1, XX, 000, R/M 的指令代码. 
 	if ((code & 0x138) == 0x100) {
-			fpush();
-			real_to_real(&tmp,&ST(0));
-			return;
+		fpush();
+		real_to_real(&tmp, &ST(0));
+		return;
 	}
 // 其余均为无效指令. 
-	printk("Unknown math-insns: %04x:%08x %04x\n\r",CS,EIP,code);
-	math_abort(info,1<<(SIGFPE-1));
+	printk("Unknown math-insns: %04x:%08x %04x\n\r", CS, EIP, code);
+	math_abort(info, 1 << (SIGFPE - 1));
 }
 
 // CPU 异常中断 int 7 调用的 80387 仿真接口函数. 
 // 若当前进程没有使用过协处理器, 就设置使用协处理器标志 used_math, 然后初始化 80387 的控制字, 状态字和特征字. 
 // 最后使用中断 int 7 调用本函数的返回地址指针作为参数调用浮点指令仿真主函数 do_emu(). 
 // 参数 ____false 是 _orig_eip. 
-void math_emulate(long ___false)
-{
+void math_emulate(long ___false) {
 	if (!current->used_math) {
 		current->used_math = 1;
 		I387.cwd = 0x037f;
@@ -523,23 +517,21 @@ void math_emulate(long ___false)
 		I387.twd = 0x0000;
 	}
 /* &___false points to info->___orig_eip, so subtract 1 to get info */
-	do_emu((struct info *) ((&___false) - 1));
+	do_emu((struct info *)((&___false) - 1));
 }
 
 // 终止仿真操作. 
 // 当处理到无效指令代码或者未实现的指令代码时, 该函数首先恢复程序的原 EIP, 并发送指定信号给当前进程. 
 // 最后将栈指针指向中断 int 7 处理过程调用本函数的返回地址, 直接返回到中断处理过程中. 
-void __math_abort(struct info * info, unsigned int signal)
-{
+void __math_abort(struct info * info, unsigned int signal) {
 	EIP = ORIG_EIP;
 	current->signal |= signal;
-	__asm__("movl %0,%%esp ; ret"::"g" ((long) info));
+	__asm__("movl %0, %%esp; ret" : : "g" ((long)info));
 }
 
 // 累加器栈弹出操作. 
 // 将状态字 TOP 字段值加 1, 并以 7 取模. 
-static void fpop(void)
-{
+static void fpop(void) {
 	unsigned long tmp;
 
 	tmp = I387.swd & 0xffffc7ff;
@@ -550,8 +542,7 @@ static void fpop(void)
 
 // 累加器栈入栈操作. 
 // 将状态字 TOP 字段减 1(即加 7), 并以 7 取模. 
-static void fpush(void)
-{
+static void fpush(void) {
 	unsigned long tmp;
 
 	tmp = I387.swd & 0xffffc7ff;
@@ -561,8 +552,7 @@ static void fpush(void)
 }
 
 // 交换两个累加器的值. 
-static void fxchg(temp_real_unaligned * a, temp_real_unaligned * b)
-{
+static void fxchg(temp_real_unaligned * a, temp_real_unaligned * b) {
 	temp_real_unaligned c;
 
 	c = *a;
@@ -572,9 +562,8 @@ static void fxchg(temp_real_unaligned * a, temp_real_unaligned * b)
 
 // 取 ST(i) 的内存指针. 
 // 取状态字中 TOP 字段值. 加上指定的物理数据寄存器号并取模, 最后返回 ST(i) 对应的指针. 
-static temp_real_unaligned * __st(int i)
-{
+static temp_real_unaligned * __st(int i) {
 	i += I387.swd >> 11;            // 取状态字中 TOP 字段值. 
 	i &= 7;
-	return (temp_real_unaligned *) (i*10 + (char *)(I387.st_space));
+	return (temp_real_unaligned *)(i * 10 + (char *)(I387.st_space));
 }
