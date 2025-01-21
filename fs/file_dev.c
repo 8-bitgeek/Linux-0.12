@@ -32,7 +32,7 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 	while (left) {
 		// 根据文件的读写偏移位置得到当前读写位置对应的逻辑块号 i_zone[x].
 		if (nr = bmap(inode, (filp->f_pos) / BLOCK_SIZE)) {		// (filp->f_pos / BLOCK_SIZE) 得到文件逻辑块号索引, 即 i_zone[x] 中的 x.
-			// 得到该逻辑块号对应的高速缓冲区
+			// 得到该逻辑块号对应的高速缓冲区.
 			if (!(bh = bread(inode->i_dev, nr))) {
 				break;
 			}
