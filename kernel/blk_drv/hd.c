@@ -127,12 +127,12 @@ int sys_setup(void * BIOS) {
 	callable = 0;
 #ifndef HD_TYPE															// 如果没有定义 HD_TYPE, 则读取.
 	for (drive = 0; drive < 2; drive++) {
-		hd_info[drive].cyl = *(unsigned short *) BIOS;					// 磁道(柱面)数.
-		hd_info[drive].head = *(unsigned char *) (2 + BIOS);			// 磁头数.
-		hd_info[drive].wpcom = *(unsigned short *) (5 + BIOS);			// 写前预补偿柱面号.
-		hd_info[drive].ctl = *(unsigned char *) (8 + BIOS);				// 控制字节.
-		hd_info[drive].lzone = *(unsigned short *) (12 + BIOS);			// 磁头着陆区柱面号.
-		hd_info[drive].sect = *(unsigned char *) (14 + BIOS);			// 每磁道扇区数.
+		hd_info[drive].cyl = *(unsigned short *)BIOS;					// 磁道(柱面)数.
+		hd_info[drive].head = *(unsigned char *)(2 + BIOS);				// 磁头数.
+		hd_info[drive].wpcom = *(unsigned short *)(5 + BIOS);			// 写前预补偿柱面号.
+		hd_info[drive].ctl = *(unsigned char *)(8 + BIOS);				// 控制字节.
+		hd_info[drive].lzone = *(unsigned short *)(12 + BIOS);			// 磁头着陆区柱面号.
+		hd_info[drive].sect = *(unsigned char *)(14 + BIOS);			// 每磁道扇区数.
 		BIOS += 16;														// 每个硬盘参数表长 16 字节, 这里 BIOS 指向下一表.
 	}
 	// setup.s 程序在取 BIOS 硬盘参数表信息时, 如果系统中只有 1 个硬盘, 就会将对应第 2 硬盘的 16 字节全部清零. 
