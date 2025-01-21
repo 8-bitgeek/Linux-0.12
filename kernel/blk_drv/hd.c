@@ -95,11 +95,11 @@ static int hd_sizes[5 * MAX_HD] = {0, };
 
 // 读端口嵌入汇编宏. 读端口 port, 共读 nr 字, 保存在 buf 中.
 #define port_read(port, buf, nr) \
-__asm__("cld; rep; insw" : : "d" (port), "D" (buf), "c" (nr):)
+__asm__("cld; rep; insw" : : "d" (port), "D" (buf), "c" (nr))
 
 // 写端口嵌入汇编宏. 写端口 port, 共写 nr 字, 从 buf 中取数据.
 #define port_write(port, buf, nr) \
-__asm__("cld; rep; outsw" : : "d" (port), "S" (buf), "c" (nr):)
+__asm__("cld; rep; outsw" : : "d" (port), "S" (buf), "c" (nr))
 
 extern void hd_interrupt(void);		// 硬盘中断过程(sys_call.s)
 extern void rd_load(void);			// 虚拟盘创建加载函数(ramdik.c)
@@ -111,8 +111,7 @@ extern void rd_load(void);			// 虚拟盘创建加载函数(ramdik.c)
 // 该硬盘参数表结构包含 2 个硬盘参数表的(共 32 字节), 是从内存 0x90080 处复制而来. 
 // 0x90080 处的硬盘参数表是由 setup.s 程序利用 ROM BIOS 功能取得. 
 // 本函数主要功能是读取 CMOS 和硬盘参数表信息, 用于设置硬盘分区结构 hd, 并尝试加载 RAM 虚拟盘和根文件系统.
-int sys_setup(void * BIOS)
-{
+int sys_setup(void * BIOS) {
 	static int callable = 1;	// 限制本函数只能被调用 1 次的标志.
 	int i, drive;
 	unsigned char cmos_disks;
@@ -122,8 +121,9 @@ int sys_setup(void * BIOS)
 	// 首先设置 callable 标志, 使得本函数只能被调用 1 次. 然后设置硬盘信息数组 hd_info[]. 
 	// 如果在 include/linux/config.h 文件已定义了符号常数 HD_TYPE, 则 hd_info[] 已经设置好了.
 	// 否则就需要读取硬盘参数表(drive_info), 这个数据由 boot/setup.s 读取到 0x90080 处, 并由 main() 方法复制到 drive_info 里.
-	if (!callable)
+	if (!callable) {
 		return -1;
+	}
 	callable = 0;
 #ifndef HD_TYPE															// 如果没有定义 HD_TYPE, 则读取.
 	for (drive = 0; drive < 2; drive++) {
@@ -137,10 +137,11 @@ int sys_setup(void * BIOS)
 	}
 	// setup.s 程序在取 BIOS 硬盘参数表信息时, 如果系统中只有 1 个硬盘, 就会将对应第 2 硬盘的 16 字节全部清零. 
 	// 因此这里只要判断第 2 个硬盘磁道(柱面)数是否为 0 就可以知道是否有第 2 个硬盘了.
-	if (hd_info[1].cyl)
+	if (hd_info[1].cyl) {
 		NR_HD = 2;														// 硬盘数置为 2.
-	else
+	} else {
 		NR_HD = 1;
+	}
 #endif
 	// 到这里, 硬盘信息数组 hd_info[] 已经设置好, 并且确定了系统含有的硬盘数 NR_HD. 现在开始设置硬盘分区结构数组 hd[]. 
 	// 该数组的项 0 和项 5 分别表示两个硬盘的整体参数, 而项 1-4 和 6-9 分别表示两个硬盘的 4 个分区参数. 
@@ -183,13 +184,15 @@ int sys_setup(void * BIOS)
 	// 这里从 CMOS 偏移地址 0x12 处读出硬盘类型字节. 
 	// 如果低半字节值(存放着第 2 个硬盘类型值)不为 0, 则表示系统有两硬盘, 否则表示系统只有 1 个硬盘. 
 	// 如果 0x12 处读出的值为 0, 则表示系统中没有 AT 兼容硬盘.
-	if ((cmos_disks = CMOS_READ(0x12)) & 0xf0)
-		if (cmos_disks & 0x0f)
+	if ((cmos_disks = CMOS_READ(0x12)) & 0xf0) {
+		if (cmos_disks & 0x0f) {
 			NR_HD = 2;
-		else
+		} else {
 			NR_HD = 1;
-	else
+		}
+	} else {
 		NR_HD = 0;
+	}
 	// 若 NR_HD = 0, 则两个硬盘都不是 AT 控制器兼容的, 两个硬盘数据结构全清零. 
 	// 若 NR_HD = 1, 则将第 2 个硬盘的参数清零.
 	for (i = NR_HD; i < 2; i++) {
@@ -228,8 +231,10 @@ int sys_setup(void * BIOS)
 	// 现在再对每个分区中的数据块总数进行统计, 并保存在硬盘各分区总数据块数组 hd_sizes[] 中. 
 	// 然后让设备数据块总数指针数组的本设备项指向该数组.
 	for (i = 0; i < 5 * MAX_HD; i++) {
-		if (hd[i].nr_sects != 0)
-			Log(LOG_INFO_TYPE, "<<<<< HD Partition[%d] Info: start_sect = %d, nr_sects = %d, end_sect = %d >>>>>\n", i, hd[i].start_sect, hd[i].nr_sects, hd[i].start_sect + hd[i].nr_sects);
+		if (hd[i].nr_sects != 0) {
+			Log(LOG_INFO_TYPE, "<<<<< HD Partition[%d] Info: start_sect = %d, nr_sects = %d, end_sect = %d >>>>>\n", 
+				i, hd[i].start_sect, hd[i].nr_sects, hd[i].start_sect + hd[i].nr_sects);
+		}
 		hd_sizes[i] = hd[i].nr_sects >> 1 ;
 	}
 	blk_size[MAJOR_NR] = hd_sizes;
@@ -239,10 +244,12 @@ int sys_setup(void * BIOS)
 	// 如果有(此时该启动盘称为集成盘)则尝试把该映像加载并存放到虚拟盘中, 
 	// 然后把此时的根文件系统设备号 ROOT_DEV 修改成虚拟盘的设备号. 
 	// 接着再对交换设备进行初始化. 最后安装根文件系统.
-	if (NR_HD)
-		Log(LOG_INFO_TYPE, "<<<<< Partition table%s ok. >>>>>\n\r",(NR_HD > 1) ? "s":"");
-	for (i = 0; i < NR_HD; i++)
+	if (NR_HD) {
+		Log(LOG_INFO_TYPE, "<<<<< Partition table%s ok. >>>>>\n\r", (NR_HD > 1) ? "s" : "");
+	}
+	for (i = 0; i < NR_HD; i++) {
 		Log(LOG_INFO_TYPE, "<<<<< HD[%d] Info: cyl = %d, head = %d, sect = %d, ctl = %x >>>>>\n", i, hd_info[i].cyl, hd_info[i].head, hd_info[i].sect, hd_info[i].ctl);
+	}
 	rd_load();						// 尝试在虚拟盘中加载根文件系统. (kernel/blk_drv/ramdisk.c)
 	// 初始化交换设备使用位图, 如果存在交换设备, 则在主内存中申请一页物理内存(4KB)生成交换内存位图信息 swap_bitmap. 
 	init_swapping();				// (mm/swap.c)
@@ -259,26 +266,28 @@ int sys_setup(void * BIOS)
 // 驱动器是否就绪(即位 6 是否为 1)与控制器的状态无关. 
 // 因此我们可能把第 172 行语句改写成: "while(--retries && (inb_p(HD_STATUS)&0x80));" 
 // 另外, 由于现在的 PC 速度都很快, 因此我们可以把等待的循环次数再加大一些, 例如再增加 10 倍.
-static int controller_ready(void)
-{
+static int controller_ready(void) {
 	int retries = 100000;
 
 	// while (--retries && (inb_p(HD_STATUS)&0xc0)!=0x40);
-	while(--retries && (inb_p(HD_STATUS) & 0X80)) ;
+	while(--retries && (inb_p(HD_STATUS) & 0X80)) {
+		// nothing.
+	}
 	return (retries);									// 返回等待循环次数.
 }
 
 // 检测硬盘执行命令后的状态. (win 表示温切斯特硬盘的缩写)
 // 读取硬盘状态寄存器中的命令执行结果状态. 返回 0 表示正常; 1 表示出错. 
 // 如果执行命令错, 则需要再读错误寄存器 HD_ERROR(0x1f1).
-static int win_result(void)
-{
+static int win_result(void) {
 	int i = inb_p(HD_STATUS);							// 读取硬盘状态寄存器中的状态信息.
 
-	if ((i & (BUSY_STAT | READY_STAT | WRERR_STAT | SEEK_STAT | ERR_STAT))
-		== (READY_STAT | SEEK_STAT))
+	if ((i & (BUSY_STAT | READY_STAT | WRERR_STAT | SEEK_STAT | ERR_STAT)) == (READY_STAT | SEEK_STAT)) {
 		return(0); 										/* ok */
-	if (i & 1) i = inb(HD_ERROR);						// 若 ERR_STAT 置位, 则读取错误寄存器.
+	}
+	if (i & 1) {
+		i = inb(HD_ERROR);								// 若 ERR_STAT 置位, 则读取错误寄存器.
+	}
 	return (1);
 }
 
@@ -290,18 +299,17 @@ static int win_result(void)
 // 然后发送硬盘控制字节和7字节的参数命令块. 硬盘中断处理程序的代码位于 kernel/sys_call.s 程序中.
 // 关键字 `register` 定义 1 个寄存器变量 port. 该变量将被保存在 1 个寄存器中, 以便于快速访问.
 // 如果想指定寄存器(如 eax), 则我们可以把该句写成 "register char __res asm("ax");"
-static void hd_out(unsigned int drive, unsigned int nsect, unsigned int sect,
-		unsigned int head, unsigned int cyl, unsigned int cmd,
-		void (*intr_addr)(void))
-{
+static void hd_out(unsigned int drive, unsigned int nsect, unsigned int sect, unsigned int head, unsigned int cyl, unsigned int cmd, void (*intr_addr)(void)) {
 	register int port;
 
 	// 首先对参数进行有效性检查. 如果驱动器号大于 1(只能是 0, 1)或者磁头号大于 15, 则程序不支持, 停机. 
 	// 否则就判断并循环等待驱动器就绪. 如果等待一段时间后仍未就绪则表示硬盘控制器出错, 也停机.
-	if (drive > 1 || head > 15)
+	if (drive > 1 || head > 15) {
 		panic("Trying to write bad sector");
-	if (!controller_ready())
+	}
+	if (!controller_ready()) {
 		panic("HD controller not ready");
+	}
 	// 接着设置硬盘中断发生时将调用的函数指针 do_hd(kernel/blk_drv/blk.h). 在向硬盘控制器发送参数和命令之前, 
 	// 规定要先向控制器命令端口(0x3f6)发送指定硬盘的控制字节, 以建立相应的硬盘控制方式. 
 	// 该控制字节即是硬盘信息结构数组中的 ctl 字节. 然后向控制器端口 0x1f1 - 0x1f7 发送 7 字节的参数命令块.
@@ -320,8 +328,7 @@ static void hd_out(unsigned int drive, unsigned int nsect, unsigned int sect,
 // 等待硬盘就绪.
 // 该函数循环等待主状态控制器忙标志复位. 若仅有就绪或寻道结束标志置位, 则表示就绪, 成功返回 0. 
 // 若经过一段时间仍为忙, 则返回 1.
-static int drive_busy(void)
-{
+static int drive_busy(void) {
 	unsigned int i;
 	unsigned char c;
 
@@ -330,8 +337,9 @@ static int drive_busy(void)
 	for (i = 0; i < 50000; i++) {
 		c = inb_p(HD_STATUS);							// 取主控制器状态字节.
 		c &= (BUSY_STAT | READY_STAT | SEEK_STAT);
-		if (c == (READY_STAT | SEEK_STAT))
+		if (c == (READY_STAT | SEEK_STAT)) {
 			return 0;
+		}
 	}
 	printk("HD controller times out\n\r");				// 等待超时, 显示信息. 并返回 1.
 	return(1);
@@ -341,24 +349,26 @@ static int drive_busy(void)
 // 首先向控制器寄存器端口(0x3f6)发送允许复位(4)控制字节. 然后循环操作等待一段时间让控制器执行复位操作. 
 // 接着再向该端口发送正常的控制字节(不禁止重试, 重读)并等待硬盘就绪. 若等待硬盘就绪超时, 则显示警告信息. 
 // 然后读取错误寄存器内容, 若其不等于 1(表示无错误)则显示硬盘控制器复位失败信息.
-static void reset_controller(void)
-{
+static void reset_controller(void) {
 	int	i;
 
 	outb(4, HD_CMD);									// 向控制寄存器端口发送复位控制字节.
-	for(i = 0; i < 1000; i++) nop();					// 等待一段时间.
+	for(i = 0; i < 1000; i++) {							// 等待一段时间.
+		nop();
+	}
 	outb(hd_info[0].ctl & 0x0f, HD_CMD);				// 发送正常控制字节(不禁止重试, 重读).
-	if (drive_busy())
+	if (drive_busy()) {
 		printk("HD-controller still busy\n\r");
-	if ((i = inb(HD_ERROR)) != 1)
+	}
+	if ((i = inb(HD_ERROR)) != 1) {
 		printk("HD-controller reset failed: %02x\n\r",i);
+	}
 }
 
 // 硬盘复位操作.
 // 首先复位(重新校正)硬盘控制器. 然后发送硬盘控制器命令 "建立驱动器参数". 在本命令引起的硬盘中断处理程序中又会调用本函数. 
 // 此时该函数会根据执行该命令的结果判断是否要进行出错处理或是继续执行请求项处理操作.
-static void reset_hd(void)
-{
+static void reset_hd(void) {
 	static int i;
 
 	// 如果复位标志 reset 是置位的, 则把复位标志清零后, 执行复位硬盘控制在操作. 
@@ -376,22 +386,22 @@ repeat:
 		reset_controller();
 	} else if (win_result()) {
 		bad_rw_intr();
-		if (reset)
+		if (reset) {
 			goto repeat;
+		}
 	}
 	i++;												// 处理下一个硬盘(第 1 个是 0).
 	if (i < NR_HD) {
-		hd_out(i, hd_info[i].sect, hd_info[i].sect,hd_info[i].head - 1,
-			hd_info[i].cyl, WIN_SPECIFY, &reset_hd);
-	} else
+		hd_out(i, hd_info[i].sect, hd_info[i].sect,hd_info[i].head - 1, hd_info[i].cyl, WIN_SPECIFY, &reset_hd);
+	} else {
 		do_hd_request();								// 执行请求项处理.
+	}
 }
 
 // 意外硬盘中断调用函数
 // 发生意外硬盘中断时, 硬盘中断处理程序中调用的默认 C 处理函数. 在被调用函数指针为 NULL 时调用该函数. 
 // 该函数在显示警告信息后设置复位标志 reset, 然后继续调用请求项函数 do_hd_request() 并在其中执行复位处理操作.
-void unexpected_hd_interrupt(void)
-{
+void unexpected_hd_interrupt(void) {
 	printk("Unexpected HD interrupt\n\r");
 	reset = 1;
 	do_hd_request();
@@ -401,20 +411,20 @@ void unexpected_hd_interrupt(void)
 // 如果读扇区时的出错次数大于或等于 7 次时, 则结束当前请求项并唤醒等待该请求的进程, 
 // 而且对应缓冲区更新标志复位, 表示数据没有更新. 
 // 如果读写一扇区时的出错次数已经大于 3 次, 则要求执行复位硬盘控制器操作(设置复位标志).
-static void bad_rw_intr(void)
-{
-	if (++CURRENT->errors >= MAX_ERRORS)
+static void bad_rw_intr(void) {
+	if (++CURRENT->errors >= MAX_ERRORS) {
 		end_request(0);
-	if (CURRENT->errors > MAX_ERRORS / 2)
+	}
+	if (CURRENT->errors > MAX_ERRORS / 2) {
 		reset = 1;
+	}
 }
 
 // 读操作中断调用函数.
 // 在硬盘读命令执行完成后会产生硬盘中断信号, 并执行硬盘中断处理程序(hd_interrupt), 
 // 此时在硬盘中断处理程序调用的 C 函数指针 do_hd 已经指向 read_intr(), 
 // 因此会在一次读扇区操作完成(或出错)后就会执行该函数.
-static void read_intr(void)
-{
+static void read_intr(void) {
 	// 首先判断此次读请求操作是否出错. 若命令结束后控制器还处于忙状态, 或者命令执行错误, 则处理硬盘操作失败的问题, 
 	// 接着再次请求硬盘作复位处理并执行其他请求项. 然后返回. 
 	// 每次读操作出错都会对当前请求项作出错次数累计, 若出错次数不到最大允许出错次数一半, 
@@ -446,8 +456,7 @@ static void read_intr(void)
 // 在写命令执行后会产生硬盘中断信号, 并执行硬盘中断处理程序, 
 // 此时在硬盘中断处理程序中调用的 C 函数指针 do_hd 已经指向 write_intr(), 
 // 因此会在一次写扇区操作完成(或出错)后就会执行该函数.
-static void write_intr(void)
-{
+static void write_intr(void) {
 	// 该函数首先判断此次写命令操作是否出错. 若命令结束后控制器还处于忙状态, 或者命令执行错误, 则处理硬盘操作失败问题, 
 	// 接着再次请求硬盘作复位处理并执行其他请求项. 然后返回. 
 	// 在 bad_rw_intr() 函数中, 每次操作出错都会对当前请求项作出错次数累计, 
@@ -483,10 +492,10 @@ static void write_intr(void)
 // 若出错次数不到最大允许出错次数一半, 则会先执行硬盘复位操作, 然后再执行本次请求项处理.
 // 若出错次数已经大于等于最大允许出错次数 MAX_ERRORS(7 次), 则结束本次请求项的处理而去处理队列中下一个请求项. 
 // do_hd_request() 中根据当时具体的标志状态来判别是否需要先执行复位, 重新校正等操作, 然后再继续或处理下一请求项.
-static void recal_intr(void)
-{
-	if (win_result())									// 若返回出错, 则调用 bad_rw_intr().
+static void recal_intr(void) {
+	if (win_result()) {									// 若返回出错, 则调用 bad_rw_intr().
 		bad_rw_intr();
+	}
 	do_hd_request();
 }
 
@@ -497,18 +506,19 @@ static void recal_intr(void)
 // 此时 do_timer() 就会调用本函数设置复位标志 reset 并调用 do_hd_request() 执行复位处理.
 // 若在预定时间内(200 滴答)硬盘控制器发出了硬盘中断并开始执行硬盘中断处理程序, 
 // 那么 hd_timeout 值就会在中断处理程序中被置 0. 此时 do_timer() 就会跳过本函数.
-void hd_times_out(void)
-{
+void hd_times_out(void) {
 	// 如果当前并没有请求项要处理(设备请求项指针为 NULL), 则无超时可言, 直接返回. 否则先显示警告信息, 
 	// 然后判断当前请求项执行过程中发生的出错次数是否已经大于设定值 MAX_ERRORS(7).
     // 如果是则以失败形式结束本次请求项的处理(不设置数据更新标志). 
 	// 然后把中断过程中调用的 C 函数指针 do_hd 置空, 并设置复位标志 reset, 
 	// 继而在请求项处理函数 do_hd_request() 中去执行复位操作.
-	if (!CURRENT)
+	if (!CURRENT) {
 		return;
+	}
 	printk("HD timeout");
-	if (++CURRENT->errors >= MAX_ERRORS)
+	if (++CURRENT->errors >= MAX_ERRORS) {
 		end_request(0);
+	}
 	SET_INTR(NULL);										// 令 do_hd = NULL, time_out = 200
 	reset = 1;											// 设置复位标志.
 	do_hd_request();
@@ -521,8 +531,7 @@ void hd_times_out(void)
 // 若请求项此时是块设备的第 1 个(原来设备空闲), 则块设备当前请求项指针会直接指向该请求项(参见 ll_rw_blk.c), 
 // 并会立刻调用本函数执行读写操作. 
 // 否则在一个读写操作完成而引发的硬盘中断过程, 若还有请求项需要处理, 则也会在硬盘中断过程中调用本函数
-void do_hd_request(void)
-{
+void do_hd_request(void) {
 	int i, r;
 	unsigned int block, dev;
 	unsigned int sec, head, cyl;
@@ -589,8 +598,9 @@ void do_hd_request(void)
 	// 否则我们可以向硬盘控制器数据寄存器端口 HD_DATA 写入 1 个扇区的数据.
 	if (CURRENT->cmd == WRITE) {
 		hd_out(dev, nsect, sec, head, cyl, WIN_WRITE, &write_intr);  // 如果是写操作, 则将中断处理函数设置为 write_intr(). 
-		for(i = 0; i < 10000 && !(r = inb_p(HD_STATUS) & DRQ_STAT); i++)
+		for(i = 0; i < 10000 && !(r = inb_p(HD_STATUS) & DRQ_STAT); i++) {
 			/* nothing */ ;
+		}
 		if (!r) {
 			bad_rw_intr();
 			goto repeat;							// 该标号在 blk.h 文件最后面.
@@ -599,8 +609,9 @@ void do_hd_request(void)
 	// 如果当前请求是读硬盘数据, 则向硬盘控制器发送读扇区命令. 若命令无效则停机.
 	} else if (CURRENT->cmd == READ) {
 		hd_out(dev, nsect, sec, head, cyl, WIN_READ, &read_intr); 	// 如果是读操作, 则将中断处理函数设置为 read_intr().
-	} else
+	} else {
 		panic("unknown hd-command");
+	}
 }
 
 // 硬盘系统初始化.
