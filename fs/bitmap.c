@@ -137,7 +137,7 @@ int new_block(int dev) {
 	bh->b_dirt = 1;
 	// 即逻辑块位图中位偏移值表示从数据区开始处算起的块号, 因此这里需要加上数据区第 1 个逻辑块的块号, 把 j 转换成逻辑块号. 
 	j += i * 8192 + sb->s_firstdatazone - 1;
-	// 此时如果新逻辑块大于该设备上的总逻辑块数, 则说明指定逻辑块在对应设备上不存在. 申请失败, 返回 0 退出.
+	// 此时如果新逻辑块号大于该设备上的总逻辑块数, 则说明指定逻辑块在对应设备上不存在. 申请失败, 返回 0 退出.
 	if (j >= sb->s_nzones) {
 		return 0;
 	}
@@ -150,6 +150,7 @@ int new_block(int dev) {
 	if (bh->b_count != 1) {
 		panic("new block: count is != 1");
 	}
+	// 之所以申请后又释放, 主要目的是设置更新标志和脏标志, 让其它进程使用的时候需要进行相应处理.
 	clear_block(bh->b_data);
 	bh->b_uptodate = 1;
 	bh->b_dirt = 1;
