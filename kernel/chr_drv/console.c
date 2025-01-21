@@ -206,8 +206,7 @@ static char * translations[] = {
 // 注意, 函数中的所有变量实际上是 vc_cons[currcons] 结构中的相应字段. 以下函数相同.
 /* NOTE! gotoxy thinks x==video_num_columns is ok */
 /* 注意! gotoxy 函数认为 x==video_num_columns 时是正确的 */
-static inline void gotoxy(int currcons, int new_x, unsigned int new_y)
-{
+static inline void gotoxy(int currcons, int new_x, unsigned int new_y) {
 	if (new_x > video_num_columns || new_y >= video_num_lines) {
 		return;
 	}

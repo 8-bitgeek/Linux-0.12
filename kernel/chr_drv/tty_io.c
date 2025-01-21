@@ -21,7 +21,7 @@
 #include <unistd.h>										// unistd.h 是标准符号常数与类型文件, 并声明了各种函数.
 
 // 给出定时警告(alarm)信号在信号位图中对应的位屏蔽位. 
-#define ALRMMASK (1<<(SIGALRM-1))
+#define ALRMMASK (1 << (SIGALRM - 1))
 
 #include <linux/sched.h>
 #include <linux/tty.h>									// tty 头文件, 定义了有关 tty_io, 串行通信方面的参数, 常数.

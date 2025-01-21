@@ -34,13 +34,12 @@
 // 内嵌汇编代码把基地址(%2)和比特偏移值(%1)所指定的比特位值先保存到进位标志 CF 中, 然后设置(复位)该比特位. 
 // 指令 abcl 是带进位位加, 用于根据进位位 CF 设置操作数(%0). 如果 CF = 1 则返回寄存器值 = 1, 否则返回寄存器值 = 0.
 #define bitop(name, op) \
-static inline int name(char * addr, unsigned int nr) \
-{ \
-int __res; \
-__asm__ __volatile__("bt" op " %1, %2; adcl $0, %0" \
-:"=g" (__res) \
-:"r" (nr),"m" (*(addr)),"0" (0)); \
-return __res; \
+static inline int name(char * addr, unsigned int nr) { \
+	int __res; \
+	__asm__ __volatile__("bt" op " %1, %2; adcl $0, %0" \
+		: "=g" (__res) \
+		: "r" (nr), "m" (*(addr)), "0" (0)); \
+	return __res; \
 }
 
 // 这里根据不同的 op 字符定义 3 个内嵌函数.
@@ -66,28 +65,32 @@ int SWAP_DEV = 0;							// 内核初始化时设置的交换设备号.
 // 申请 1 页交换页面.
 // 扫描整个交换映射位图(除对应位图本身的位 0 以外), 返回值为 1 的第一个比特位号, 即目前空闲的交换页面号. 
 // 若操作成功则返回交换页面号, 否则返回 0.
-static int get_swap_page(void)
-{
+static int get_swap_page(void) {
 	int nr;
 
-	if (!swap_bitmap)
+	if (!swap_bitmap) {
 		return 0;
-	for (nr = 1; nr < 32768 ; nr++)
-		if (clrbit(swap_bitmap, nr))
+	}
+	for (nr = 1; nr < 32768; nr++) {
+		if (clrbit(swap_bitmap, nr)) {
 			return nr;					// 返回目前空闲的交换页面号.
+		}
+	}
 	return 0;
 }
 
 // 释放交换设备中指定的交换页面.
 // 在交换位图中设置指定页面号对应的位(置 1). 
 // 若原来该位就等于 1, 则表示交换设备中原来该页面就没有被占用, 或者位图出错, 于是显示出错信息并返回.
-void swap_free(int swap_nr)				// 参数指定交换页面号.
-{
-	if (!swap_nr)
+void swap_free(int swap_nr) {			// 参数指定交换页面号.
+	if (!swap_nr) {
 		return;
-	if (swap_bitmap && swap_nr < SWAP_BITS)
-		if (!setbit(swap_bitmap, swap_nr))
+	}
+	if (swap_bitmap && swap_nr < SWAP_BITS) {
+		if (!setbit(swap_bitmap, swap_nr)) {
 			return;
+		}
+	}
 	printk("Swap-space bad (swap_free())\n\r");
 	return;
 }
@@ -95,8 +98,7 @@ void swap_free(int swap_nr)				// 参数指定交换页面号.
 // 把指定页面交换进内存中
 // 把指定页表项的对应页面从交换设备中读入到新申请的内存页面中. 
 // 修改交换位图中对应位(置位), 同时修改页表项内容, 让它指向该内存页面, 并设置相应标志.
-void swap_in(unsigned long *table_ptr)
-{
+void swap_in(unsigned long * table_ptr) {
 	int swap_nr;
 	unsigned long page;
 
@@ -120,11 +122,13 @@ void swap_in(unsigned long *table_ptr)
 	// 在把页面交换进来后, 就把交换位图中对应比特位置位. 
 	// 如果其原本就是置位的, 说明此次是再次从交换设备中读入相同的页面, 于是显示一下警告信息. 
 	// 最后让页表指向该物理页面, 并设置页面已修改, 用户可读写和存在标志(Dirty, U/S, R/W, P).
-	if (!(page = get_free_page()))
+	if (!(page = get_free_page())) {
 		oom();
-	read_swap_page(swap_nr, (char *) page);
-	if (setbit(swap_bitmap, swap_nr))
+	}
+	read_swap_page(swap_nr, (char *)page);
+	if (setbit(swap_bitmap, swap_nr)) {
 		printk("swapping in multiply from same page\n\r");
+	}
 	*table_ptr = page | (PAGE_DIRTY | 7);
 }
 
@@ -133,26 +137,29 @@ void swap_in(unsigned long *table_ptr)
 // 于是可以直接释放掉相应物理页面了事. 否则就申请一个交换页面号, 然后把页面交换出去. 
 // 此时交换页面号要保存在对应页表项中, 并且仍需要保持页表项存在位 P = 0. 
 // 参数是页表项指针. 页面换或释放成功返回 1, 否则返回 0.
-int try_to_swap_out(unsigned long * table_ptr)
-{
+int try_to_swap_out(unsigned long * table_ptr) {
 	unsigned long page;
 	unsigned long swap_nr;
 
 	// 首先判断参数的有效性. 若需要交换出去的内存页面并不存在(或称无效), 则即可退出. 
 	// 若页表项指定的物理页面地址大于分页管理的内存高端 PAGING_MEMORY(15MB), 也退出.
 	page = *table_ptr;
-	if (!(PAGE_PRESENT & page))
+	if (!(PAGE_PRESENT & page)) {
 		return 0;
-	if (page - LOW_MEM > PAGING_MEMORY)
+	}
+	if (page - LOW_MEM > PAGING_MEMORY) {
 		return 0;
+	}
 	// 若内存页面已被修改过, 但是该页面是被共享的, 那么为了提高运行效率, 此类页面不宜被交换出去, 于是直接退出, 函数返回 0. 
 	// 否则就申请一交换页面号, 并把它保存在页表项中, 然后把页面交换出去并释放对应物理内存页面.
 	if (PAGE_DIRTY & page) {
 		page &= 0xfffff000;									// 取物理页面地址.
-		if (mem_map[MAP_NR(page)] != 1)
+		if (mem_map[MAP_NR(page)] != 1) {
 			return 0;
-		if (!(swap_nr = get_swap_page()))					// 申请交换页面号.
+		}
+		if (!(swap_nr = get_swap_page())) {					// 申请交换页面号.
 			return 0;
+		}
 		// 对于要交换设备中的页面, 相应页表项中将存放的是(swap_nr << 1). 
 		// 乘 2(左移 1 位) 是为了空出原来页表项的存在位(P). 
 		// 只有存在位 P = 0 并且页表项内容不为 0 的页面才会在交换设备中. 
@@ -161,7 +168,7 @@ int try_to_swap_out(unsigned long * table_ptr)
 		// 下面写交换页函数 write_swap_page(nr, buffer) 被定义为 ll_rw_page(WRITE, SWAP_DEV, (nr), (buffer)).
 		*table_ptr = swap_nr << 1;
 		invalidate();										// 刷新 CPU 页变换高速缓冲.
-		write_swap_page(swap_nr, (char *) page);
+		write_swap_page(swap_nr, (char *)page);
 		free_page(page);
 		return 1;
 	}
@@ -184,8 +191,7 @@ int try_to_swap_out(unsigned long * table_ptr)
 // 从线性地址 64MB 对应的目录项(FIRST_VM_PAGE >> 10)开始, 搜索整个 4GB 线性空间, 
 // 对有效页目录二级页表指定的物理内存页面执行交换到交换设备中去的尝试. 
 // 一旦成功地交换出一个页面, 就返回 -1. 否则返回 0. 该函数会在 get_free_page() 中被调用.
-int swap_out(void)
-{
+int swap_out(void) {
 	static int dir_entry = FIRST_VM_PAGE >> 10;	// 即任务 1 的第 1 个目录项索引.
 	static int page_entry = -1;
 	int counter = VM_PAGES;						// 表示除去任务 0 以外的其他任务的所有页数目
@@ -196,13 +202,15 @@ int swap_out(void)
 	// 然后继续检测下一项目录项. 若全部搜索完还没有找到适合的(存在的)页目录项, 就重新搜索.
 	while (counter > 0) {
 		pg_table = pg_dir[dir_entry];			// 页目录项内容.
-		if (pg_table & 1)
+		if (pg_table & 1) {
 			break;
+		}
 		counter -= 1024;						// 1 个页表对应 1024 个页帧
 		dir_entry++;							// 下一目录项.
 		// 如果整个 4GB 的 1024 个页目录项检查完了则又回到第 1 个任务重新开始检查
-		if (dir_entry >= 1024)
+		if (dir_entry >= 1024) {
 			dir_entry = FIRST_VM_PAGE >> 10;
+		}
 	}
 	// 在取得当前目录项的页表指针后, 针对该页表中的所有 1024 个页面, 逐一调用交换函数 try_to_swap_out() 尝试交换出去. 
 	// 一旦某个页面成功交换到交换设备中就返回 1. 
@@ -216,14 +224,17 @@ int swap_out(void)
 			page_entry = 0;
 		repeat:
 			dir_entry++;
-			if (dir_entry >= 1024)
+			if (dir_entry >= 1024) {
 				dir_entry = FIRST_VM_PAGE >> 10;
+			}
 			pg_table = pg_dir[dir_entry];		// 页目录项内容.
-			if (!(pg_table & 1))
-				if ((counter -= 1024) > 0)
+			if (!(pg_table & 1)) {
+				if ((counter -= 1024) > 0) {
 					goto repeat;
-				else
+				} else {
 					break;
+				}
+			}
 			pg_table &= 0xfffff000;				// 页表指针.
 		}
 		if (try_to_swap_out(page_entry + (unsigned long *) pg_table))
@@ -253,8 +264,7 @@ int swap_out(void)
 // 后面的 put_page() 函数即用于把指定页面映射到某个进程的地址空间中. 
 // 当然对于内核代码直接使用本函数申请内存时并不需要再使用 put_page() 进行映射, 
 // 因为内核代码和数据空间(16MB)已经对等地映射到物理地址空间.
-unsigned long get_free_page(void)
-{
+unsigned long get_free_page(void) {
 	register unsigned long __res;
 
 // 首先在内存映射字节位图(mem_map[]: 位于内核数据段中, 由编译时生成位置)中从后往前查找值为 0(UNUSED) 的项, 
@@ -279,24 +289,26 @@ repeat:
 		: "0" (0), "i" (LOW_MEM), "c" (PAGING_PAGES), 	/* 输入寄存器列表: %1(=%0=eax), %2, %3(ecx); LOW_MEM = 1MB; PAGING_PAGES = 3840 */
 		  "D" (mem_map + PAGING_PAGES - 1) 				/* %4(edi): mem_map 最后一个字节的下个字节的地址 */
 		: "dx");
-	if (__res >= HIGH_MEMORY)				// 页面地址大于实际内存容量则重新寻找
+	if (__res >= HIGH_MEMORY) {				// 页面地址大于实际内存容量则重新寻找
 		goto repeat;
-	if (!__res && swap_out())				// 若没有得到空闲页面则执行交换处理, 并重新查找.
+	}
+	if (!__res && swap_out()) {				// 若没有得到空闲页面则执行交换处理, 并重新查找.
 		goto repeat;
+	}
 	return __res;							// 返回空闲物理页面地址.
 }
 
 // 交换内存初始化.
-void init_swapping(void)
-{
+void init_swapping(void) {
 	// blk_size[] 指向指定主设备号的块设备数据块总数数组. 
 	// 该块数数组每一项对应一个设备上所拥有的数据块总数(1 块大小 = 1KB).
-	extern int *blk_size[];					// 存放各个块设备大小的指针数组. (kernel/blk_drv/ll_rw_blk.c)
+	extern int * blk_size[];				// 存放各个块设备大小的指针数组. (kernel/blk_drv/ll_rw_blk.c)
 	int swap_size, i, j;
 
 	// 如果没有定义交换设备则返回. 如果交换设备没有设置块数数组, 则显示并返回.
-	if (!SWAP_DEV)
+	if (!SWAP_DEV) {
 		return;
+	}
 	if (!blk_size[MAJOR(SWAP_DEV)]) {  		// SWAP_DEV = 0x304: 硬盘的第 4 个分区.
 		printk("Unable to get size of swap device\n\r");
 		return;
@@ -304,8 +316,9 @@ void init_swapping(void)
 	// 取指定交换设备号的交换区数据块总数 swap_size. 
 	// 若为 0 则返回, 若总块数小于 100 块(100KB)则显示信息 "交换设备区太小", 然后退出.
 	swap_size = blk_size[MAJOR(SWAP_DEV)][MINOR(SWAP_DEV)];
-	if (!swap_size)
+	if (!swap_size) {
 		return;
+	}
 	if (swap_size < 100) {
 		printk("Swap device too small (%d blocks)\n\r", swap_size);
 		return;
@@ -313,10 +326,11 @@ void init_swapping(void)
 	// 每页 4 个数据块(4KB), 所以 swap_size >>= 2 计算出交换页面总数.
 	// 交换数据块总数转换成对应可交换页面总数. 该值不能大于 SWAP_BITS 所能表示的页面数. 即交换页面总数不得大于 32768.
 	swap_size >>= 2; 								// swap_size /= 4.
-	if (swap_size > SWAP_BITS)
+	if (swap_size > SWAP_BITS) {
 		swap_size = SWAP_BITS;
+	}
 	// 然后从主内存区申请一页物理内存(4KB)来存放交换页面映射数组 swap_bitmap, 其中每 1 比特代表 1 页交换页面.
-	swap_bitmap = (char *) get_free_page();
+	swap_bitmap = (char *)get_free_page();
 	if (!swap_bitmap) {
 		printk("Unable to start swapping: out of memory :-)\n\r");
 		return;
@@ -343,8 +357,9 @@ void init_swapping(void)
 	// 先检查不可用的位图情况, 它们应该均为 0, 若这部分(0, swap_size--SWAP_BITS)位图中有置位的比特位(1), 
 	// 则表示位图有问题, 于是显示出错信息, 释放位图占用的页面并退出函数. 
 	for (i = 0; i < SWAP_BITS; i++) {
-		if (i == 1)
+		if (i == 1) {
 			i = swap_size; 							// 跳到 swap_size 之后的位继续检查.
+		}
 		if (bit(swap_bitmap, i)) {
 			printk("Bad swap-space bit-map\n\r");
 			free_page((long) swap_bitmap);
@@ -356,9 +371,11 @@ void init_swapping(void)
 	// 若统计出没有空闲的交换页面, 则表示交换功能有问题, 于是释放位图占用的内存页面并退出函数.
 	// 否则显示交换设备工作正常以及交换页面和交换空间总字节数.
 	j = 0;
-	for (i = 1; i < swap_size; i++)
-		if (bit(swap_bitmap, i))
+	for (i = 1; i < swap_size; i++) {
+		if (bit(swap_bitmap, i)) {
 			j++;
+		}
+	}
 	if (!j) { 									// 如果没有空闲的交换页面, 则表示交换设备有问题.
 		free_page((long) swap_bitmap);
 		swap_bitmap = NULL;
