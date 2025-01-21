@@ -23,10 +23,14 @@ struct exec {
 };
 
 int main() {
+    /* C89 standard: All variable declarations must appear at the beginning of a block (a function or a code block). */
+    struct exec * exec_ptr;
     FILE * fd = fopen("./test", "r+");
-    char * exec_ptr = malloc(sizeof(struct exec));
-    int readed = fread(exec_ptr, sizeof(struct exec), 1, fd);
+    char * ptr = malloc(sizeof(struct exec));
+    int readed = fread(ptr, sizeof(struct exec), 1, fd);
     printf("readed %d bytes.\n", readed);
-    free(exec_ptr);
+    exec_ptr = (struct exec *)ptr;
+    printf("a_magic = %d, a_text = %d\n", exec_ptr->a_magic, exec_ptr->a_text);
+    free(ptr);
     return 0;
 }
