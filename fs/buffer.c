@@ -432,14 +432,16 @@ struct buffer_head * bread(int dev, int block) {
 		panic("bread: getblk() returned NULL\n");
 	}
 	// 如果该缓冲块中数据是有效的(已更新的)可以直接使用, 则返回.
-	if (bh->b_uptodate) {						// 之前已经缓存过的 uptodate == 1.
+	if (bh->b_uptodate) {
 		return bh;
 	}
 	// 如果没有缓存, 或缓存的数据不可用, 则调用底层块设备读写 ll_rw_block() 函数, 产生读设备块请求. 
 	// 等待数据缓冲完成, 在睡眠醒来之后, 如果该缓冲区已更新, 则返回缓冲区头指针, 退出. 
 	// 否则表明读设备操作失败, 于是释放该缓冲区, 返回 NULL, 退出.
-	ll_rw_block(READ, bh); 						// 向设备提交请求后返回.
-	wait_on_buffer(bh); 						// 进入不可中断睡眠等待数据可用, 数据可用后会由中断触发唤醒当前进程.
+	ll_rw_block(READ, bh); 						// 向设备提交请求.
+	// 不可中断睡眠等待读请求完成, 让出 CPU. 请求完成后由硬盘中断唤醒当前进程.
+	wait_on_buffer(bh);
+	// 读磁盘的请求只需要检查缓冲块中的数据是否为最新的, 写磁盘的请求需要判断缓冲块是否修改过(b_dirt).
 	if (bh->b_uptodate) {
 		return bh;
 	}

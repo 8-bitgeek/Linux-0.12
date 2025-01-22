@@ -173,7 +173,7 @@ static void make_request(int major, int rw, struct buffer_head * bh) {
 	if (rw != READ && rw != WRITE) {
 		panic("Bad block dev command, must be R/W/RA/WA");
 	}
-	lock_buffer(bh);                				// 锁定缓冲块.
+	lock_buffer(bh);                				// 因为要修改(写)缓冲块, 所以要锁定缓冲块.
 	// 如果是 WRITE 操作并且缓冲块未修改, 或是 READ 操作并且缓冲块已更新, 则直接返回.
 	if ((rw == WRITE && !bh->b_dirt) || (rw == READ && bh->b_uptodate)) {
 		unlock_buffer(bh);
@@ -223,7 +223,8 @@ repeat:
 	req->dev = bh->b_dev;								// 设备号.
 	req->cmd = rw;										// 命令(READ/WRITE).
 	req->errors = 0;									// 操作时产生的错误次数.
-	req->sector = bh->b_blocknr << 1;					// 起始扇区. 块号转换成扇区号(1 块 = 2 扇区).
+	// 设备内的相对起始扇区, 比如 hd1 的起始扇区是 200, sector 是 100, 则真正要读的扇区是 200 + 100 = 300.
+	req->sector = bh->b_blocknr << 1;					// 块号转换成扇区号(1 块 = 2 扇区).
 	req->nr_sectors = 2;								// 本请求项需要读写的扇区数.
 	req->buffer = bh->b_data;							// 请求项缓冲区指向需要读写的缓存头的数据缓冲区.
 	req->waiting = NULL;								// 等待该请求完成的任务.
