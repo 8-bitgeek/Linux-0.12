@@ -48,7 +48,7 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 		filp->f_pos += chars;
 		left -= chars;
 		// 若上面从设备上读到了数据, 则将 p 指向缓冲块中开始读取数据的位置, 并且复制 chars 字节到用户缓冲区 buf 中. 
-		// 否则往用户缓冲区中填入 chars 个值字节. 
+		// 否则往用户缓冲区中填入 chars 个字节的 0 值. 
 		if (bh) {
 			char * p = nr + bh->b_data;
 			while (chars-- > 0) {
@@ -65,7 +65,7 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 	// CURRENT_TIME 是定义在 include/linux/sched.h 上的宏, 用于计算 UNIX 时间. 
 	// 即从 1970 年 1 月 1 日 0 时 0 秒开始, 到当前时间. 单位是秒. 
 	inode->i_atime = CURRENT_TIME;
-	return (count - left) ? (count-left) : -ERROR;
+	return (count - left) ? (count - left) : -ERROR;
 }
 
 // 文件写函数 - 根据 inode 和文件结构信息, 将用户数据写入文件中. 

@@ -441,7 +441,7 @@ struct buffer_head * bread(int dev, int block) {
 	ll_rw_block(READ, bh); 						// 向设备提交请求.
 	// 不可中断睡眠等待读请求完成, 让出 CPU. 请求完成后由硬盘中断唤醒当前进程.
 	wait_on_buffer(bh);
-	// 读磁盘的请求只需要检查缓冲块中的数据是否为最新的, 写磁盘的请求需要判断缓冲块是否修改过(b_dirt).
+	// 读磁盘的请求只需要检查缓冲块中的数据是否为最新的(b_uptodate), 写磁盘的请求需要判断缓冲块是否修改过(b_dirt).
 	if (bh->b_uptodate) {
 		return bh;
 	}
