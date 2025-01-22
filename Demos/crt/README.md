@@ -2,6 +2,8 @@
 
 # How to compile this project
 
+## 1. Compile by using GNU tools
+
 ```shell
 cd minicrt
 gcc -c -m32 -fno-builtin -nostdlib -fno-stack-protector src/entry.c src/malloc.c src/stdio.c src/string.c src/printf.c
@@ -18,6 +20,12 @@ ar 参数说明:
 - `-r`: replace, 将文件添加到归档中, 如果已存在则替换.
 - `-c`: create, 归档文件不存在, 则创建一个新的归档文件.
 - `-s`: index, 在归档文件中哉更新符号表索引(symbol index), 符号表帮助链接器快速找到归档中的符号.
+
+## 2. Compile by using GNU Make
+
+```shell
+cd minicrt && make archive
+```
 
 # How to use MiniCRT
 
