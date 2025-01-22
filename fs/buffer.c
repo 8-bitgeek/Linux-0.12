@@ -288,7 +288,9 @@ struct buffer_head * get_hash_table(int dev, int block) {
 
 	for (;;) {
 		// 在高速缓冲区中寻找给定设备和指定块的缓冲区块, 如果没有找到则返回 NULL, 退出.
-		if (!(bh = find_buffer(dev, block))) return NULL;
+		if (!(bh = find_buffer(dev, block))) {
+			return NULL;
+		}
 		// 对该缓冲块增加引用计数, 并等待该缓冲块解锁(如果已被上锁). 
 		// 由于经过了睡眠状态, 因此有必要再验证该缓冲块的正确性, 并返回缓冲块头指针.
 		bh->b_count++;
@@ -326,7 +328,7 @@ struct buffer_head * getblk(int dev, int block) {
 	struct buffer_head * tmp, * bh;
 
 repeat:
-	if (bh = get_hash_table(dev, block)) {			// 如果已经缓存过该设备的给定数据块, 则直接返回对应的缓冲块指针.
+	if (bh = get_hash_table(dev, block)) {			// 如果已经缓存过该数据块, 则直接返回对应的缓冲块指针.
 		return bh;
 	}
 	// 如果没有缓存过该块, 则扫描空闲数据块链表, 从空闲链表中查找空闲缓冲区.

@@ -93,10 +93,14 @@ struct buffer_head {
 	unsigned short b_dev;				/* device (0 = free) */						// 数据源的设备号.
 	unsigned char b_uptodate;  			// 更新标志: 表示数据是否已更新(最新的).
 	unsigned char b_dirt;				/* 0 - clean, 1 - dirty */					// 修改(脏)标志: 0 未修改, 1 已修改.
-	unsigned char b_count;				/* users using this block */				// 该缓冲块的使用用户数.
-	unsigned char b_lock;				/* 0 - ok, 1 - locked */					// 缓冲区是否被锁定.
+	/* 使用 b_count 和 b_lock 配合可以优化性能, 减少不必要的等待: 如果只有 b_lock 而没有 b_count, 任何访问缓冲块的操作都必须等待解锁, 
+	   这会显著降低系统的并发性能, 引入 b_count 后, 当缓冲块正在被其它进程引用时, 只要它们是只读操作(b_lock != 1), 就可以同时进行, 无需等待解锁. */
+	// 只读访问时可以安全地共享缓冲块, 此时无需加锁, 只需要增加引用计数防止缓冲块被释放即可.
+	unsigned char b_count;				/* users using this block */				// 该缓冲块被引用的次数(是否可以被回收).
+	// 互斥锁标志, 防止并发修改带来的数据不一致的问题(比如写入磁盘或从磁盘加载数据). 只要被锁定, 其它进程就不能访问该数据.
+	unsigned char b_lock;				/* 0 - ok, 1 - locked */					// 缓冲区是否被锁定(是否允许被修改).
 	struct task_struct * b_wait;		// 指向等待该缓冲区解锁的进程.
-	// 以下两个字段用于实现哈希槽链表(即 dev + block 哈希后为同一个槽位值的缓冲区组成的链表)
+	// 以下两个字段用于实现哈希槽链表(即 dev + block 哈希后为同一个槽位值的缓冲区组成的链表).
 	struct buffer_head * b_prev;		// hash 队列上前一块(这四个指针用于缓冲区的管理).
 	struct buffer_head * b_next;		// hash 队列上下一块.
 	// 以下两个字段用于实现空闲缓冲块循环链表
