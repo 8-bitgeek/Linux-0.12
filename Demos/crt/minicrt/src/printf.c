@@ -18,9 +18,9 @@ int fputs(const char * str, FILE * stream) {
 }
 
 #define va_list             char *
-#define va_start(ap, arg)   (ap = (va_list) & arg + sizeof(arg))
-#define va_arg(ap, t)       (*(t *)((ap += sizeof(t)) - sizeof(t)))
-#define va_end(ap)          (ap = (va_list)0)
+#define va_start(ap, arg)   (ap = (va_list) &arg + sizeof(arg))
+#define va_arg(ap, t)       (*(t *) ((ap += sizeof(t)) - sizeof(t)))
+#define va_end(ap)          (ap = (va_list) 0)
 
 int vfprint(FILE * stream, const char * format, va_list arg_list) {
     int translating = 0;
@@ -83,8 +83,8 @@ int vfprint(FILE * stream, const char * format, va_list arg_list) {
 }
 
 int printf(const char * format, ...) {
-    va_list(arg_list);
-    va_start(arg_list, format);
+    va_list(arg_list);                                  /* define arg_list: char * (arg_list) */
+    va_start(arg_list, format);                         /* make arg_list points to first arg: arg_list = (char * ) &format + sizeof(format) */
     return vfprint(stdout, format, arg_list);
 }
 

@@ -29,8 +29,10 @@ int main() {
     char * ptr = malloc(sizeof(struct exec));
     int readed = fread(ptr, sizeof(struct exec), 1, fd);
     printf("readed %d bytes.\n", readed);
-    exec_ptr = (struct exec *)ptr;
-    printf("a_magic = %d, a_text = %d\n", exec_ptr->a_magic, exec_ptr->a_text);
+    exec_ptr = (struct exec *) ptr;
+    printf("a_magic = %d, a_text = %d, a_data = %d, a_bss = %d, a_syms = %d, a_entry = %d, a_trsize = %d, a_drsize = %d\n", 
+            exec_ptr->a_magic, exec_ptr->a_text, exec_ptr->a_data, exec_ptr->a_bss, exec_ptr->a_syms, exec_ptr->a_entry, exec_ptr->a_trsize, exec_ptr->a_drsize);
     free(ptr);
+    while (1) {}
     return 0;
 }
