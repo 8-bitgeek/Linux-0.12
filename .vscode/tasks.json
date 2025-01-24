@@ -20,7 +20,7 @@
           "printf.c"
         ],
         "options": {                                    // 配置任务的执行环境
-          "cwd": "${workspaceFolder}/Demos/minicrt",    // 任务的工作目录
+          "cwd": "${workspaceFolder}/Demos/crt/minicrt",    // 任务的工作目录
           "env": {}                                     // 设置环境变量
         },
         "problemMatcher": ["$gcc"],                     // 解析任务的输出, 用于识别错误或警告; 如果任务输出包含错误信息(比如编译器输出), 可以通过 problemMathcher 将错误信息集成到 VSCode 的问题面板上
@@ -51,7 +51,7 @@
           "string.o"
         ],
         "options": {
-          "cwd": "${workspaceFolder}/Demos/minicrt"
+          "cwd": "${workspaceFolder}/Demos/crt/minicrt"
         },
         "problemMatcher": [],
         "group": {
@@ -64,35 +64,17 @@
       {
         "label": "Build Test Program with GCC",
         "type": "shell",
-        "command": "gcc",
-        "args": [
-          "-m32",
-          "-ggdb",
-          "-g3",
-          "-O0",
-          "-fno-omit-frame-pointer",
-          "-fno-builtin",
-          "-nostdlib",
-          "-fno-stack-protector",
-          "-static",
-          "-e",
-          "mini_crt_entry",
-          "entry.o",
-          "test.c",
-          "minicrt.a",
-          "-o",
-          "test"
-        ],
+        "command": "make",
+        "args": [],
         "options": {
-          "cwd": "${workspaceFolder}/Demos/minicrt"
+          "cwd": "${workspaceFolder}/Demos/crt"
         },
         "problemMatcher": [],
         "group": {
           "kind": "build",
           "isDefault": false
         },
-        "detail": "Build and link the MiniCRT library and test program using GCC.",
-        "dependsOn": ["Archive MiniCRT Library"],               // 依赖的前置任务
+        "detail": "Build and link the MiniCRT library and test program using GNU make.",
         "dependsOrder": "sequence"
       }, 
       {

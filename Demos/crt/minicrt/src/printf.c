@@ -55,6 +55,22 @@ int vfprint(FILE * stream, const char * format, va_list arg_list) {
                     ret++;
                 }
                 break;
+            case 'x':
+                /* %d */
+                if (translating) {
+                    char buf[16];
+                    translating = 0;
+                    itoa(va_arg(arg_list, int), buf, 16);
+                    if (fputs(buf, stream) < 0) {
+                        return EOF;
+                    }
+                    ret += strlen(buf);
+                } else if (fputc('x', stream) < 0) {
+                    return EOF;
+                } else {
+                    ret++;
+                }
+                break;
             case 's':
                 /* %s */
                 if (translating) {

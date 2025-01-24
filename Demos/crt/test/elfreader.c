@@ -12,7 +12,7 @@
  */
 
 struct exec {
-    unsigned a_magic;               /* Use macros N_MAGIC, etc for access */
+    unsigned long a_magic;          /* Use macros N_MAGIC, etc for access */
     unsigned a_text;                /* length of text, in bytes */
     unsigned a_data;                /* length of data, in bytes */
     unsigned a_bss;                 /* length of uninitialized data area for file, in bytes */
@@ -26,11 +26,11 @@ int main() {
     /* C89 standard: All variable declarations must appear at the beginning of a block (a function or a code block). */
     struct exec * exec_ptr;
     FILE * fd = fopen("./test", "r+");
-    char * ptr = malloc(sizeof(struct exec));
+    void * ptr = malloc(sizeof(struct exec));
     int readed = fread(ptr, sizeof(struct exec), 1, fd);
     printf("readed %d bytes.\n", readed);
     exec_ptr = (struct exec *) ptr;
-    printf("a_magic = %d, a_text = %d, a_data = %d, a_bss = %d, a_syms = %d, a_entry = %d, a_trsize = %d, a_drsize = %d\n", 
+    printf("a_magic = 0x%x, a_text = 0x%x, a_data = 0x%x, a_bss = 0x%x, a_syms = 0x%x, a_entry = 0x%x, a_trsize = 0x%x, a_drsize = 0x%x\n", 
             exec_ptr->a_magic, exec_ptr->a_text, exec_ptr->a_data, exec_ptr->a_bss, exec_ptr->a_syms, exec_ptr->a_entry, exec_ptr->a_trsize, exec_ptr->a_drsize);
     free(ptr);
     while (1) {}

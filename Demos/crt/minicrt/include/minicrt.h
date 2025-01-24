@@ -14,9 +14,9 @@ int mini_crt_heap_init();
 typedef int FILE;
 #define EOF     -1
 
-#define stdin   ((FILE *)0)
-#define stdout  ((FILE *)1)
-#define stderr  ((FILE *)2)
+#define stdin   ((FILE *) 0)
+#define stdout  ((FILE *) 1)
+#define stderr  ((FILE *) 2)
 
 int mini_crt_io_init();
 FILE * fopen(const char * filename, const char * mode);
