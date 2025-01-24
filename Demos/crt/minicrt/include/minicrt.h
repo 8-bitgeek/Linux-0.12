@@ -24,6 +24,8 @@ int fread(void * buffer, int size, int count, FILE * stream);
 int fwrite(const void * buffer, int size, int count, FILE * stream);
 int fclose(FILE * fp);
 int fseek(FILE * fp, int offset, int set);
+int fputc(int c, FILE * stream);
+int fputs(const char * str, FILE * stream);
 
 
 /* string.c */
@@ -33,8 +35,6 @@ char * strcpy(char * src, const char * dest);
 unsigned strlen(const char * str);
 
 /* printf.c */
-int fputc(int c, FILE * stream);
-int fputs(const char * str, FILE * stream);
 int printf(const char * format, ...);
 int fprintf(FILE * stream, const char * format, ...);
 

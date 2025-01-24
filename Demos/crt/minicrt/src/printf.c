@@ -1,22 +1,5 @@
 #include "minicrt.h"
 
-int fputc(int c, FILE * stream) {
-    if (fwrite(&c, 1, 1, stream) != 1) {
-        return EOF;
-    } else {
-        return c;
-    }
-}
-
-int fputs(const char * str, FILE * stream) {
-    int len = strlen(str);
-    if (fwrite(str, 1, len, stream) != len) {
-        return EOF;
-    } else {
-        return len;
-    }
-}
-
 #define va_list             char *
 #define va_start(ap, arg)   (ap = (va_list) &arg + sizeof(arg))
 #define va_arg(ap, t)       (*(t *) ((ap += sizeof(t)) - sizeof(t)))

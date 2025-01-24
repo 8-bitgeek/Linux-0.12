@@ -117,3 +117,20 @@ int fclose(FILE * fp) {
 int fseek(FILE * fp, int offset, int set) {
     return seek((int)fp, offset, set);
 }
+
+int fputc(int c, FILE * stream) {
+    if (fwrite(&c, 1, 1, stream) != 1) {
+        return EOF;
+    } else {
+        return c;
+    }
+}
+
+int fputs(const char * str, FILE * stream) {
+    int len = strlen(str);
+    if (fwrite(str, 1, len, stream) != len) {
+        return EOF;
+    } else {
+        return len;
+    }
+}
