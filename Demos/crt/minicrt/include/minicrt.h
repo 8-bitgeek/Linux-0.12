@@ -26,6 +26,8 @@ int fclose(FILE * fp);
 int fseek(FILE * fp, int offset, int set);
 int fputc(int c, FILE * stream);
 int fputs(const char * str, FILE * stream);
+int fgetc(FILE * stream);
+char * fgets(char * str, int size, FILE * stream);
 
 
 /* string.c */

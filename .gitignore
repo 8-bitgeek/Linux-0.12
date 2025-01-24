@@ -20,8 +20,8 @@ Demos/**/test/elfreader
 Demos/**/libminicrt.a
 Demos/**/temp.txt
 Demos/**/minicrt.h.gch
-Demos/**/tinyhello/tinyhello
 !Demos/crt/test/*.c
 !Demos/crt/test/Makefile
+Demos/**/shell/src/minishell
 **/.fuse_*
 release/**

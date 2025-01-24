@@ -134,3 +134,33 @@ int fputs(const char * str, FILE * stream) {
         return len;
     }
 }
+
+int fgetc(FILE * stream) {
+    unsigned char c;
+    if (fread(&c, 1, 1, stream) != 1) {
+        return EOF;
+    }
+    return (int) c;
+}
+
+char * fgets(char * str, int size, FILE * stream) {
+    int i = 0;
+    int c;
+
+    while (i < size - 1) {
+        c = fgetc(stream);
+        if (c == EOF) {
+            if (i == 0) {
+                return NULL;
+            }
+            break;
+        }
+        str[i++] = (char) c;
+
+        if (c == '\n') {            // if get return, finish read too.
+            break;
+        }
+    }
+    str[i] = '\0';
+    return str;
+}
