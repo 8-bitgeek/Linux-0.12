@@ -155,7 +155,7 @@ void math_state_restore() {
 }
 
 /*
- *  'schedule()' is the scheduler function. This is GOOD CODE! There
+ * 'schedule()' is the scheduler function. This is GOOD CODE! There
  * probably won't be any reason to change this, as it should work well
  * in all circumstances (ie gives IO-bound processes good response etc).
  * The one thing you might take a look at is the signal-handler code here.
@@ -176,12 +176,13 @@ void schedule(void) {
 	int i, next, c;
 	struct task_struct ** p;						// 任务结构指针的指针.
 
+reschedule:
 	/* check alarm, wake up any interruptible tasks that have got a signal */
 	/* 检测 alarm(进程的报警定时值), 唤醒任何已得到信号的可中断任务 */
-	for(p = &LAST_TASK; p > &FIRST_TASK; --p) {
+	for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
 		if (*p) { 									// 判断任务是否存在.
 			// 如果任务设置了超时时间 timeout(比如读超时, sys_select()), 并且已经超时(jiffies > timeout), 则清除超时时间; 
-			// 如果任务是可中断睡眠状态 TASK_INTERRUPTIBLE, 将其置为就绪状态(TASK_RUNNING), 将基恢复运行.
+			// 如果任务是可中断睡眠状态 TASK_INTERRUPTIBLE, 将其置为就绪状态(TASK_RUNNING), 使其恢复运行.
 			// jiffies 是系统从开机开始算起的滴答数(10ms/滴答). 
 			if ((*p)->timeout && jiffies > (*p)->timeout) { 	// jiffies > timeout 表示已经超时. TODO: sys_select() 函数会设置超时时间.
 				(*p)->timeout = 0; 								// 清除超时时间.
@@ -207,7 +208,7 @@ void schedule(void) {
 	/* this is the scheduler proper: */ /* 这里是调度程序的主要部分: */
 	while (1) {
 		c = -1;
-		next = 0;
+		next = 0; 													// 将要切换到的进程项号.
 		i = NR_TASKS;
 		p = &task[NR_TASKS];
 		// 遍历任务列表, 获取时间片最长的就绪状态的任务.
@@ -219,8 +220,17 @@ void schedule(void) {
 				c = (*p)->counter, next = i;
 			}
 		}
+		// 如果 c == -1, 表示当前没有处于 TASK_RUNNING 状态的进程. 此时 next = 0;
+		// 因为如果有 RUNNING 状态的进程, 则此时 c >= 0, 因为 (*p)->counter > c 一定成立.
+		// 如果此时没有处于 TASK_RUNNING 状态的进程, 并且该函数是由 TASK-0(idle) 进程调用的, 则让系统进入空闲状态, 降低 CPU 消耗.
+		if (c == -1 && current == task[0]) { 
+			__asm__("hlt");
+			goto reschedule; 										// 被时钟中断唤醒时会重新从开始处执行, 完美!
+		}
+
 		// 如果找到一个时间片大于 0 的就绪任务, 则退出循环, 并切换到这个任务上运行.
 		if (c) break; 													// 如果找到待运行的任务, 则跳出循环后切换到该任务上运行.
+
 		// 如果没有找到时间片大于 0 的就绪任务, 则根据每个任务的优先值, 更新**所有任务**的 counter 值, 然后重新循环比较. 
 		// counter 值的计算方式为 counter = counter / 2 + priority. (即原来时间片不为 0 的, 则减半后加上优先值).
 		for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
