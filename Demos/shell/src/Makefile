@@ -8,12 +8,12 @@ endif
 CC = gcc
 out = test
 LIB_DIR = ../../crt/minicrt/lib
-INC_DIR = ../../crt/minicrt/include
+INC_DIR = -I ../../crt/minicrt/include -I ../include
 
 ifneq ($(V), 2)
-BUILD_FLAG = -m32 -ggdb -g3 -O0 -fno-omit-frame-pointer -fno-builtin -nostdlib -fno-stack-protector -static -e mini_crt_entry -I $(INC_DIR) -L $(LIB_DIR)
+BUILD_FLAG = -m32 -ggdb -g3 -O0 -fno-omit-frame-pointer -fno-builtin -nostdlib -fno-stack-protector -static -e mini_crt_entry $(INC_DIR) -L $(LIB_DIR)
 else
-BUILD_FLAG = -nostdlib -e _mini_crt_entry -I $(INC_DIR) -L $(LIB_DIR)
+BUILD_FLAG = -nostdlib -e _mini_crt_entry $(INC_DIR) -L $(LIB_DIR)
 endif
 
 cpmpile: 

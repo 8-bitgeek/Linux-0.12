@@ -1,5 +1,23 @@
 # MiniCRT README
 
+
+# Project Construct
+
+```
+minicrt/
+├── stdio.c        # 实现标准输入/输出相关函数
+├── stdio.h        # 声明标准输入/输出相关函数
+├── unistd.c       # 实现低级系统调用接口
+├── unistd.h       # 声明低级系统调用接口
+├── string.c       # 实现字符串操作函数
+├── string.h       # 声明字符串操作函数
+├── malloc.c       # 实现内存分配函数
+├── malloc.h       # 声明内存分配函数
+├── printf.c       # 实现格式化输出（printf, fprintf 等）
+└── printf.h       # 声明格式化输出函数
+```
+
+
 # How to compile this project
 
 ## 1. Compile by using GNU tools

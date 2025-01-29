@@ -1,6 +1,9 @@
 #ifndef __MINI_CRT_H__
 #define __MINI_CRT_H__
 
+/* typedef */
+typedef unsigned int uint;
+
 /* malloc.c */
 #ifndef NULL
 #define NULL    (0)
@@ -40,4 +43,13 @@ unsigned strlen(const char * str);
 int printf(const char * format, ...);
 int fprintf(FILE * stream, const char * format, ...);
 
-#endif      /* __MINI_CRT_H__ */
+/* unistd.c */
+int open(const char * pathname, int flags, int mode);
+int read(int fd, void * buffer, unsigned size);
+int write(int fd, const void * buffer, unsigned size);
+int close(int fd);
+int seek(int fd, int offset, int mode);
+int chdir(const char * filename);
+char * getcwd(char * buf, uint size);
+
+#endif      /* END __MINI_CRT_H__ */
