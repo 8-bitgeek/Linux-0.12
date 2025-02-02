@@ -72,8 +72,8 @@ int fstat(int fd, struct stat * buf) {
     int ret;
     /* syscall __NR_fstat = 28: sys_fstat */
     asm("movl $28, %%eax    \n\t"
-        "movl %1, %ebx      \n\t"
-        "movl %2, %ecx      \n\t"
+        "movl %1, %%ebx      \n\t"
+        "movl %2, %%ecx      \n\t"
         "int $0x80          \n\t"
         "movl %%eax, %0     \n\t"
         : "=m" (ret)
@@ -93,31 +93,31 @@ int chdir(const char * filename) {
     return ret;
 }
 
-char * getcwd(char * buf, uint size) {
-    if (!buf || size == 0) {
-        return NULL;
-    }
+// char * getcwd(char * buf, uint size) {
+//     if (!buf || size == 0) {
+//         return NULL;
+//     }
 
-    char temp[MAX_PATH_LEN];
-    temp[size - 1] = '\0';
-    char * ptr = temp + size - 1;
+//     char temp[MAX_PATH_LEN];
+//     temp[size - 1] = '\0';
+//     char * ptr = temp + size - 1;
 
-    int fd = open(".", OREAD, ORDONLY);
-    if (fd < 0) {
-        return NULL;
-    }
+//     int fd = open(".", OREAD, ORDONLY);
+//     if (fd < 0) {
+//         return NULL;
+//     }
 
-    struct stat current_stat, parent_stat;
-    if (fstat(fd, &current_stat) < 0) {
-        close(fd);
-        return NULL;
-    }
+//     struct stat current_stat, parent_stat;
+//     if (fstat(fd, &current_stat) < 0) {
+//         close(fd);
+//         return NULL;
+//     }
 
-    while (1) {
-        int parent_fd = open("..", O_RDONLY);
-        if (parent_fd < 0) {
-            close(fd);
-            return NULL;
-        }
-    }
-}
+//     while (1) {
+//         int parent_fd = open("..", O_RDONLY);
+//         if (parent_fd < 0) {
+//             close(fd);
+//             return NULL;
+//         }
+//     }
+// }

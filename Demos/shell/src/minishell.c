@@ -14,6 +14,10 @@ void main() {
     while (1) {
         printf("gshell> ");
         fgets(command, MAX_CMD_LEN, stdin);
+        struct stat * st = malloc(sizeof(struct stat));
+        int * fd = fopen(".", "r");
+        fstat((int) fd, st);
+        printf("st_dev: %d\n", st->st_dev);
 
         uint argc = parse_command(command, argv);
 
