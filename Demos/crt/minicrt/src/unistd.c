@@ -1,6 +1,5 @@
 #include "minicrt.h"
 
-
 int open(const char * pathname, int flags, int mode) {
     int fd = 0;
     /* syscall __NR_open = 5: sys_open() */
@@ -69,6 +68,19 @@ int seek(int fd, int offset, int mode) {
     return ret;
 }
 
+int fstat(int fd, struct stat * buf) {
+    int ret;
+    /* syscall __NR_fstat = 28: sys_fstat */
+    asm("movl $28, %%eax    \n\t"
+        "movl %1, %ebx      \n\t"
+        "movl %2, %ecx      \n\t"
+        "int $0x80          \n\t"
+        "movl %%eax, %0     \n\t"
+        : "=m" (ret)
+        : "m" (fd), "m" (buf));
+    return ret;
+}
+
 int chdir(const char * filename) {
     int ret;
     /* syscall __NR_chdir = 12: sys_chdir */
@@ -89,4 +101,23 @@ char * getcwd(char * buf, uint size) {
     char temp[MAX_PATH_LEN];
     temp[size - 1] = '\0';
     char * ptr = temp + size - 1;
+
+    int fd = open(".", OREAD, ORDONLY);
+    if (fd < 0) {
+        return NULL;
+    }
+
+    struct stat current_stat, parent_stat;
+    if (fstat(fd, &current_stat) < 0) {
+        close(fd);
+        return NULL;
+    }
+
+    while (1) {
+        int parent_fd = open("..", O_RDONLY);
+        if (parent_fd < 0) {
+            close(fd);
+            return NULL;
+        }
+    }
 }

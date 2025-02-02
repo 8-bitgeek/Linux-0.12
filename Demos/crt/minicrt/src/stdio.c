@@ -1,5 +1,6 @@
 #include "minicrt.h"
 
+
 int mini_crt_io_init() {
     return 1;
 }
@@ -8,13 +9,6 @@ FILE * fopen(const char * filename, const char * mode) {
     int fd = -1;
     int flags = 0;
     int access = 00700;                         /* permission flag to create file */
-
-    #define O_RDONLY    00
-    #define O_WRONLY    01
-    #define O_RDWR      02
-    #define O_CREAT     0100
-    #define O_TRUNC     01000
-    #define O_APPEND    02000
 
     if (strcmp(mode, "w") == 0) {
         flags |= O_WRONLY | O_CREAT | O_TRUNC;

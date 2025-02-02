@@ -4,8 +4,8 @@
 #include <sys/types.h>
 
 struct stat {
-	dev_t	st_dev;		// 含有文件的设备号
-	ino_t	st_ino;		// 文件i节点号
+	dev_t	st_dev;		// 含有文件的设备号.
+	ino_t	st_ino;		// 文件 inode 号.
 	umode_t	st_mode;	// 文件类型和属性(见下面).
 	nlink_t	st_nlink;	// 指定文件的连接数.
 	uid_t	st_uid;		// 文件的用户(标识)号.
