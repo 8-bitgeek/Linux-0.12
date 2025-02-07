@@ -17,7 +17,7 @@ void main() {
         struct stat * st = malloc(sizeof(struct stat));
         int * fd = fopen(".", "r");
         fstat((int) fd, st);
-        printf("st_dev: %d\n", st->st_dev);
+        printf("st_dev: %d, st_ino: %d, st_mode: %d, \n", st->st_dev, st->st_ino, st->st_mode);
 
         uint argc = parse_command(command, argv);
 

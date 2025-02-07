@@ -83,7 +83,7 @@ char * fgets(char * str, int size, FILE * stream) {
         }
         str[i++] = (char) c;
 
-        if (c == '\n') {            // if get return, finish read too.
+        if (c == '\n') {                        /* if get return, finish read too */
             break;
         }
     }

@@ -93,31 +93,33 @@ int chdir(const char * filename) {
     return ret;
 }
 
-// char * getcwd(char * buf, uint size) {
-//     if (!buf || size == 0) {
-//         return NULL;
-//     }
+/*
+char * getcwd(char * buf, uint size) {
+    if (!buf || size == 0) {
+        return NULL;
+    }
 
-//     char temp[MAX_PATH_LEN];
-//     temp[size - 1] = '\0';
-//     char * ptr = temp + size - 1;
+    char temp[MAX_PATH_LEN];
+    temp[size - 1] = '\0';
+    char * ptr = temp + size - 1;
 
-//     int fd = open(".", OREAD, ORDONLY);
-//     if (fd < 0) {
-//         return NULL;
-//     }
+    int fd = open(".", OREAD, ORDONLY);
+    if (fd < 0) {
+        return NULL;
+    }
 
-//     struct stat current_stat, parent_stat;
-//     if (fstat(fd, &current_stat) < 0) {
-//         close(fd);
-//         return NULL;
-//     }
+    struct stat current_stat, parent_stat;
+    if (fstat(fd, &current_stat) < 0) {
+        close(fd);
+        return NULL;
+    }
 
-//     while (1) {
-//         int parent_fd = open("..", O_RDONLY);
-//         if (parent_fd < 0) {
-//             close(fd);
-//             return NULL;
-//         }
-//     }
-// }
+    while (1) {
+        int parent_fd = open("..", O_RDONLY);
+        if (parent_fd < 0) {
+            close(fd);
+            return NULL;
+        }
+    }
+}
+*/
