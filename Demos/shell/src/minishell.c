@@ -9,17 +9,20 @@
 void main() {
     char command[MAX_CMD_LEN];
     char * argv[MAX_ARGC];
+    struct stat * st;
+    int * fd;
+    uint argc;
 
     /* main loop */
     while (1) {
         printf("gshell> ");
         fgets(command, MAX_CMD_LEN, stdin);
-        struct stat * st = malloc(sizeof(struct stat));
-        int * fd = fopen(".", "r");
+        st = malloc(sizeof(struct stat));
+        fd = fopen(".", "r");
         fstat((int) fd, st);
         printf("st_dev: %d, st_ino: %d, st_mode: %d, \n", st->st_dev, st->st_ino, st->st_mode);
 
-        uint argc = parse_command(command, argv);
+        argc = parse_command(command, argv);
 
         printf("%d args\n", argc);
 

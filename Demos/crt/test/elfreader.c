@@ -25,9 +25,18 @@ struct exec {
 int main() {
     /* C89 standard: All variable declarations must appear at the beginning of a block (a function or a code block). */
     struct exec * exec_ptr;
-    FILE * fd = fopen("./test", "r+");
-    void * ptr = malloc(sizeof(struct exec));
-    int readed = fread(ptr, sizeof(struct exec), 1, fd);
+    FILE * fd;
+    void * ptr;
+    int readed;
+    struct dirent * dir_entry;
+    DIR * dir = opendir("/usr/root");
+    while (1) {
+        dir_entry = readdir(dir);
+        printf("dirent->name: %s\n", dir_entry->name);
+    }
+    fd = fopen("./test", "r+");
+    ptr = malloc(sizeof(struct exec));
+    readed = fread(ptr, sizeof(struct exec), 1, fd);
     printf("readed %d bytes.\n", readed);
     exec_ptr = (struct exec *) ptr;
     printf("a_magic = 0x%x, a_text = 0x%x, a_data = 0x%x, a_bss = 0x%x, a_syms = 0x%x, a_entry = 0x%x, a_trsize = 0x%x, a_drsize = 0x%x\n", 

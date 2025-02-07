@@ -1,6 +1,10 @@
 #ifndef __MINI_CRT_H__
 #define __MINI_CRT_H__
 
+#define MAX_PATH 256                            /* max lenght of pathname */
+#define NAME_LEN 14                             /* max length of filename */
+#define DIR_BUF_SIZE 512                        /* size of dir buf */
+
 /* typedef */
 typedef unsigned int uint;
 
@@ -56,7 +60,7 @@ int write(int fd, const void * buffer, unsigned size);
 int close(int fd);
 int seek(int fd, int offset, int mode);
 int chdir(const char * filename);
-char * getcwd(char * buf, uint size);
+char * getcwd(char * buf, int size);
 typedef int pid_t;				/* 用于进程号和进程组号 */
 typedef unsigned short uid_t;	/* 用于用户号(用户标识号) */
 typedef unsigned short gid_t;	/* 用于组号 */
@@ -84,5 +88,21 @@ struct stat {
 	time_t	st_ctime;	/* 最后节点修改时间. */
 };
 int fstat(int fd, struct stat * buf);
+
+/* dirent.c */
+struct dirent {
+    unsigned short inode;
+    char name[NAME_LEN];
+};
+
+typedef struct {
+    FILE fd;
+    unsigned long buf_pos;
+    unsigned long buf_size;
+    char buf[DIR_BUF_SIZE];
+} DIR;
+
+DIR * opendir(const char * name);
+struct dirent * readdir(DIR * dir);
 
 #endif      /* END __MINI_CRT_H__ */
