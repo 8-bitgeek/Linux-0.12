@@ -29,7 +29,7 @@ int main() {
     void * ptr;
     int readed;
     struct dirent * dir_entry;
-    DIR * dir = opendir("/usr/root");
+    DIR * dir = opendir("/home/gldwolf");
     while (1) {
         dir_entry = readdir(dir);
         printf("dirent->name: %s\n", dir_entry->name);

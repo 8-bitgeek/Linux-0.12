@@ -97,8 +97,8 @@ struct dirent {
 
 typedef struct {
     FILE fd;
-    unsigned long buf_pos;
-    unsigned long buf_size;
+    unsigned int buf_pos;
+    unsigned int buf_size;
     char buf[DIR_BUF_SIZE];
 } DIR;
 
