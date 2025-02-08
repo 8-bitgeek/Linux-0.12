@@ -1,4 +1,5 @@
 #include "minicrt.h"
+#include "dirent.h"
 
 DIR * opendir(const char * name) {
     DIR * dir;

@@ -17,4 +17,4 @@ BUILD_FLAG = -nostdlib -e _mini_crt_entry $(INC_DIR) -L $(LIB_DIR)
 endif
 
 cpmpile: 
-	$(CC) $(BUILD_FLAG) -l minicrt minishell.c -o minishell
+	$(CC) $(BUILD_FLAG) minishell.c -l minicrt -o minishell

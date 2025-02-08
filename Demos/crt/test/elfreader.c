@@ -1,4 +1,5 @@
-#include "../minicrt/include/minicrt.h"
+#include "minicrt.h"
+#include "dirent.h"
 
 /*
  * readelf: 
@@ -28,12 +29,14 @@ int main() {
     FILE * fd;
     void * ptr;
     int readed;
+    int i = 0;
     struct dirent * dir_entry;
-    DIR * dir = opendir("/home/gldwolf");
-    while (1) {
+    DIR * dir = opendir(".");
+    while (i++ < 5) {
         dir_entry = readdir(dir);
         printf("dirent->name: %s\n", dir_entry->name);
     }
+    /*
     fd = fopen("./test", "r+");
     ptr = malloc(sizeof(struct exec));
     readed = fread(ptr, sizeof(struct exec), 1, fd);
@@ -43,5 +46,6 @@ int main() {
             exec_ptr->a_magic, exec_ptr->a_text, exec_ptr->a_data, exec_ptr->a_bss, exec_ptr->a_syms, exec_ptr->a_entry, exec_ptr->a_trsize, exec_ptr->a_drsize);
     free(ptr);
     while (1) {}
+    */
     return 0;
 }

@@ -1,5 +1,4 @@
 #include "minicrt.h"
-#include "parser.h"
 #include "command.h"
 
 #define MAX_CMD_LEN 256
@@ -17,10 +16,6 @@ void main() {
     while (1) {
         printf("gshell> ");
         fgets(command, MAX_CMD_LEN, stdin);
-        st = malloc(sizeof(struct stat));
-        fd = fopen(".", "r");
-        fstat((int) fd, st);
-        printf("st_dev: %d, st_ino: %d, st_mode: %d, \n", st->st_dev, st->st_ino, st->st_mode);
 
         argc = parse_command(command, argv);
 
@@ -63,7 +58,10 @@ uint parse_command(char * command, char * argv[]) {
     return argc;
 }
 
-void execute_command(char * argv[]) {
+uint execute_command(char * argv[]) {
+    DIR * dir;
+    struct dirent * dir_entry;
+    int i = 0;
     if (strcmp(argv[0], "exit") == 0) {
         printf("GoodBye!\n");
         exit(0);
@@ -76,7 +74,11 @@ void execute_command(char * argv[]) {
             }
         }
     } else if (strcmp(argv[0], "ls")) {
-
+        dir = opendir(".");
+        while (i++ <= 5) {
+            dir_entry = readdir(dir);
+            printf("%s\t", dir_entry->name);
+        }
     } else {
         printf("Command not found: %s\n", argv[0]);
     }
