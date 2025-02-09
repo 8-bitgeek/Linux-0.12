@@ -52,6 +52,9 @@ uint parse_command(char * command, char * argv[]) {
             *command++ = '\0';
         }
     }
+    if (*(command - 1) == '\n') {
+        *(command - 1) = '\0';
+    }
 
     argv[argc] = NULL;
 
@@ -73,7 +76,7 @@ uint execute_command(char * argv[]) {
                 printf("cd: no such directory: %s\n", argv[1]);
             }
         }
-    } else if (strcmp(argv[0], "ls")) {
+    } else if (strcmp(argv[0], "ls") == 0) {
         dir = opendir(".");
         while (i++ <= 5) {
             dir_entry = readdir(dir);
