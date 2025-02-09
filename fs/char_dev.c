@@ -24,7 +24,7 @@ typedef int (*crw_ptr)(int rw, unsigned minor, char * buf, int count, off_t * po
 // 		count - 读写字节数; pos - 读写操作当前指针, 对于终端操作, 该指针无用.
 // 返回: 实际读写的字节数. 若失败则返回出错码.
 static int rw_ttyx(int rw, unsigned minor, char * buf, int count, off_t * pos) {
-	return ((rw == READ) ? tty_read(minor, buf, count): tty_write(minor, buf, count));
+	return ((rw == READ) ? tty_read(minor, buf, count) : tty_write(minor, buf, count));
 }
 
 // 终端读写操作函数. 
@@ -107,6 +107,7 @@ static crw_ptr crw_table[]={
 	NULL,		/* /dev/lp */		/* /dev/lf 打印机 */
 	NULL		/* unnamed pipes */	/* 未命名管道 */
 };
+
 // 字符设备读写操作函数
 // 参数: rw - 读写命令; dev - 设备号; buf - 缓冲区; count - 读写字节数; pos - 读写指针.
 // 返回: 实际读/写字节数.
