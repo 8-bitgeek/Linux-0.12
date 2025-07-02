@@ -57,8 +57,8 @@ Image: boot/bootsect boot/setup tools/system
 	$(Q)cp -f tools/system system.tmp
 	$(Q)strip system.tmp
 	$(Q)objcopy -O binary -R .note -R .comment system.tmp tools/kernel
-# There is no Kernal_Image at begain, we create it by build.sh
-	$(Q)tools/build.sh boot/bootsect boot/setup tools/kernel release/Kernel_Image $(ROOT_DEV) $(SWAP_DEV)
+	# There is no KernalImage at begain, we create it by build.sh
+	$(Q)tools/build.sh boot/bootsect boot/setup tools/kernel release/KernelImage $(ROOT_DEV) $(SWAP_DEV)
 	$(Q)rm system.tmp
 	$(Q)rm -f tools/kernel
 	$(Q)sync
@@ -125,21 +125,20 @@ tools/build: tools/build.c
 	$(Q)$(CC) $(CFLAGS) -o tools/build tools/build.c
 
 clean:
-	$(Q)rm -rf release boot/bootsect boot/setup
+	$(Q)rm -rf release System.map boot/bootsect boot/setup
 	$(Q)rm -f init/*.o tools/system boot/*.o typescript* info bochsout.txt
 	$(Q)for i in mm fs kernel lib boot; do make clean -C $$i; done
 
-debug: Image
-	$(Q)dd if=release/Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
-	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/boota.img -fdb Images/rootimage-0.12-fd -hda Images/rootimage-0.12-hd \
+debug: Image bootimage
+	$(Q)dd if=release/KernelImage of=Images/bootdisk.img bs=512 conv=notrunc,sync
+	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/bootdisk.img -hda Images/rootimage-0.12-hd \
 		-vnc :1 -serial pty -S -gdb tcp::1234
 
-start: Image
-	$(Q)dd if=release/Kernel_Image of=Images/boota.img bs=512 conv=notrunc,sync
-	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/boota.img -fdb Images/rootimage-0.12-fd -hda Images/rootimage-0.12-hd
+start: Image bootimage
+	$(Q)dd if=release/KernelImage of=Images/bootdisk.img bs=512 conv=notrunc,sync
+	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/bootdisk.img -hda Images/rootimage-0.12-hd
 
-dep:
-	$(Q)sed '/\#\#\# Dependencies/q' < Makefile > tmp_make
-	$(Q)(for i in init/*.c; do echo -n "init/"; $(CPP) -M $$i; done) >> tmp_make
-	$(Q)cp tmp_make Makefile
-	$(Q)for i in fs kernel mm lib; do make dep -C $$i; done
+bootimage:
+	$(Q)mkdir -p Images
+	$(Q)rm -rf Images/bootdisk.img
+	$(Q)dd if=/dev/zero of=Images/bootdisk.img bs=512 count=2880
