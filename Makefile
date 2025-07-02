@@ -45,7 +45,7 @@ LIBS	=lib/lib.a
 	$(CC) $(CFLAGS) -nostdinc -Iinclude -c -o $*.o $<
 
 
-all: clean Image
+all: Image
 
 # strip: 
 # 		strip symbol and sections like debug info from object.
@@ -53,7 +53,7 @@ all: clean Image
 # 		-O binary: 指定输出目标文件(system.tmp)的格式(bfdname)为 binary.
 # 		-R: 去掉源文件中的 .note .comment 区(section)再输出到目标文件.
 # sync: synchronize cached writes to persistant storage.
-Image: clean boot/bootsect boot/setup tools/system
+Image: boot/bootsect boot/setup tools/system
 	$(Q)cp -f tools/system system.tmp
 	$(Q)strip system.tmp
 	$(Q)objcopy -O binary -R .note -R .comment system.tmp tools/kernel
