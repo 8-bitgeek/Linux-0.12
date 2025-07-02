@@ -82,7 +82,7 @@ tools/system: boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
 	$(Q)mkdir -p release
 	$(Q)$(LD) $(LDFLAGS) boot/head.o init/main.o $(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS) -o tools/system
 	$(Q)nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > release/System.map
-	$(Q)objdump -S tools/system > release/system.S
+	# $(Q)objdump -S tools/system > release/system.S
 
 # make -C {dir}: 
 # 	Change to directory {dir} before reading the makefiles or doing anything else.
@@ -125,7 +125,7 @@ tools/build: tools/build.c
 	$(Q)$(CC) $(CFLAGS) -o tools/build tools/build.c
 
 clean:
-	$(Q)rm -rf release System_s.map tmp_make core boot/bootsect boot/setup
+	$(Q)rm -rf release boot/bootsect boot/setup
 	$(Q)rm -f init/*.o tools/system boot/*.o typescript* info bochsout.txt
 	$(Q)for i in mm fs kernel lib boot; do make clean -C $$i; done
 
