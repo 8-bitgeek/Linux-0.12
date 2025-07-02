@@ -50,8 +50,7 @@ static int month[12] = {
 
 // 该函数计算从 1970年1月1日0时 起到开机当日经过的秒数, 作为开机时间.
 // 参数 tm 中各字段已经在 init/main.c 中被赋值, 信息取自 CMOS.
-long kernel_mktime(struct tm * tm)
-{
+long kernel_mktime(struct tm * tm) {
 	long res;
 	int year;
 
@@ -62,7 +61,9 @@ long kernel_mktime(struct tm * tm)
 	// 另外, month[] 数组中已经在 2 月份的天数中包含进了闰年时的天数, 即 2 月份天数多算了 1 天. 
 	// 因此, 若当年不是闰年并且当前月份大于 2 月份的话, 我们就要减去这天. 因为从 70 年开始算起, 
 	// 所以当年是闰年的判断方法是(y+2)能被 4 除尽. 若不能除尽(有余数)就不是闰年.
-	if(tm->tm_year < 70) tm->tm_year += 100;				//处理 2000 年问题
+	if (tm->tm_year < 70) {
+		tm->tm_year += 100;				//处理 2000 年问题
+	}
 	year = tm->tm_year - 70;
 	/* magic offsets (y+1) needed to get leapyears right.*/
 	/* 为了获得正确的闰年数, 这里需要这样一个魔幻值(y+1) */
@@ -70,8 +71,9 @@ long kernel_mktime(struct tm * tm)
 	res += month[tm->tm_mon];
 	/* and (y+2) here. If it wasn't a leap-year, we have to adjust */
 	/* 以及(y+2). 如果(y+2)不是闰年, 那么我们就必须进行调整(减去一天的秒数时间) */
-	if (tm->tm_mon > 1 && ((year + 2) % 4))
+	if (tm->tm_mon > 1 && ((year + 2) % 4)) {
 		res -= DAY;
+	}
 	res += DAY * (tm->tm_mday - 1);							// 再加上本月过去的天数的秒数时间.
 	res += HOUR * tm->tm_hour;								// 再加上当天过去的小时数的秒数时间.
 	res += MINUTE * tm->tm_min;								// 再加上 1 小时内过去的分钟数的秒数时间.

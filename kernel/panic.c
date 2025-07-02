@@ -22,13 +22,13 @@ void sys_sync(void);	                           /* it's really int */	/* 实际�
 // 函数名前的关键字 volatile 用于告诉编译器 gcc 该函数不会返回. 
 // 这样可让 gcc 产生更好一些的代码, 更重要的是使用这个关键字以避免产生某些(未初始化变量的)假警告信息.
 // 等同于现在 gcc 的函数属性说明: void panic(const char *s) __attribute__((noreturn));
-void panic(const char * s)
-{
+void panic(const char * s) {
 	printk("Kernel panic: %s\n\r", s);
-	if (current == task[0])
+	if (current == task[0]) {
 		printk("In swapper task - not syncing\n\r");
-	else
+	} else {
 		sys_sync();
+	}
 	for(;;);
 }
 

@@ -1,6 +1,6 @@
 # Linux-0.12 kernel source code with chinese comments
 
-> Linux-0.12 Kernel code with comments & Compile with GCC 4.8.5, can run it with QEMU(recommend) or Bochs.
+> Linux-0.12 Kernel source code with comments & Compile with GCC 4.8.5, you can run it with QEMU(recommend) or Bochs.
 
 ref: https://github.com/sky-big/Linux-0.12
 
@@ -21,5 +21,5 @@ $ make start
 
 ```shell
 $ make debug
-# then you can your IDE connect it with localhost:1234(you can use any port you want by modifing Makefile rules)
+# then make your IDE(like vscode) connect it with localhost:1234(use any port you want by update Makefile target)
 ```

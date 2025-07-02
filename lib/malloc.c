@@ -140,16 +140,16 @@ struct bucket_desc *free_bucket_desc = (struct bucket_desc *) 0;
  */
 // 初始化桶描述符. 
 // 建立空闲桶描述符链表, 并让 free_bucket_desc 指向第一个空闲桶描述符. 
-static inline void init_bucket_desc()
-{
-	struct bucket_desc *bdesc, *first;
+static inline void init_bucket_desc() {
+	struct bucket_desc * bdesc, * first;
 	int	i;
 	int j;
 
 	// 申请一页内存, 用于存放桶描述符. 如果失败, 则显示初始化桶描述符时内存不够出错信息, 死机. 
-	first = bdesc = (struct bucket_desc *) get_free_page();
-	if (!bdesc)
+	first = bdesc = (struct bucket_desc *)get_free_page();
+	if (!bdesc) {
 		panic("Out of memory in init_bucket_desc()");
+	}
 	// 首先计算一页内存中可存放的桶描述符数量, 然后对其建立单向链接指针. 
 	for (i = PAGE_SIZE / sizeof(struct bucket_desc); i > 1; i--) {
 		bdesc->next = bdesc + 1;
@@ -170,11 +170,10 @@ static inline void init_bucket_desc()
 // 分配动态内存函数. 
 // 参数: len - 请求的内在块长度. 
 // 返回: 指向被分配内在的指针. 如果失败则返回NULL. 
-void *malloc(unsigned int len)
-{
-	struct _bucket_dir	*bdir;
-	struct bucket_desc	*bdesc;
-	void				*retval;
+void * malloc(unsigned int len) {
+	struct _bucket_dir * bdir;
+	struct bucket_desc * bdesc;
+	void * retval;
 
 	/*
 	 * First we search the bucket_dir to find the right bucket change
@@ -184,14 +183,15 @@ void *malloc(unsigned int len)
      * 首先我们搜索存储桶目录bucket_dir来寻找适合请求的桶大小. 
      */
 	// 搜索存储桶目录, 寻找适合申请内存块大小的桶描述符链表. 如果目录项的桶字节数大于请求的字节数, 就找到了对应的桶目录项. 
-	for (bdir = bucket_dir; bdir->size; bdir++)
-		if (bdir->size >= len)
+	for (bdir = bucket_dir; bdir->size; bdir++) {
+		if (bdir->size >= len) {
 			break;
+		}
+	}
 	// 如果搜索完整个目录都没有找到合适大小的目录项, 则表明所请求的内存块大小太大, 超出了该程序的分配限制(最长为1个页面). 
 	// 于是显示出错信息, 死机. 
 	if (!bdir->size) {
-		printk("malloc called with impossibly large argument (%d)\n",
-			len);
+		printk("malloc called with impossibly large argument (%d)\n", len);
 		panic("malloc: bad arg");
 	}
 	/*
@@ -203,9 +203,11 @@ void *malloc(unsigned int len)
 	cli();								/* Avoid race conditions */     /* 为了避免出现竞争条件, 首先关中断 */
 	// 搜索对应桶目录项中描述符链表, 查找具有空闲空间的桶描述符. 
 	// 如果桶描述符的空闲内存指针 freeptr 不为空, 则表示找到了相应的桶描述符. 
-	for (bdesc = bdir->chain; bdesc; bdesc = bdesc->next)
-		if (bdesc->freeptr)
+	for (bdesc = bdir->chain; bdesc; bdesc = bdesc->next) {
+		if (bdesc->freeptr) {
 			break;
+		}
+	}
 	/*
 	 * If we didn't find a bucket with free space, then we'll
 	 * allocate a new one.
@@ -214,13 +216,14 @@ void *malloc(unsigned int len)
      * 如果没有找到具有空闲空间的桶描述符, 那么我们就要新建立一个该目录项的描述符. 
      */
 	if (!bdesc) {
-		char	*cp;
-		int		i;
+		char * cp;
+		int	i;
 
 		// 若 free_bucket_desc 还为空时, 表示第一次调用该程序, 或者链表中所有空桶描述符都已用完. 
 		// 此时就需要申请一个页面并在其上建立初始化空闲描述符链表. free_bucket_desc 会指向第一个空闲桶描述符. 
-		if (!free_bucket_desc)
+		if (!free_bucket_desc) {
 			init_bucket_desc();
+		}
 		// 取 free_bucket_desc 指向的空闲桶描述符, 并让 free_bucket_desc 指向下一个空闲桶描述符. 
 		bdesc = free_bucket_desc;
 		free_bucket_desc = bdesc->next;
@@ -228,28 +231,29 @@ void *malloc(unsigned int len)
 		// 空闲内在指针也指向该页开关, 因为此时全空空闲. 
 		bdesc->refcnt = 0;
 		bdesc->bucket_size = bdir->size;
-		bdesc->page = bdesc->freeptr = (void *) (cp = (char *)get_free_page());
+		bdesc->page = bdesc->freeptr = (void *)(cp = (char *)get_free_page());
 		// 如果申请内在页面操作失败, 则显示出错信息, 死机. 
-		if (!cp)
+		if (!cp) {
 			panic("Out of memory in kernel malloc()");
+		}
 		/* Set up the chain of free objects */
         /* 在该页空闲内存中建立空闲对象链表 */
 		// 以该桶目录项指定的桶大小为对象长度, 对该页内存进行划分, 并使每个对象的开始 4 字节设置成指向下一对象的指针. 
 		for (i = PAGE_SIZE / bdir->size; i > 1; i--) {
-			*((char **) cp) = cp + bdir->size;
+			*((char **)cp) = cp + bdir->size;
 			cp += bdir->size;
 		}
 		// 最后一个对象开始处的指针设置为 0(NULL). 
 		// 然后让该桶描述符的下一描述符指针字段指向对应桶目录项指针 chain 所指的描述符, 而桶目录的 chain 指向该桶描述符, 
 		// 即将该描述符插入到描述符链链头处. 
-		*((char **) cp) = 0;
+		*((char **)cp) = 0;
 		bdesc->next = bdir->chain; 				/* OK, link it in! */        /* OK, 将其链入！ */
 		bdir->chain = bdesc;
     }
 	// 返回指针即等于该描述符对应页面的当前空闲指针. 然后调整该空闲空间指针指向下一个空闲对象, 
 	// 并使描述符中对应页面中对象引用计数增 1. 
-	retval = (void *) bdesc->freeptr;
-	bdesc->freeptr = *((void **) retval);
+	retval = (void *)bdesc->freeptr;
+	bdesc->freeptr = *((void **)retval);
 	bdesc->refcnt++;
 	// 最后开放中断, 并返回指向空闲内在对象的指针. 
 	sti();										/* OK, we're safe again */      /* OK, 现在我们又安全了 */
@@ -270,28 +274,29 @@ void *malloc(unsigned int len)
  */
 // 释放存储桶对象. 
 // 参数: obj - 对应对象指针; size - 大小. 
-void free_s(void *obj, int size)
-{
-	void				*page;
-	struct _bucket_dir	*bdir;
-	struct bucket_desc	*bdesc, *prev;
+void free_s(void * obj, int size) {
+	void * page;
+	struct _bucket_dir * bdir;
+	struct bucket_desc * bdesc, * prev;
 
 	/* Calculate what page this object lives in */
     /* 计算该对象所在页面 */
-	page = (void *)  ((unsigned long) obj & 0xfffff000);
+	page = (void *)((unsigned long)obj & 0xfffff000);
 	/* Now search the buckets looking for that page */
     /* 现在搜索存储桶目录项所链接的桶描述符, 寻找该页面 */
 	for (bdir = bucket_dir; bdir->size; bdir++) {
 		prev = 0;
 		/* If size is zero then this conditional is always false */
         /* 如果参数 size 是 0, 则下面条件肯定是 false */
-		if (bdir->size < size)
+		if (bdir->size < size) {
 			continue;
+		}
 		// 搜索对应目录项中链接的所有描述符, 查找对应页面. 如果某描述符页面指针等于 page 则表示找到了相应的描述符, 跳转到found. 
 		// 如果描述符不含有对应 page, 则让描述符指针 perv 指向该描述. 
 		for (bdesc = bdir->chain; bdesc; bdesc = bdesc->next) {
-			if (bdesc->page == page)
+			if (bdesc->page == page) {
 				goto found;
+			}
 			prev = bdesc;
 		}
 	}
@@ -310,19 +315,22 @@ found:
 		 * may not be, if someone rudely interrupted us....
 		 */
 		// 如果 prev 已经不是搜索到的描述符的前一个描述符, 则重新搜索当前描述符的前一个描述符. 
-		if ((prev && (prev->next != bdesc)) ||
-		    (!prev && (bdir->chain != bdesc)))
-			for (prev = bdir->chain; prev; prev = prev->next)
-				if (prev->next == bdesc)
+		if ((prev && (prev->next != bdesc)) || (!prev && (bdir->chain != bdesc))) {
+			for (prev = bdir->chain; prev; prev = prev->next) {
+				if (prev->next == bdesc) {
 					break;
+				}
+			}
+		}
 		// 如果找到该前一个描述符, 则从描述符链中删除当前描述符. 
-		if (prev)
+		if (prev) {
 			prev->next = bdesc->next;
 		// 如果 prev == NULL, 则说明当前一个描述符是该目录项第 1 个描述符, 即目录项中 chain 应该直接指向当前描述符 bdesc, 
 		// 否则表示链表有问题, 则显示出错信息, 死机. 因此, 为了将当前描述符从链表中删除, 应该让 chain 指向下一个描述符. 
-		else {
-			if (bdir->chain != bdesc)
+		} else {
+			if (bdir->chain != bdesc) {
 				panic("malloc bucket chains corrupted");
+			}
 			bdir->chain = bdesc->next;
 		}
 		// 释放当前描述符所操作的内存页面, 并将该描述符插入空闲描述符表开始处. 

@@ -19,7 +19,7 @@
 #error "LIBRARY_SIZE too damn big!"				// 加载库的长度不得大于任务长度的一半.
 #endif
 
-#if (((TASK_SIZE>>16)*NR_TASKS) != 0x10000)
+#if (((TASK_SIZE >> 16) * NR_TASKS) != 0x10000)
 #error "TASK_SIZE*NR_TASKS must be 4GB"			// 任务长度 * 任务总个数必须为 4GB.
 #endif
 
@@ -187,8 +187,8 @@ struct task_struct {
 	unsigned long start_code;			// 代码段地址(线性地址).
 	unsigned long end_code;				// 代码长度(字节数).
 	unsigned long end_data;				// 代码长度 + 数据长度(字节数).
-	unsigned long brk;					// 总长度(代码长度 + 数据长度 + 未初始化数据区长度[bss]).
-	unsigned long start_stack;			// 堆栈段地址.
+	unsigned long brk;					// 总长度(代码长度 + 数据长度 + 未初始化数据区长度[bss]), 也负责进程的堆大小控制(堆结束地址).
+	unsigned long start_stack;			// 栈段起始地址.
 	long pid;							// 进程标识号(进程号).
 	long pgrp;							// 进程组号.
 	long session;						// 会话号.
@@ -199,10 +199,10 @@ struct task_struct {
 	 * older sibling, respectively.  (p->father can be replaced with
 	 * p->p_pptr->pid)
 	 */
-	struct task_struct *p_pptr;			// 指向父进程的指针.
-	struct task_struct *p_cptr;			// 指向最新子进程的指针.
-	struct task_struct *p_ysptr;		// 指向比自己后创建的相邻进程的指针.
-	struct task_struct *p_osptr;		// 指向比自己早创建的相邻进程的指针.
+	struct task_struct * p_pptr;		// 指向父进程的指针.
+	struct task_struct * p_cptr;		// 指向最新子进程的指针.
+	struct task_struct * p_ysptr;		// 指向比自己后创建的相邻进程的指针.
+	struct task_struct * p_osptr;		// 指向比自己早创建的相邻进程的指针.
 	unsigned short uid;					// 用户标识号(用户 id).
 	unsigned short euid;				// 有效用户 id.
 	unsigned short suid;				// 保存的用户 id.
@@ -317,9 +317,9 @@ struct task_struct {
 // 						P = 1(段存在); S = 1(描述符类型: 代码或数据); TYPE = 0b1010(代码段: 可读/可执行); 
 // 						G = 0b1(颗粒度: 4KB 为单位); D/B = 0b1; AVL = 0b1; 
 
-extern struct task_struct *task[NR_TASKS];								// 任务指针数组.
-extern struct task_struct *last_task_used_math;							// 上一个使用过协处理器的进程
-extern struct task_struct *current;										// 当前运行进程结构指针变量.
+extern struct task_struct * task[NR_TASKS];								// 任务指针数组.
+extern struct task_struct * last_task_used_math;						// 上一个使用过协处理器的进程
+extern struct task_struct * current;									// 当前运行进程结构指针变量.
 // extern struct task_struct *test_task;
 extern unsigned long volatile jiffies;									// 从开机开始算起的滴答数(10ms/滴答).
 extern unsigned long startup_time;										// 开机时间. 从 1970:0:0:0:0 开始计时的秒数.
@@ -361,9 +361,9 @@ extern int in_group_p(gid_t grp);
 // 宏定义, 计算在全局表中第 n 个任务的 LDT 段描述符的选择符值(偏移量)
 #define _LDT(n) ((((unsigned long) n) << 4) + (FIRST_LDT_ENTRY << 3))
 // 宏定义, 把第 n 个任务的 TSS 段选择符加载到任务寄存器 TR 中.
-#define ltr(n) __asm__("ltr %%ax"::"a" (_TSS(n)))
+#define ltr(n) __asm__("ltr %%ax" :: "a" (_TSS(n)))
 // 宏定义, 把第 n 个任务的 LDT 段选择符加载到局部描述符表寄存器 LDTR 中.
-#define lldt(n) __asm__("lldt %%ax"::"a" (_LDT(n)))
+#define lldt(n) __asm__("lldt %%ax" :: "a" (_LDT(n)))
 // 取当前运行任务的任务号(是任务数组中的索引值, 与进程号 pid 不同).
 // 返回: n - 当前任务号. 用于(kernel/traps.c).
 #define str(n) \
@@ -371,8 +371,8 @@ __asm__(\
 	"str %%ax\n\t"  				/* 将任务寄存器中 TSS 段的选择符复制到 ax 中 */\
 	"subl %2, %%eax\n\t"  			/* (eax - FIRST_TSS_ENTRY*8) -> eax */\
 	"shrl $4, %%eax"  				/* (eax/16) -> eax = 当前任务号 */\
-	:"=a" (n) \
-	:"a" (0), "i" (FIRST_TSS_ENTRY << 3))
+	: "=a" (n) \
+	: "a" (0), "i" (FIRST_TSS_ENTRY << 3))
 
 /*
  * switch_to(n) should switch tasks to task nr n, first
@@ -410,7 +410,7 @@ __asm__(\
 		"clts\n"  								/* 原任务上次使用过协处理器, 则清 cr0 中的任务切换标志 TS */\
 		"1:"  									/* 宏返回, 返回后 schedule 随即返回 */\
 		:: "m" (*&__tmp.a), "m" (*&__tmp.b), 	/* __tmp.a 将保存偏移值, __tmp.b 中保存 TSS 段选择符 */\
-		"d" (_TSS(n)), "c" ((long) task[n]));  	/* 将任务 n 的 TSS 段选择符值放入 edx 中, 将 task[n] 的地址放入 ecx 中 */ \
+		   "d" (_TSS(n)), "c" ((long) task[n]));/* 将任务 n 的 TSS 段选择符值放入 edx 中, 将 task[n] 的地址放入 ecx 中 */ \
 }
 
 // 页面地址对齐(在内核代码中没有任何地方引用!!)
@@ -426,9 +426,9 @@ do { \
 		"rorl $16, %%edx\n\t"  			/* edx 中基址高 16 位(位 31-16) -> dx */\
 		"movb %%dl, %2\n\t"  			/* 基址高 16 位中的低 8 位(位 23-16) -> [addr+4] */\
 		"movb %%dh, %3\n\t"  			/* 基址高 16 位中的高 8 位(位 31-24) -> [addr+7] */\
-		:"=&d"(__pr) \
-		:"m"(*((addr) + 2)), "m"(*((addr) + 4)), \
-		"m"(*((addr) + 7)), "0"(base) \
+		: "=&d"(__pr) \
+		: "m"(*((addr) + 2)), "m"(*((addr) + 4)), \
+		  "m"(*((addr) + 7)), "0"(base) \
 	); \
 } while(0)
 
@@ -442,15 +442,13 @@ __asm__(\
 	"andb $0xf0, %%dh;" 			/* 清 dh 的低 4 位(将存放段长的位 19-16) */\
 	"orb %%dh, %%dl;"  				/* 将原高 4 位标志和段长的高 4 位(位 19-16)合成 1 字节, 并放回 [addr+6] 处 */\
 	"movb %%dl, %1" \
-	: : "m" (*(addr)), \
-	    "m" (*((addr) + 6)), \
-	    "d" (limit) \
+	: : "m" (*(addr)), "m" (*((addr) + 6)), "d" (limit) \
 	)
 
 // 设置局部描述符表 LDT 中段描述符的段基地址.
-#define set_base(ldt, base) _set_base(((char *) &(ldt)), base)
+#define set_base(ldt, base) _set_base(((char *)&(ldt)), base)
 // 设置局部描述符表 LDT 中段描述符的段限长字段.
-#define set_limit(ldt, limit) _set_limit(((char *) &(ldt)), (limit - 1) >> 12)
+#define set_limit(ldt, limit) _set_limit(((char *)&(ldt)), (limit - 1) >> 12)
 
 // 从地址 addr 处描述符中取段基地址. 功能与 _set_base() 正好相反.
 // edx - 存放基地址(__base); %1 - 地址 addr 偏移 2; %2 - 地址 addr 偏移 4; %3 - addr 偏移 7.
@@ -462,14 +460,12 @@ __asm__(\
 		"shll $16, %%edx\n\t"  				/* 基地址高 16 位移到 edx 中高 16 位处. */\
 		"movw %1, %%dx"  					/* 取 [addr+2] 处基址低 16 位(位 16-0) -> dx */\
 		: "=&d" (__base)  					/* 从而 edx 中含有 32 位的段基地址 */\
-		: "m" (*((addr) + 2)), \
-		  "m" (*((addr) + 4)), \
-		  "m" (*((addr) + 7))); \
+		: "m" (*((addr) + 2)), "m" (*((addr) + 4)), "m" (*((addr) + 7))); \
 	__base; \
 })
 
 // 取局部描述符表中 ldt 所指段描述符中的段基地址.
-#define get_base(ldt) _get_base(((char *) &(ldt)))
+#define get_base(ldt) _get_base(((char *)&(ldt)))
 
 // 取段选择符 segment 指定的 **描述符** 中的段限长值.
 // 指令 lsll 是 Load Segment Limit 的缩写它从指定段描述符中取出分散的限长比特位拼成完整的段限长值放入指定寄存器中. 

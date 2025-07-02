@@ -84,7 +84,7 @@ _syscall0(int, sync)
 
 static char printbuf[1024];							// 静态字符串数组, 用作内核显示信息的缓存.
 
-extern char *strcpy();
+extern char * strcpy();
 extern int vsprintf();								// 送格式化输出到一字符串中(kernel/vsprintf.c).
 extern void init(void);								// 函数原型, 初始化.
 extern void blk_dev_init(void);						// 块设备初始化子程序(kernel/blk_drv/ll_rw_blk.c).
@@ -108,15 +108,15 @@ static inline long fork_for_process0() {
 		: "0" (2));  				/* 输入为系统中断调用号 __NR_name(2) */ // 输入寄存器为 eax(%0) = 2, 
 									/* 即调用 sys_call_table[2](include/linux/sys.h) 中的 sys_fork (kernel/sys_call.s) */
 	// 从 fork_for_process0() 返回时, cs = 0xf = 0b-0000-1-1-11 ==> LDT 中第一项(代码段), CPL = 3.
-	if (__res >= -1)  				/* 如果返回值(存放在 eax 中) >= -1(创建成功), 则直接返回该值. */
+	if (__res >= -1) {				/* 如果返回值(存放在 eax 中) >= -1(创建成功), 则直接返回该值. */
 		return __res; 				// 新创建的子进程返回 0, 父进程返回新进程的 pid.
+	}
 	errno = -__res;  				/* 否则置出错号, 并返回 -1 */
 	return -1;
 }
 
 // 内核专用 sprintf() 函数. 该函数用于产生格式化信息并输出到指定缓冲区 str 中. 参数 '*fmt' 指定输出将采用格式.
-static int sprintf(char * str, const char * fmt, ...)
-{
+static int sprintf(char * str, const char * fmt, ...) {
 	va_list args;
 	int i;
 
@@ -156,12 +156,11 @@ static int sprintf(char * str, const char * fmt, ...)
 // 定义宏. 将 BCD 码转换成二进制值. BCD 码利用半个字节(4 位)表示一个 10 进制数, 因此一个字节表示 2 个 10 进制数.
 // (val)&15 取 BCD 表示的 10 进制个位数, 而 (val)>>4 取 BCD 表示的 10 进制十位数, 再乘以 10. 
 // 因此最后两者相加就是一个字节 BCD 码的实际二进制数值.
-#define BCD_TO_BIN(val) ((val) = ((val)&15) + ((val) >> 4) * 10)
+#define BCD_TO_BIN(val) ((val) = ((val) & 15) + ((val) >> 4) * 10)
 
 // 该函数取 CMOS 实时钟信息作为开机时间, 并保存到全局变量 startup_time(秒)中. 
 // 其中调用的函数 kernel_mktime() 用于计算从 1970年1月1日0时 起到开机当日经过的秒数, 作为开机时间.
-static void time_init(void)
-{
+static void time_init(void) {
 	struct tm time;								// 时间结构 tm 定义在 include/time.h 中
 	// CMOS 的访问速度很慢. 为了减小时间误差, 在读取了下面循环中所有数值后, 若此时 CMOS 中秒值了变化, 那么就重新读取所有值. 
 	// 这样内核就能把与 CMOS 时间误差控制在 1 秒之内.
@@ -203,8 +202,8 @@ struct drive_info { char dummy[32]; } drive_info;	// 用于存放硬盘参数表
 // 分页机制已经在 head.s 的 setup_paging 中开启.  (main 函数的起始地址大约是 0x67ff)
 // 内核初始化主程序. 初始化结束后将以任务 0(idle 任务即空闲任务)的身份运行.
 // 英文注释含义是 "这里确实是 void, 没错. 在 startup 程序(head.s)中就是这样假设的". 参见 head.h 程序代码.
-int main(void)										/* This really IS void, no error here. */
-{													/* The startup routine assumes (well, ...) this */
+int main(void) {									/* This really IS void, no error here. */
+													/* The startup routine assumes (well, ...) this */
 #ifdef EM
 	// 开启仿真协处理器
 	__asm__("movl %cr0, %eax;" \
@@ -235,15 +234,17 @@ int main(void)										/* This really IS void, no error here. */
 	// 主内存区是供所有程序可以随时申请和使用的内存区域.
 	memory_end = (1 << 20) + (EXT_MEM_K << 10);						// 内存大小 = 1MB + [扩展内存(k) * 1024] 字节.
 	memory_end &= 0xfffff000;										// 忽略不到 4KB(1 页)的内存数.
-	if (memory_end > 16 * 1024 * 1024)								// 如果内存量超过 16MB, 则按 16MB 计.
+	if (memory_end > 16 * 1024 * 1024) {							// 如果内存量超过 16MB, 则按 16MB 计.
 		memory_end = 16 * 1024 * 1024;
+	}
 	// 根据物理内存的大小设置高速缓冲区的末端大小.
-	if (memory_end > 12 * 1024 * 1024) 								// 如果 16MB >= 内存 > 12MB, 则设置高速缓冲区末端 = 4MB.
+	if (memory_end > 12 * 1024 * 1024) {							// 如果 16MB >= 内存 > 12MB, 则设置高速缓冲区末端 = 4MB.
 		buffer_memory_end = 4 * 1024 * 1024;
-	else if (memory_end > 6 * 1024 * 1024)							// 否则若 12MB >= 内存 > 6MB, 则设置高速缓冲区末端 = 2MB.
+	} else if (memory_end > 6 * 1024 * 1024) {						// 否则若 12MB >= 内存 > 6MB, 则设置高速缓冲区末端 = 2MB.
 		buffer_memory_end = 2 * 1024 * 1024;
-	else
+	} else {
 		buffer_memory_end = 1 * 1024 * 1024;						// 否则则设置缓冲区末端 = 1MB.
+	}
 	// 根据高速缓冲区的末端大小设置主内存区的起始地址, 两者相同, 即高速缓冲区末端为主内存起始端.
 	main_memory_start = buffer_memory_end;							// 主内存起始位置 == 高速缓冲区末端.
 	// 如果在 Makefile 文件中定义了内存虚拟盘符号 RAMDISK, 则初始化虚拟盘. 此时主内存将减少.
@@ -291,14 +292,15 @@ int main(void)										/* This really IS void, no error here. */
 	// pause() 系统调用(kernel/sched.c)会把 TASK-0 转换成可中断等待状态, 再执行调度函数. 
 	// 但是调度函数只要发现系统中没有其他任务可以运行时就会切换到任务 0, 而不依赖于任务 0 的状态.
 	// sys_pause() 会调用 schedule() 来执行调度程序.
-	for( ; ; )
+	for( ; ; ) {
 		__asm__("int $0x80" : : "a" (__NR_pause));	// 即执行系统调用 pause() ==> include/linux/sys.h #sys_call_table[29].
+	}
 }
 
 // 下面函数产生格式化信息并输出到标准输出设备 stdout(1), 这里是指屏幕上显示. 参数 '*fmt' 指定输出将采用的格式, 参见标准 C 语言书籍.
 // 该子程序正好是 vsprintf 如何使用的一个简单例子. 该程序使用 vsprintf() 将格式化的字符串放入 printbuf 缓冲区, 
 // 然后用 write() 将缓冲区的内容输出到标准设备(1 -- stdout). vsprintf() 函数的实现见 kernel/vsprintf.c.
-int printf(const char *fmt, ...)
+int printf(const char * fmt, ...)
 {
 	va_list args;
 	int i;
@@ -311,17 +313,14 @@ int printf(const char *fmt, ...)
 
 // 在 main() 中已经进行子系统初始化, 包括内存管理, 各种硬件设备和驱动程序. init() 函数由 TASK-1 执行.
 // 它首先对第一个将要执行的程序(shell)的环境进行初始化, 然后以登录 shell 方式加载程序并执行之.
-void init(void)
-{
+void init(void) {
 	int pid, i, fd;
 	// setup() 是 sys_setup() 系统调用. 用于读取硬盘参数和分区表信息并加载虚拟盘(若存在的话)以及安装根文件系统. 
 	// 该函数用上面的 _syscall1() 宏定义, 对应函数是 sys_setup(), 在块设备子目录 (kernel/blk_drv/hd.c).
-	setup((void *) &drive_info);
-	// 下面以读写访问方式打开设备 "/dev/tty1", 它对应终端控制台. 
-	// 由于这是第一次打开文件操作, 因此产生的文件句柄号(文件描述符)肯定是 0, 即作为标准输入.
-	// 该句柄是 UNIX 类操作系统默认的控制台标准输入句柄 stdin. 
+	setup((void *)&drive_info);
+	// 以读写访问方式打开字符设备 "/dev/tty1", 作为当前进程的控制终端, 也即输入输出设备, 对应当前进程的 0, 1, 2 号文件句柄 fd.
 	// 函数前面的 "(void)" 前缀用于表示强制函数无需返回值.
-	// 这里把它以读和写(O_RDWR)的方式打开是为了复制产生标准输出句柄 stdout(1) 和标准错误输出句柄 stderr(2).
+	// 以读和写(O_RDWR)的方式打开是为了可以输入输出, 标准输入 stdin(0), 标准输出 stdout(1), 标准错误输出 stderr(2).
 	(void) open("/dev/tty1", O_RDWR, 0); 				// sys_open 系统调用(fs/open.c)
 	// 复制 0 号文件句柄: 当前进程的打开文件列表(filp[])中的三个句柄(0, 1, 2)都指向同一个文件(/dev/tty1).
 	(void) dup(0);										// 复制句柄, 产生句柄 1 号 -- stdout 标准输出设备. (fs/fcntl.c sys_dup())
@@ -341,24 +340,24 @@ void init(void)
 	if (!(pid = fork())) { 								// sys_fork() 系统调用(kernel/sys_call.s)
 		// 以下代码是在 Task-2 中执行. 关闭当前进程 fd 为 0 的文件.
 		close(0); 										// int $0x80 中断, __NR_close. (lib/close.c) (fs/open.c sys_close())
-		if (open("/etc/rc", O_RDONLY, 0))
+		if (open("/etc/rc", O_RDONLY, 0)) {
 			_exit(1);									// 若文件打开失败, 则退出(lib/_exit.c).
+		}
 		// 调用 int $0x80 中断, __NR_execve. (lib/execve.c) (kernel/sys_call.s sys_execve())
-		execve("/bin/sh", argv_rc, envp_rc);			// 替换成 /bin/sh 程序并执行.
+		execve("/bin/sh", argv_rc, envp_rc);			// 加载 /bin/sh 程序并执行.
 		// _exit(execve("/usr/root/hello", argv, envp));
 		_exit(2);										// 若 execve() 执行失败则退出.
     }
 	// 下面是父进程(Task-1)执行的语句. 调用 wait() 等待子进程停止或终止, 返回值应是子进程的进程号(pid). 
 	// &i 用于存放返回状态信息. 如果 wait() 返回值不等于子进程号, 则继续等待.
-  	if (pid > 0)
+  	if (pid > 0) {
 		while (pid != wait(&i));
+	}
 	// 如果执行到这里, 说明刚创建的子进程的执行已停止或终止了. 
 	// 下面循环中再创建一个新的子进程, 如果出错, 则显示 "初始化程序创建子进程失败" 信息并继续执行. 
-	// 对于所创建的子进程将关闭所有以前遗留的文件句柄(stdin, stdout, stderr), 新创建一个会话并设置进程组号,
-	// 然后重新打开 /dev/tty0 作为 stdin, 并复制出 stdout 和 stderr. 再次执行系统解释程序 /bin/sh. 
-	// 但这次执行所选用的参数和环境数组另选了一套. 然后父进程再次运行 wait() 等等. 
-	// 如果子进程又停止了执行, 则在标准输出上显示出错信息 "子进程 pid 停止了运行, 返回码是 i",
-	// 然后继续重试下去..., 形成 "大" 死循环.
+	// 新创建的子进程将关闭所有以前遗留的文件句柄(stdin, stdout, stderr), 新创建一个会话和进程组,
+	// 然后重新打开 /dev/tty1 作为 stdin, stdout 和 stderr. 再次执行系统解释程序 /bin/sh. 
+	// 但这次执行所选用的参数和环境数组另选了一套. 然后父进程再次运行 wait() 等待, 如果子进程退出则重启. 
 	while (1) {
 		if ((pid = fork()) < 0) {
 			printf("Fork failed in init %c\r\n", ' ');
@@ -374,9 +373,11 @@ void init(void)
 			_exit(execve("/bin/sh", argv, envp));
 		}
 		// 等待子进程结束, 在 shell 里执行 exit 子进程会结束, 此时循环退出, 打印日志并重新创建子进程执行 /bin/sh.
-		while (1)
-			if (pid == wait(&i))
+		while (1) {
+			if (pid == wait(&i)) {
 				break;
+			}
+		}
 		printf("\n\rchild %d died with code %04x\n\r", pid, i);
 		sync();
 	}

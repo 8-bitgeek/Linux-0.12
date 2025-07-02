@@ -55,8 +55,7 @@ typedef struct {
 
 // 把未准备好描述符的等待队列指针加入等待表 wait_table 中. 参数 *wait_address 是与描述符相关的等待队列头指针. 
 // 例如 tty 读缓冲队列 secondary 的等待队列头指针是 proc_list. 参数 p 是 do_select() 中定义的等待表结构指针. 
-static void add_wait(struct task_struct ** wait_address, select_table * p)
-{
+static void add_wait(struct task_struct ** wait_address, select_table * p) {
 	int i;
 
 	// 首先判断描述符是否有对应的等待队列, 若无则返回. 然后在等待表中搜索参数指定的等待队列指针是否已经在等待表中设置过, 
@@ -78,8 +77,7 @@ static void add_wait(struct task_struct ** wait_address, select_table * p)
 // 清空等待表. 参数是等待表结构指针. 本函数在 do_select() 函数中睡眠后被唤醒返回时被调用, 
 // 用于唤醒等待表中处于各个等待队列上的其他任务, 它与 kernel/sched.c 中 sleep_on() 函数的后半部分代码几乎完全相同, 
 // 请参考对 sleep_on() 函数的说明. 
-static void free_wait(select_table * p)
-{
+static void free_wait(select_table * p) {
 	int i;
 	struct task_struct ** tpp;
 
@@ -105,8 +103,7 @@ static void free_wait(select_table * p)
 }
 
 // 根据文件 i 节点判断文件是不是字符终端设备文件. 若是则返回其 tty 结构指针, 否则返回 NULL. 
-static struct tty_struct * get_tty(struct m_inode * inode)
-{
+static struct tty_struct * get_tty(struct m_inode * inode) {
 	int major, minor;
 
 	// 如果不是字符设备文件则返回 NULL. 如果主设备号不是 5(控制终端) 或 4, 则返回 NULL. 
@@ -134,8 +131,7 @@ static struct tty_struct * get_tty(struct m_inode * inode)
  */
 // 检查读文件操作是否准备好, 即终端读缓冲队列 secondary 是否有字符可读, 或者管道文件是否不空. 参数 wait 是等待表指针; 
 // inode 是文件 i 节点指针. 若描述符可进行读操作则返回 1, 否则返回 0. 
-static int check_in(select_table * wait, struct m_inode * inode)
-{
+static int check_in(select_table * wait, struct m_inode * inode) {
 	struct tty_struct * tty;
 
 	// 首先根据文件 i 节点调用 get_tty() 检测文件是不是一个 tty 终端(字符)设备文件, 
@@ -159,8 +155,7 @@ static int check_in(select_table * wait, struct m_inode * inode)
 
 // 检查文件写操作是否准备好, 即终端写缓冲队列 write_q 中是否还有空闲位置可写, 或者此时管道文件是否不满. 
 // 参数 wait 是等待表指针; inode 是文件 i 节点指针. 若描述符可进行写操作则返回 1, 否则返回 0. 
-static int check_out(select_table * wait, struct m_inode * inode)
-{
+static int check_out(select_table * wait, struct m_inode * inode) {
 	struct tty_struct * tty;
 
 	// 首先根据文件 i 节点调用 get_tty() 检测文件是不是一个 tty 终端(字符)设备文件, 
@@ -184,8 +179,7 @@ static int check_out(select_table * wait, struct m_inode * inode)
 // 检查文件是否处于异常状态. 对于终端设备文件, 目前内核总是返回 0. 对于管道文件, 如果此时两个管道描述符中有一个或都已被关闭, 
 // 则返回 1, 否则就把当前任务添加到管道 i 节点的等待队列上并返回 0. 返回 0. 参数 wait 等待表指针; 
 // inode 是文件 i 节点指针. 若出现异常条件则返回 1, 否则返回 0. 
-static int check_ex(select_table * wait, struct m_inode * inode)
-{
+static int check_ex(select_table * wait, struct m_inode * inode) {
 	struct tty_struct * tty;
 
 	if (tty = get_tty(inode))
@@ -206,8 +200,7 @@ static int check_ex(select_table * wait, struct m_inode * inode)
 // 若有任何一个描述符已经准备好, 本函数就会立刻返回, 否则进程就会在本函数中进入睡眠状态, 
 // 并在过了超时时间或者由于某个描述符所在等待队列上的进程被唤醒而使本进程继续运行. 
 int do_select(fd_set in, fd_set out, fd_set ex,
-	fd_set *inp, fd_set *outp, fd_set *exp)
-{
+	fd_set *inp, fd_set *outp, fd_set *exp) {
 	int count;
 	select_table wait_table;
 	int i;
@@ -296,17 +289,16 @@ repeat:
 // 然后设置需要等待的超时时间值 timeout, 接着调用 do_select() 执行 select 功能, 返回后就把处理结果再复制回用户空间中. 
 // 参数 buffer 指向用户数据区中 select() 函数的第 1 个参数处. 如果返回值小于 0 表示执行时出现错误; 
 // 如果返回值等于 0, 则表示在规定等待时间内没有描述符准备好操作; 如果返回值大于 0, 则表示已准备好的描述符数量. 
-int sys_select( unsigned long *buffer )
-{
+int sys_select( unsigned long *buffer ) {
 	/* Perform the select(nd, in, out, ex, tv) system call. */
 	/* 执行 select(nd, in, out, ex, tv) 系统调用 */
 	// 首先定义几个局部变量, 用于把指针参数传递来的 select() 函数参数分解开来. 
 	int i;
-	fd_set res_in, in = 0, *inp;            						// 读操作描述符集. 
-	fd_set res_out, out = 0, *outp;         						// 写操作描述符集. 
-	fd_set res_ex, ex = 0, *exp;            						// 异常条件描述符集. 
+	fd_set res_in, in = 0, * inp;            						// 读操作描述符集. 
+	fd_set res_out, out = 0, * outp;         						// 写操作描述符集. 
+	fd_set res_ex, ex = 0, * exp;            						// 异常条件描述符集. 
 	fd_set mask;                            						// 处理的描述符数值范围(nd)屏蔽码. 
-	struct timeval *tvp;                    						// 等待时间结构指针. 
+	struct timeval * tvp;                    						// 等待时间结构指针. 
 	unsigned long timeout;
 
 	// 然后从用户数据区把参数分别隔离复制到局部指针变量中, 并根据描述符集指针是否有效分别取得 3 个描述符集 in(读), out(写) 和 ex(异常). 
@@ -318,12 +310,15 @@ int sys_select( unsigned long *buffer )
 	exp = (fd_set *) get_fs_long(buffer++);
 	tvp = (struct timeval *) get_fs_long(buffer);
 
-	if (inp)                                						// 若指针有效, 则取读操作描述符集. 
+	if (inp) {                               						// 若指针有效, 则取读操作描述符集. 
 		in = mask & get_fs_long(inp);
-	if (outp)                               						// 若指针有效, 则取写操作描述符集. 
+	}
+	if (outp) {                             						// 若指针有效, 则取写操作描述符集. 
 		out = mask & get_fs_long(outp);
-	if (exp)                                						// 若指针有效, 则取异常描述符集. 
+	}
+	if (exp) {                                						// 若指针有效, 则取异常描述符集. 
 		ex = mask & get_fs_long(exp);
+	}
 	// 接下来我们尝试从时间结构中取出等待(睡眠)时间值 timeout. 首先把 timeout 初始化成最大(无限)值, 
 	// 然后从用户数据空间取得该时间结构中设置的时间值, 经转换和加上系统当前嘀嗒值 jiffies, 
 	// 最后得到需要等待的时间嘀嗒数值 timeout. 我们用此值来设置当前进程应该等待的延时. 
@@ -343,16 +338,18 @@ int sys_select( unsigned long *buffer )
 	// 表示 do_select() 可能是由于超时而返回, 因此把剩余时间值设置为 0. 
 	cli();                  										// 禁止响应中断. 
 	i = do_select(in, out, ex, &res_in, &res_out, &res_ex);
-	if (current->timeout > jiffies)
+	if (current->timeout > jiffies) {
 		timeout = current->timeout - jiffies;
-	else
+	} else {
 		timeout = 0;
+	}
 	sti();                  										// 开启中断响应. 
 	// 接下来我们把进程的超时字段清零. 如果 do_select() 返回的已准备好描述符个数小于 0, 表示执行出错, 于是返回这个错误号. 
 	// 然后我们把处理过的描述符集内容和延迟时间结构内容写回到用户数据缓冲空间. 在时间结构内容时还需要先将嘀嗒时间单位表示的剩余延迟时间转换成秒和微秒值. 
 	current->timeout = 0;
-	if (i < 0)
+	if (i < 0) {
 		return i;
+	}
 	if (inp) {
 		verify_area(inp, 4);
 		put_fs_long(res_in, inp);        							// 可读描述符值. 
@@ -373,7 +370,8 @@ int sys_select( unsigned long *buffer )
 		put_fs_long(timeout, (unsigned long *) &tvp->tv_usec);      // 微秒. 
 	}
 	// 如果此时并没有已准备好的描述符, 并且收到了某个非阻塞信号, 则返回被中断错误号. 否则返回已准备好的描述符个数值. 
-	if (!i && (current->signal & ~current->blocked))
+	if (!i && (current->signal & ~current->blocked)) {
 		return -EINTR;
+	}
 	return i;
 }

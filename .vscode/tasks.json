@@ -1,0 +1,189 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Compile MiniCRT Library",             // 任务的唯一标识, 其它地方通过它引用该任务
+        "type": "shell",                                // 指定任务的执行方式: shell(在 shell 中执行一个命令)/process(直接运行一个进程)
+        "command": "gcc",                               // 要执行的命令
+        "args": [                             
+          "-m32",
+          "-c",
+          "-ggdb",
+          "-O0",
+          "-fno-builtin",
+          "-nostdlib",
+          "-fno-stack-protector",
+          "entry.c",
+          "malloc.c",
+          "stdio.c",
+          "string.c",
+          "printf.c"
+        ],
+        "options": {                                    // 配置任务的执行环境
+          "cwd": "${workspaceFolder}/Demos/crt/minicrt",    // 任务的工作目录
+          "env": {}                                     // 设置环境变量
+        },
+        "problemMatcher": ["$gcc"],                     // 解析任务的输出, 用于识别错误或警告; 如果任务输出包含错误信息(比如编译器输出), 可以通过 problemMathcher 将错误信息集成到 VSCode 的问题面板上
+        "group": {                                      // 将任务分组, 设置是否为默认任务
+          "kind": "build",                              // 分组类型: build/test
+          "isDefault": false                            // 标识是否为默认任务
+        },
+        "dependsOn": ["Cleaning all Objects"],          // 指定当前任务依赖的前置任务
+        "presentation": {                               // 控制任务的输出行为
+          // 终端的显示方式: always(始终显示终端)/silent(只在任务失败时显示终端)/never(从不显示终端)
+          "reveal": "always",                           
+          // 控制任务终端的复用方式: shared(多个任务共享同一个终端)/dedicated(独立终端)/new(每次执行任务都打开新的终端)
+          "panel": "shared",
+          "clear": false                                // 是否在运行任务前清空终端
+        },
+        "detail": "Compile the MiniCRT source files into object files."
+      },
+      {
+        "label": "Archive MiniCRT Library",
+        "type": "shell",
+        "command": "ar",
+        "args": [
+          "-rcs",
+          "minicrt.a",
+          "malloc.o",
+          "printf.o",
+          "stdio.o",
+          "string.o"
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/crt/minicrt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        },
+        "dependsOn": ["Compile MiniCRT Library"],
+        "detail": "Archive the MiniCRT object files into a static library."
+      },
+      {
+        "label": "Build Test Program with GCC",
+        "type": "shell",
+        "command": "make",
+        "args": [],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/crt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        },
+        "detail": "Build and link the MiniCRT library and test program using GNU make.",
+        "dependsOrder": "sequence"
+      }, 
+      {
+        "label": "Compile Test Program with GCC",
+        "type": "shell",
+        "command": "gcc",
+        "args": [
+          "-c",
+          "-m32",
+          "-ggdb",
+          "-g3",
+          "-O0",
+          "-fno-omit-frame-pointer",
+          "-fno-builtin",
+          "-nostdlib",
+          "-fno-stack-protector",
+          "test.c",
+          "-o",
+          "test.o"
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/minicrt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        },
+        "detail": "Build and link the MiniCRT library and test program using GCC.",
+        "dependsOn": ["Archive MiniCRT Library"],               // 依赖的前置任务
+        "dependsOrder": "sequence"
+      }, 
+      {
+        "label": "Build Test Program with LD",
+        "type": "shell",
+        "command": "ld",
+        "args": [
+          "-m",
+          "elf_i386",
+          "-static",
+          "-e",
+          "mini_crt_entry",
+          "entry.o",
+          "test.o",
+          "minicrt.a",
+          "-o",
+          "test"
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/minicrt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        },
+        "dependsOn": ["Compile Test Program with GCC"],
+        "detail": "Link the MiniCRT library and test program using LD."
+      },
+      {
+        "label": "Clean Objects",
+        "type": "shell",
+        "command": "rm",
+        "args": ["-rf", "*.o", "test", "minicrt.a"],
+        "options": {
+          "cwd": "${workspaceFolder}/Demos/minicrt"
+        },
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": false
+        },
+        "detail": "Cleaning all objects",
+      }, 
+      {
+        "label": "Build and debug Linux",
+        "type": "shell",
+        "command": "make",
+        "args": [
+          "debug",
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}"
+        },
+        // 由于这个任务不会结束, 所以需要自己定义开始及结束的标志, 防止任务不结束导致 debug 阻塞
+        "problemMatcher": {
+          "owner": "custom",
+          "fileLocation": ["relative", "."],
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,                                    // 任务启动后立即进入后台
+            "beginsPattern": "rm -rf release System_s.map tmp_make",  // 定义任务开始
+            "endsPattern":  "char device redirected to "              // 定义任务结束
+          }   
+        },
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "isBackground": true,
+        "detail": "Build and Run debug task of Linux 0.12"
+      }
+    ]
+  }
+  

@@ -30,30 +30,29 @@
 // 把临时实数尾数(有效数)取反后再加 1. 
 // 参数 a 是临时实数结构. 其中 a, b 字段组合是实数的有效数. 
 #define NEGINT(a) \
-__asm__("notl %0 ; notl %1 ; addl $1,%0 ; adcl $0,%1" \
-	:"=r" (a->a),"=r" (a->b) \
-	:"0" (a->a),"1" (a->b))
+__asm__("notl %0; notl %1; addl $1, %0; adcl $0, %1" \
+	: "=r" (a->a), "=r" (a->b) \
+	: "0" (a->a), "1" (a->b))
 
 // 尾数符号化. 即把临时实数变换成指数和整数表示形式, 便于仿真运算. 因此这里称其为仿真格式. 
-static void signify(temp_real * a)
-{
+static void signify(temp_real * a) {
 // 把 64 位二进制尾数右移 2 位(因此指数需要加 2). 因为指针字段 exponent 的最高位是符号位, 所以若指数值小于零, 说明该数是负数. 
 // 于是则把尾数用补码表示(取负). 然后把指数取正值. 此时尾数中不仅包含移过 2 位的有效数, 而且还包含数值的符号位. 
 // 30 行上: %0 - a->a; %1 - a->b. 汇编指令 "shrdl $2, %1, %0" 执行双精度(64 位)右移, 即把组合尾数 <b,a> 右移 2 位. 
 // 由于该移动操作不会改变 %1(a->b) 中的值, 因此还需要单独对其右移 2 位. 
 	a->exponent += 2;
-	__asm__("shrdl $2,%1,%0 ; shrl $2,%1"   // 使用双精度指令把尾数右移 2 位. 
-		:"=r" (a->a),"=r" (a->b)
-		:"0" (a->a),"1" (a->b));
-	if (a->exponent < 0)                    // 是负数, 则尾数用补码表示(取负值). 
+	__asm__("shrdl $2, %1, %0; shrl $2, %1"   // 使用双精度指令把尾数右移 2 位. 
+		: "=r" (a->a), "=r" (a->b)
+		: "0" (a->a), "1" (a->b));
+	if (a->exponent < 0) {                   // 是负数, 则尾数用补码表示(取负值). 
 		NEGINT(a);
+	}
 	a->exponent &= 0x7fff;                  // 去掉符号位(若有). 
 }
 
 // 尾数非符号化. 
 // 将仿真格式转换为临时实数格式. 即把指数和整数表示的实数转换为临时实数格式. 
-static void unsignify(temp_real * a)
-{
+static void unsignify(temp_real * a) {
 // 对于值为 0 的数不用处理, 直接返回. 否则, 我们先复位临时实数格式的符号位. 然后判断尾数的高位 long 字段 a->b 是否带有符号位. 
 // 若有, 则在 exponent 字段添加符号位, 同时把尾数用无符号数形式表示(取补). 最后对尾数进行规格化处理, 同时指数值作相应递减. 
 // 即执行左移操作, 使得尾数最高有效位不为 0(最后 a->b 值表现为负值). 
@@ -68,18 +67,17 @@ static void unsignify(temp_real * a)
 	}
 	while (a->b >= 0) {                             // 对尾数进行规格化处理. 
 		a->exponent--;
-		__asm__("addl %0,%0 ; adcl %1,%1"
-			:"=r" (a->a),"=r" (a->b)
-			:"0" (a->a),"1" (a->b));
+		__asm__("addl %0, %0; adcl %1, %1"
+			: "=r" (a->a), "=r" (a->b)
+			: "0" (a->a), "1" (a->b));
 	}
 }
 
 // 仿真浮点加法指令运算. 
 // 临时实数参数 src1 + src2 -> result. 
-void fadd(const temp_real * src1, const temp_real * src2, temp_real * result)
-{
-	temp_real a,b;
-	int x1,x2,shift;
+void fadd(const temp_real * src1, const temp_real * src2, temp_real * result) {
+	temp_real a, b;
+	int x1, x2, shift;
 
 // 首先取两个数的指数值 x1, x2(去掉符号位). 然后让变量 a 等于基中最大值, shift 为指数差值(即相差 2 的倍数值). 
 	x1 = src1->exponent & 0x7fff;
@@ -109,14 +107,14 @@ void fadd(const temp_real * src1, const temp_real * src2, temp_real * result)
 // 接着再进行细致的调整, 以将相加两者调整成相同. 调整方法是把小值 b 的尾数右移 shift 各位. 
 // 这样两者的指数相同, 处于同一个数量级. 
 // 我们就要以对尾数进行相加运算了. 相加之前我们需要先把它们转换成仿真运算格式. 在加法运算后再变换回临时实数格式. 
-	__asm__("shrdl %4,%1,%0 ; shrl %4,%1"                   // 双精度(64 位)右移. 
-		:"=r" (b.a),"=r" (b.b)
-		:"0" (b.a),"1" (b.b),"c" ((char) shift));
+	__asm__("shrdl %4, %1, %0; shrl %4, %1"                  // 双精度(64 位)右移. 
+		: "=r" (b.a), "=r" (b.b)
+		: "0" (b.a), "1" (b.b), "c" ((char)shift));
 	signify(&a);                                            // 变换格式. 
 	signify(&b);
-	__asm__("addl %4,%0 ; adcl %5,%1"                       // 执行加法运算. 
-		:"=r" (a.a),"=r" (a.b)
-		:"0" (a.a),"1" (a.b),"g" (b.a),"g" (b.b));
+	__asm__("addl %4, %0; adcl %5, %1"                      // 执行加法运算. 
+		: "=r" (a.a), "=r" (a.b)
+		: "0" (a.a), "1" (a.b), "g" (b.a), "g" (b.b));
 	unsignify(&a);                                          // 再变换回临时实数格式. 
 	*result = a;
 }

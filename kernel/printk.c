@@ -26,8 +26,7 @@ static char buf[1024];          			// 显示用临时缓冲区.
 extern int vsprintf(char * buf, const char * fmt, va_list args);
 
 // 内核使用的显示函数.
-int printk(const char *fmt, ...)
-{
+int printk(const char * fmt, ...) {
 	va_list args;							// va_list 实际上是一个字符指针类型.
 	int i;
 
@@ -40,8 +39,7 @@ int printk(const char *fmt, ...)
 	return i;
 }
 
-inline void check_data32(int value, int pos)
-{
+inline void check_data32(int value, int pos) {
 	asm __volatile__(
 		"shl	$4, %%ebx\n\t"
 		"addl	$0xb8000,%%ebx\n\t"
@@ -63,6 +61,6 @@ inline void check_data32(int value, int pos)
 		"add	$0x02,%%ebx\n\t"
 		"cmpl	$0x0,%%eax\n\t"
 		"jnz	1b\n"
-		:: "m"(value), "b"(pos));
+		: : "m"(value), "b"(pos));
 }
 

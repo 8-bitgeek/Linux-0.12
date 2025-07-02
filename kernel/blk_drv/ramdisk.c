@@ -32,7 +32,7 @@
 
 // 虚拟盘在内存中的起始位置. 该位置会在第 52 行上初始化函数 rd_init() 中确定. 
 // 参见内核初始化程序 init/main.c. 'rd' 是 'ramdisk' 的缩写.
-char	*rd_start;								// 虚拟盘在内存中的开始地址.
+char * rd_start;								// 虚拟盘在内存中的开始地址.
 int	rd_length = 0;								// 虚拟盘所占内存大小(字节).
 
 // 虚拟盘当前请求项操作函数.
@@ -43,10 +43,9 @@ int	rd_length = 0;								// 虚拟盘所占内存大小(字节).
 // 然后根据请求项中的命令进行操作. 若是写命令 WRITE, 就把请求项所指缓冲区中的数据直接复制到内存位置 addr 处. 
 // 若是读操作作反之. 数据复制完成后即可直接调用 end_request() 对本次请求项作结束处理. 
 // 然后跳转到函数开始处再去处理下一个请求项. 若已没有请求项则退出.
-void do_rd_request(void)
-{
+void do_rd_request(void) {
 	int	len;
-	char	*addr;
+	char * addr;
 
 	// 首先检测请求项的合法性, 若已没有请求项则退出(参见 blk.h). 
 	// 然后计算请求项处理的虚拟盘中起始扇区在物理内存中对应的地址 addr 和占用的内存字节长度值 len. 
@@ -65,15 +64,12 @@ void do_rd_request(void)
 	// 然后进行实际的读写操作. 如果是写命令(WRITE), 则将请求项中缓冲区的内容复制到地址 addr 处, 长度为 len 字节. 
 	// 如果是读命令(READ), 则将 addr 开始的内存内容复制到请求项缓冲区中, 长度为 len 字节. 否则显示命令不存在, 死机. 
 	if (CURRENT-> cmd == WRITE) {
-		(void ) memcpy(addr,
-			      CURRENT->buffer,
-			      len);
+		(void)memcpy(addr, CURRENT->buffer, len);
 	} else if (CURRENT->cmd == READ) {
-		(void) memcpy(CURRENT->buffer,
-			      addr,
-			      len);
-	} else
+		(void)memcpy(CURRENT->buffer, addr, len);
+	} else {
 		panic("unknown ramdisk-command");
+	}
 	// 然后在请求项成功后处理, 置更新标志. 并继续处理本设备的下一请求项. 
 	end_request(1);
 	goto repeat;
@@ -89,18 +85,18 @@ void do_rd_request(void)
 // 当 linux/Makefile 文件中设置过 RAMDISK 值不为零时, 表示系统中会创建 RAM 虚拟盘设备. 
 // 在这种情况下的内核初始化过程中, 本函数就会被调用(init/main.c). 
 // 该函数在第 2 个参数 length 会被赋值成 RAMDISK * 1024, 单位为字节.
-long rd_init(long mem_start, int length)
-{
+long rd_init(long mem_start, int length) {
 	int	i;
-	char	*cp;
+	char * cp;
 
 	blk_dev[MAJOR_NR].request_fn = DEVICE_REQUEST;
-	rd_start = (char *) mem_start;
+	rd_start = (char *)mem_start;
 	rd_length = length;
 	cp = rd_start;
 	// 将内存空间清零
-	for (i = 0; i < length; i++)
+	for (i = 0; i < length; i++) {
 		*cp++ = '\0';
+	}
 	return(length);
 }
 
@@ -116,22 +112,22 @@ long rd_init(long mem_start, int length)
 // 尝试将根文件系统加载到虚拟盘中.
 // 该函数将在内核设置函数 setup()(kernel/blk_drv/hd.c) 中被调用. 另外, 1 磁盘块 = 1024byte. 
 // 变量 block = 256 表示根文件系统映像被存储于 boot 盘第 256 磁盘块开始处.
-void rd_load(void)
-{
-	struct 	buffer_head *bh;							// 调整缓冲块头指针.
+void rd_load(void) {
+	struct 	buffer_head * bh;							// 调整缓冲块头指针.
 	struct 	super_block	s;								// 文件超级块结构.
 	int		block = 256;								/* Start at block 256 */	/* 开始于 256 盘块 */
 	int		i = 1;
 	int		nblocks;									// 文件系统盘块总数.
-	char	*cp;										/* Move pointer */
+	char	* cp;										/* Move pointer */
 
 	// 首先检查虚拟盘的有效性和完整性. 如果 ramdisk 的长度为零, 则退出. 
 	// 否则显示 ramdisk 的大小以及内存起始位置. 如果此时根文件设备不是软盘设备, 则也退出.
-	if (!rd_length)
+	if (!rd_length) return;
+
+	printk("Ram disk: %d bytes, starting at 0x%x, dev = 0x%x \n", rd_length, (int)rd_start, ROOT_DEV);
+	if (MAJOR(ROOT_DEV) != 2) {
 		return;
-	printk("Ram disk: %d bytes, starting at 0x%x, dev = 0x%x \n", rd_length, (int) rd_start, ROOT_DEV);
-	if (MAJOR(ROOT_DEV) != 2)
-		return;
+	}
 	// 然后读根文件系统的基本参数. 即读软盘块 256 + 1, 256 和 256 + 2. 这里 block + 1 是指磁盘上的超级块. 
 	// breada() 用于读取指定的数据块, 并标出还需要读的块, 然后返回含有数据块的缓冲区指针. 
 	// 如果返回 NULL, 则表示数据块不可读(fs/buffer.c). 
@@ -142,12 +138,13 @@ void rd_load(void)
 		printk("Disk error while looking for ramdisk!\n");
 		return;
 	}
-	*((struct d_super_block *) &s) = *((struct d_super_block *) bh->b_data);
+	*((struct d_super_block *)&s) = *((struct d_super_block *)bh->b_data);
 	brelse(bh);
-	if (s.s_magic != SUPER_MAGIC)
+	if (s.s_magic != SUPER_MAGIC) {
 		/* No ram disk image present, assume normal floppy boot */
         /* 磁盘中没有 ramdisk 映像文件, 退出去执行通常的软盘引导 */
 		return;
+	}
 	// 然后我们试图把整个根文件系统读入在内存虚拟盘区中. 
 	// 对于一个文件系统来说, 其超级块结构的 s_nzones 字段中保存着总逻辑块数(或称为区段数). 
 	// 一个逻辑块中含有的数据块数则由字段 s_log_zone_size 指定. 
@@ -156,8 +153,7 @@ void rd_load(void)
 	// 如果遇到文件系统中数据块总数大于内存虚拟盘所能容纳的块数的情况, 则不能执行加载操作, 而只能显示出错信息并返回.
 	nblocks = s.s_nzones << s.s_log_zone_size;
 	if (nblocks > (rd_length >> BLOCK_SIZE_BITS)) {
-		printk("Ram disk image too big!  (%d blocks, %d avail)\n",
-			nblocks, rd_length >> BLOCK_SIZE_BITS);
+		printk("Ram disk image too big! (%d blocks, %d avail)\n", nblocks, rd_length >> BLOCK_SIZE_BITS);
 		return;
 	}
 	// 若虚拟盘能容纳得下文件系统总数据块数, 则我们显示加载数据信息, 并让 cp 指向内存虚拟盘起始处, 
@@ -167,20 +163,19 @@ void rd_load(void)
 	// 若在读盘过程中出现 I/O 操作错误, 就只能放弃加载过程返回. 
 	// 所读取的磁盘块会使用 memcpy() 函数从高速缓冲区中复制到内存虚拟盘相应位置处, 同时显示已加载的块数.
 	// 显示字符串中的八进制数 '\010' 表示显示一个制表符.
-	printk("Loading %d bytes into ram disk... (0k)",
-		nblocks << BLOCK_SIZE_BITS);
+	printk("Loading %d bytes into ram disk... (0k)", nblocks << BLOCK_SIZE_BITS);
 	cp = rd_start;
 	while (nblocks) {
-		if (nblocks > 2)  								// 若读取块数多于 2 块则采用超前预读.
+		if (nblocks > 2) { 								// 若读取块数多于 2 块则采用超前预读.
 			bh = breada(ROOT_DEV, block, block + 1, block + 2, -1);
-		else											// 否则就单块读取.
+		} else {										// 否则就单块读取.
 			bh = bread(ROOT_DEV, block);
+		}
 		if (!bh) {
-			printk("I/O error on block %d, aborting load\n",
-				block);
+			printk("I/O error on block %d, aborting load\n", block);
 			return;
 		}
-		(void) memcpy(cp, bh->b_data, BLOCK_SIZE);		// 复制到 cp 处.
+		(void)memcpy(cp, bh->b_data, BLOCK_SIZE);		// 复制到 cp 处.
 		brelse(bh);
 		cp += BLOCK_SIZE;								// 虚拟盘指针前移.
 		block++;
