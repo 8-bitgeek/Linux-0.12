@@ -6,7 +6,7 @@
 bootsect=$1 			# boot/bootsect
 setup=$2 				# boot/setup
 system=$3 				# tools/kernel
-IMAGE=$4 				# Kernel_Image
+IMAGE=$4 				# KernelImage
 root_dev=$5 			# $(ROOT_DEV)
 swap_dev=$6 			# $(SWAP_DEV)
 

@@ -84,7 +84,7 @@ void usage(void)
 
 // 主程序开始.
 // 执行命令: 
-// 		boot/bootsect(bootsect.S) boot/setup(setup.S) tools/kernel(head.s, main...) Kernel_Image $(ROOT_DEV) $(SWAP_DEV)
+// 		boot/bootsect(bootsect.S) boot/setup(setup.S) tools/kernel(head.s, main...) KernelImage $(ROOT_DEV) $(SWAP_DEV)
 int main(int argc, char ** argv)
 {
 	int i,c,id;
