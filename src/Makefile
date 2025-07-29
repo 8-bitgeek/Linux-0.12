@@ -129,16 +129,15 @@ clean:
 	$(Q)rm -f init/*.o tools/system boot/*.o typescript* info bochsout.txt
 	$(Q)for i in mm fs kernel lib boot; do make clean -C $$i; done
 
-debug: Image bootimage
-	$(Q)dd if=release/KernelImage of=Images/bootdisk.img bs=512 conv=notrunc,sync
-	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/bootdisk.img -hda Images/rootimage-0.12-hd \
+debug: bootimage
+	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda ../Images/bootdisk.img -hda ../Images/rootimage-0.12-hd \
 		-vnc :1 -serial pty -S -gdb tcp::1234
 
-start: Image bootimage
-	$(Q)dd if=release/KernelImage of=Images/bootdisk.img bs=512 conv=notrunc,sync
-	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda Images/bootdisk.img -hda Images/rootimage-0.12-hd
+start: bootimage
+	$(Q)qemu-system-i386 -m 32M -smp 1,sockets=1,cores=1 -boot a -fda ../Images/bootdisk.img -hda ../Images/rootimage-0.12-hd
 
-bootimage:
-	$(Q)mkdir -p Images
-	$(Q)rm -rf Images/bootdisk.img
-	$(Q)dd if=/dev/zero of=Images/bootdisk.img bs=512 count=2880
+bootimage: Image
+	$(Q)mkdir -p ../Images
+	$(Q)rm -rf ../Images/bootdisk.img
+	$(Q)dd if=/dev/zero of=../Images/bootdisk.img bs=512 count=2880
+	$(Q)dd if=release/KernelImage of=../Images/bootdisk.img bs=512 conv=notrunc,sync

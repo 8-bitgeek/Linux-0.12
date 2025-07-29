@@ -5,9 +5,9 @@
             "name": "Debug Kernel",                             // 配置名称(必选)
             "type": "cppdbg",                                   // 调试器类型: c++(必选)
             "request": "launch",                                // launch(启动可执行程序) / attach(附加到正在运行的进程)(必选)
-            "program": "${workspaceFolder}/tools/system",       // 调试程序的路径(必选)
+            "program": "${workspaceFolder}/src/tools/system",       // 调试程序的路径(必选)
             // "miDebuggerServerAddress": "192.168.192.192:1234",
-            "miDebuggerServerAddress": "localhost:1234",
+            "miDebuggerServerAddress": "ecs.gldwolf.cn:1234",
             "args": [],                                         // 传递给被调试程序的命令行参数(可选)
             "stopAtEntry": false,                               // 是否在程序入口处暂停(可选, 默认 false)
             "cwd": "${workspaceFolder}",                        // 设置当前工作目录 current work dir(可选)
@@ -15,15 +15,15 @@
             "externalConsole": true,                            // 是否使用外部终端运行调试程序(可选, 默认 false)
             "MIMode": "gdb",                                    // 指定调试模式(gdb / lldb)
             "sourceFileMap": {                                  // 源文件映射, 用于调试时将调试信息中的路径映射到本地路径
-                "/root/Linux-0.12": {
-                    "editorPath": "~/Linux-0.12",
+                "/root/Linux-0.12": {                           // 这里是编译时的路径
+                    "editorPath": "~/workspace/c/Linux-0.12",   // 这里是在调试时真实的项目路径
                     "useForBreakpoints" : false
                 }
             },
             "setupCommands": [                                  // 指定启动调试器后要执行的初始化命令
                 {"text": "-enable-pretty-printing"}
             ],
-            "preLaunchTask": "Build and debug Linux"
+            // "preLaunchTask": "Build and debug Linux"
         },
         {
             "name": "Debug MiniCRT NEW",
