@@ -9,3 +9,6 @@ debug:
 
 start:
 	$(MAKE) -C src start
+
+bootimage:
+	$(MAKE) -C src bootimage
