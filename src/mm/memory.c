@@ -836,13 +836,13 @@ void do_no_page(unsigned long error_code, unsigned long address) {
 // 而范围 0~1MB 内存空间用于内核系统(其实内核只使用 0~640KB, 剩下的部分被部分高速缓冲和设备内存占用).
 // 参数 start_mem 是可用作页面分配的主内存区起始地址(已去除 RAMDISK 所占内存空间). 
 // end_mem 是实际物理内存最大地址. 而地址范围 start_mem 到 end_mem 是主内存区.
-void mem_init(long start_mem, long end_mem) {			// start_mem = 4MB, end_mem = 大约 16MB.
+void mem_init(long start_mem, long end_mem) {			// start_mem = 4MB, end_mem = 16MB.
 	int i;
 
 	// 首先将 1MB 到 16MB 范围内所有内存页面对应的内存映射字节数组项置为已占用状态, 即各项字节值全部设置成 USED(100). 
 	// PAGING_PAGES 被定义为(PAGING_MEMORY >> 12), 即 1MB 以上所有物理内存(PAGING_MEMORY)分页后的内存页面数(15MB/4KB = 3840).
 	HIGH_MEMORY = end_mem;									// 设置内存最高端(16MB).
-	for (i = 0; i < PAGING_PAGES; i++) {
+	for (i = 0; i < PAGING_PAGES; i++) { 					// 15MB / 4KB = 3840 pages
 		mem_map[i] = USED;
 	}
 	// 然后计算主内存区起始内存 start_mem 处页面对应 mem_map 数组中的项号 i 和主内存区占用的页面数. 
@@ -851,7 +851,7 @@ void mem_init(long start_mem, long end_mem) {			// start_mem = 4MB, end_mem = �
 	i = MAP_NR(start_mem);									// 主内存区(4-16MB)起始位置处页面号(i = 768).
 	end_mem -= start_mem; 									// 主内存区的大小.
 	// 得到主内存区的页面数量.
-	end_mem >>= 12;											// 主内存区中的总页面数(3072).
+	end_mem >>= 12;											// 主内存区中的总页面数( 12MB / 4906 = 3072).
 	// 将主内存区所有页面使用数置零.
 	while (end_mem-- > 0) {
 		mem_map[i++] = 0;									// 主内存区(4-16MB)页面对应字节值清零(清除已使用标志).

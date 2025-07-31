@@ -622,7 +622,7 @@ int sys_nice(long increment) {
 // 内核调度程序的初始化子程序.
 void sched_init(void) {
 	int i;
-	struct desc_struct * p;										// 描述符表结构指针.
+	struct desc_struct * p;										// 描述符指针.
 
 	// 由于 Linux 系统开发之初, 内核不成熟. 内核代码会被经常修改. 
 	// Linus 怕无意中修改了这些关键性的数据结构, 造成与 POSIX 标准的不兼容. 
@@ -632,18 +632,19 @@ void sched_init(void) {
 	}
 	// 在全局描述符表中设置任务 0 的任务状态段描述符(TSS)和局部数据表描述符(LDT).
 	// FIRST_TSS_ENTRY 和 FIRST_LDT_ENTRY 的值分别是 4 和 5, 定义在 include/linux/sched.h 中. 
-	// gdt 是一个描述符表数组(include/linux/head.h), 实际上对应程序 head.s 中的全局描述符表基址(gdt). 
+	// gdt 是一个描述符数组(include/linux/head.h), 实际上对应程序 head.s 中的全局描述符表基址(gdt). 
 	// 因此 gdt + FIRST_TSS_ENTRY 即为 gdt[FIRST_TSS_ENTRY](即是 gdt[4]), 即 gdt 数组第 4 项的地址.
-	// 参见 include/asm/system.h
+	// 参见 include/asm/system.h. 
+	// 每个任务都对应一个 task_struct, 并在 GDT 中有一个 TSS 和 LDT, 该 TSS(任务状态描述符) 中有 task_struct.tss_struct 的地址.
 	set_tss_desc(gdt + FIRST_TSS_ENTRY, &(init_task.task.tss)); // 在 GDT 中设置任务 0 的任务状态段(TSS)描述符.
 	set_ldt_desc(gdt + FIRST_LDT_ENTRY, &(init_task.task.ldt)); // 在 GDT 中设置任务 0 的局部描述符表(LDT)地址.
 	// 清空任务数组和描述符表项(注意 i = 1 开始, 所以任务 0 的描述符还在). 描述符项结构定义在文件 include/linux/head.h 中.
 	// 此处 p 指向 GDT 中的描述符 6(即 task1 的 tss, 从 0 开始).
-	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt+6 -> 指向任务 1 的描述符: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 
+	p = gdt + FIRST_TSS_ENTRY + 2; 	// gdt[6] -> 指向 task1 的 TSS: 0 - 没有用 null, 1 - 内核代码段 cs, 2 - 内核数据段 ds, 
 									// 3 - 系统段 syscall, 4 - 任务状态段 TSS0, 5 - 局部表 LTD0, 6 - 任务状态段 TSS1 等.
 	// 初始化除 task0 以外的其他进程指针及描述符表.
 	for(i = 1; i < NR_TASKS; i++) {
-		task[i] = NULL; 			// task0 已经初始化过了, 不需要再初始化, 此处从 task1 开始依次初始化每个任务的 tss 和 ldt.
+		task[i] = NULL; 			// task0 已经初始化过了, 不能再置空, 此处从 task1 开始依次初始化每个任务的 tss 和 ldt.
 		p->a = p->b = 0; 			// 初始化 tss_i. tss_i 中的 i 表示任务号.
 		p++;
 		p->a = p->b = 0; 			// 初始化 ldt_i. i 表示任务号.

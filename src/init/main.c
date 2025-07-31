@@ -231,13 +231,13 @@ int main(void) {									/* This really IS void, no error here. */
 	// 高速缓冲区主要用于缓存硬盘或软盘等块设备中的数据(数据块大小为 1KB), 
 	// 当一个进程需要硬盘或软盘中的数据时, 系统会首先把数据读取到高速缓冲区内存中.
 	// 当有数据需要写到块设备上时, 系统也是将数据先写入到高速缓冲区中, 然后由块设备驱动程序写到对应的设备上.
-	// 主内存区是供所有程序可以随时申请和使用的内存区域.
+	// 主内存区是供所有程序可以随时申请和使用的内存区域. EXT_MEM_K 可以通过 `x /1dh 0x90002` 查看.
 	memory_end = (1 << 20) + (EXT_MEM_K << 10);						// 内存大小 = 1MB(1<<20) + [扩展内存(KB) * 1024] 字节.
 	memory_end &= 0xfffff000;										// 4KB(一页) 对齐.
 	if (memory_end > 16 * 1024 * 1024) {							// 如果内存d大小超过 16MB, 则按 16MB 计.
 		memory_end = 16 * 1024 * 1024;
 	}
-	// 根据物理内存的大小设置高速缓冲区的末端大小.
+	// 根据物理内存的大小设置高速缓冲区的末端位置.
 	if (memory_end > 12 * 1024 * 1024) {							// 如果 16MB >= 内存 > 12MB, 则设置高速缓冲区末端 = 4MB.
 		buffer_memory_end = 4 * 1024 * 1024;
 	} else if (memory_end > 6 * 1024 * 1024) {						// 否则若 12MB >= 内存 > 6MB, 则设置高速缓冲区末端 = 2MB.
@@ -255,7 +255,7 @@ int main(void) {									/* This really IS void, no error here. */
 	// 进行内核的所有初始化操作.
 	mem_init(main_memory_start, memory_end);		// 主内存区初始化. (mm/memory.c) 初始化 mem_map[], 主内存区为 4MB - mem_end. 一页大小为 4KB.
 	trap_init();                              		// 陷阱门(硬件中断向量)初始化. (kernel/traps.c)
-	blk_dev_init();									// 块设备初始化. (blk_drv/ll_rw_blk.c) 
+	blk_dev_init();									// 块设备初始化(将所有的块设备请求项 request[] 清空). (blk_drv/ll_rw_blk.c) 
 	chr_dev_init();									// 字符设备初始化. 目前该函数为空. (chr_drv/tty_io.c)
  	tty_init();										// tty 初始化. (chr_drv/tty_io.c)
 	time_init();									// 设置开机启动时间.
