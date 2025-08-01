@@ -1,5 +1,5 @@
 all: 
-	$(MAKE) -C src
+	$(MAKE) -C src bootimage
 
 clean:
 	$(MAKE) -C src clean
@@ -9,6 +9,3 @@ debug:
 
 start:
 	$(MAKE) -C src start
-
-bootimage:
-	$(MAKE) -C src bootimage

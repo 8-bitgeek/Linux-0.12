@@ -27,12 +27,12 @@
 cmd: `x /nfu addr`
 
 n: the repeat count
-f: the display format, x - hexhexadecimal, o - octal, d - signed decimal, u - unsigned decimal, a - address(指针值), c - character, i - instruction, f - float, t - binary, s - string
+f: the display format, x - hexadecimal, o - octal, d - signed decimal, u - unsigned decimal, a - address(指针值), c - character, i - instruction, f - float, t - binary, s - string
 u: the unit size, b - bytes, h - half word(2bytes), w - words(4bytes), g - Giant words(8bytes)
 
 ```gdb
-# 打印内存 0x8888 开始后的 10 个 word(w - words[4bytes], h - half word[2bytes]) 数据(h for hex, d for digital, b for byte)
--exec x /10hw *0x8888
+# 以 hex 打印内存 0x8888 开始后的 10 个 words
+-exec x /10xw *0x8888
 ```
 
 ### 在内核态下观察进程的内存空间中的变量值

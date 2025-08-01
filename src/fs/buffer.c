@@ -583,7 +583,7 @@ void buffer_init(long buffer_end) {					// buffer_end = 4MB.
 	// h 是指向缓冲头结构的指针, 而 h+1 是指向内存地址连续的下一个缓冲头地址, 也可以说是指向 h 缓冲头的末端 + 1byte. 
 	// 为了保证有足够长度的内存来存储一个缓冲头结构, 需要 b 所指向的内存块地址 >= h 缓冲头的末端, 即要求 >= h+1.
 	// 注意: 缓冲头的第一项指向缓冲区的末端. 参见 P635 图 12-16. 缓冲块头与数据块一一对应, 对应关系不会改变.
-	while ((b -= BLOCK_SIZE) >= ((void *) (h + 1))) { 	// BLOCK_SIZE = 1024Byte
+	while ((b -= BLOCK_SIZE) >= ((void *) (h + 1))) { 	// BLOCK_SIZE = 1024 Bytes
 		h->b_dev = 0;								// 使用该缓冲块的设备号.
 		h->b_dirt = 0;								// 脏标志, 即缓冲块修改标志.
 		h->b_count = 0;								// 缓冲块引用计数.
@@ -592,7 +592,7 @@ void buffer_init(long buffer_end) {					// buffer_end = 4MB.
 		h->b_wait = NULL;							// 指向等待该缓冲块解锁的进程.
 		h->b_next = NULL;							// 指向具有相同 hash 值的下一个缓冲头.
 		h->b_prev = NULL;							// 指向具有相同 hash 值的前一个缓冲头.
-		h->b_data = (char *) b;						// 指向对应缓冲数据块(1024 字节).
+		h->b_data = (char *) b;						// 指向对应缓冲数据块(1KB).
 		h->b_prev_free = h - 1;						// 指向空闲链表中前一项.
 		h->b_next_free = h + 1;						// 指向空闲链表中下一项.
 		h++;										// h 指向下一个缓冲头位置.
