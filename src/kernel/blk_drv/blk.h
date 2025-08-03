@@ -41,7 +41,7 @@ struct request {
 	unsigned long sector;   			// 分区内的扇区号. (1 缓冲块 = 2 扇区)
 	unsigned long nr_sectors;			// 读/写扇区数.
 	char * buffer;                  	// 数据缓冲区(主内存区).
-	struct task_struct * waiting;   	// 等待该请求完成操作的任务.
+	struct task_struct * waiting;   	// 等待该请求完成的任务.
 	struct buffer_head * bh;        	// 高速缓冲区头指针(include/linux/fs.h).
 	struct request * next;          	// 指向下一请求项.
 };

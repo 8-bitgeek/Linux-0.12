@@ -295,14 +295,14 @@ struct task_struct {
 						{0x9f, 0xc0fa00}, /* 段基地址 0x0; 段限长 636KB; 特权级 DPL = 3; 代码段, 可读/可执行, 即任务 0 用的也是内核的代码段, 只不过特权级是 3 */\
 						{0x9f, 0xc0f200}, /* 段基地址 0x0; 段限长 636KB; 特权级 DPL = 3; 数据段, 可读/可写 */\
 					}, \
-	/*tss*/ \
-					/* 前一任务链接的 tss 段选择符,             esp0, */ \
-					{        0,                   PAGE_SIZE + (long) &init_task, \
-					/*  ss0,  esp1, ss1,  esp2,  ss2,    cr3(页目录基地址寄存器, pdbr) TASK-0 使用内核的页目录表, 内存地址为 0x0 */ \
-						0x10,  0,    0,     0,     0,       (long) &pg_dir, \
+	/* tss */ \
+					/* 前一任务链接的 tss 段选择符,         esp0(内核态下 esp), */ \
+					{        0,                       PAGE_SIZE + (long) &init_task, \
+					/* ss0(内核态下 ss), esp1, ss1,  esp2,  ss2,  cr3(页目录基地址寄存器, pdbr) TASK-0 使用内核的页目录表, 内存地址为 0x0 */ \
+						0x10,  			 0,    0,     0,     0,     (long) &pg_dir, \
 					/*  eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi */ \
 		 				0,     0,    0,   0,   0,   0,   0,   0,   0,   0, \
-					/*  ex,   cs,   ss,   ds,   fs,   gs  0x17 ---> 0b 00010(2 - data) 1(LDT) 11(RPL=3) */ \
+					/*  ex,   cs,    ss,   ds,   fs,   gs  0x17 ---> 0b 00010(2 - data) 1(LDT) 11(RPL=3) */ \
 		 				0x17, 0x17, 0x17, 0x17, 0x17, 0x17, \
 					/* LDT 段选择符,    IO 位图地址 */ \
 		 				_LDT(0),      0x80000000, \
