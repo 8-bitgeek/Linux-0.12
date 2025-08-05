@@ -118,7 +118,8 @@ reschedule:
 # 中断调用服务列表在 sys_call_table 中(include/linux/sys.h).
 # system_call 陷阱门在 GDT 中的特权级(DPL)是 3, 即所有特权级的代码都可以调用.
 .align 4
-# 因为用户态代码在调用 int 0x80 时会发生堆栈切换, 所以此时的堆栈为当前任务 TSS 指定的内核态堆栈(ss0 = 0x10)
+# 因为用户态代码在调用 int $0x80 时会发生堆栈切换, 所以此时的堆栈为当前任务 TSS 指定的内核态堆栈(ss0 = 0x10)
+# 比如如果当前任务是 task-0, 则此时堆栈段为 &(init_task.stack).
 system_call:
 	push %ds						# 保存原(调用方)段寄存器值.
 	push %es
@@ -139,7 +140,7 @@ system_call:
 	mov %dx, %ds 					# ds/es 指向内核数据段.
 	mov %dx, %es
 	movl $0x17, %edx				# fs points to local data space.
-	mov %dx, %fs 					# fs 指向任务局部数据段.
+	mov %dx, %fs 					# fs 指向任务局部数据段.(可以用于从内核数据段复制数据到用户数据段)
 	cmpl NR_syscalls, %eax 			# 如果 eax 中的值大于 NR_syscalls 则表示超出调用号范围(>= 87).
 	jae bad_sys_call 				# 调用号如果超出范围(>= 87)的话就跳转.
 

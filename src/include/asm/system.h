@@ -93,16 +93,16 @@ __asm__ (\
 // 处理器使用这个长指针把程序执行权转移到代码段中异常或中断的处理过程中.
 // 参数: n - 中断号; addr - 中断程序偏移地址.
 // &idt[n] 是中断描述表中中断号 n 对应项的偏移值; 中断描述符的类型是 14(中断门), 特权级是 0.
-#define set_intr_gate(n, addr) \
-	_set_gate(&idt[n], 14, 0, addr)
+#define set_intr_gate(n, addr) _set_gate(&idt[n], 14, 0, addr)
 
 // 设置陷阱门函数(DPL = 0). 陷阱门用于处理异常(故障, 陷阱, 中止).
 // 参数: n - 中断号; addr - 中断程序偏移地址.
 // &idt[n] 是中断描述符表中中断号 n 对应项的偏移值; 中断描述符的类型是 15, 特权级是 0.
-#define set_trap_gate(n, addr) \
-	_set_gate(&idt[n], 15, 0, addr)
+#define set_trap_gate(n, addr) _set_gate(&idt[n], 15, 0, addr)
 
-// 设置系统**陷阱门**函数(特权级 DPL = 3).
+// 设置系统**陷阱门**函数(特权级 DPL = 3). 用户态的代码可以通过该描述符实现内核态的切换, 并调用内核代码.
+// 用户态 CPL = 3, 是不可以直接调用内核代码段的, 但是通过调用该门描述符可以实现提权:
+// 用户态 CPL = 3, 门描述符 DPL = 3, 目标代码段 DPL = 0, 用户态通过调用(中断）门描述符来实现受控的特权级变化, 最终 CPL = 0.
 // 上面 set_trap_gate() 设置的描述符的特权级(DPL)为 0, 而这里是 3. 
 // 因此 set_system_gate() 设置的中断处理过程能够被所有特权级的程序执行, 
 // 比如 system_call 陷阱门的 DPL = 3, 这表示用户态的代码可以调用这个陷阱门, 从而实现对系统代码的调用.
@@ -110,8 +110,7 @@ __asm__ (\
 // 参数: n - 中断号. addr - 中断程序偏移值.
 // &idt[n] 是中断描述符表中中断号 n 对应项的偏移值; 
 // 中断描述符的类型是 15(陷阱门), 特权级 DPL 是 3(所有特权级的代码都可以调用这类门描述符).
-#define set_system_gate(n, addr) \
-	_set_gate(&idt[n], 15, 3, addr)
+#define set_system_gate(n, addr) _set_gate(&idt[n], 15, 3, addr)
 
 // 设置段描述符函数(内核中没有用到).
 // 参数: gate_addr - 描述符地址; type - 描述符中类型域值; 

@@ -35,6 +35,12 @@ u: the unit size, b - bytes, h - half word(2bytes), w - words(4bytes), g - Giant
 -exec x /10xw *0x8888
 ```
 
+### 打印当前 eip 后续的 10 条指令
+
+```gdb
+-exec x /10i $eip
+```
+
 ### 在内核态下观察进程的内存空间中的变量值
 
 原理是: 进程的 nr * 64MB 得到的进程的基地址, 加上变量的偏移地址即是变量的线性地址, 由于使用同一个页目录表, 所以即可从对应的物理中获取变量的值.
