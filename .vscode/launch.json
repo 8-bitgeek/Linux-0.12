@@ -10,13 +10,13 @@
             "miDebuggerServerAddress": "localhost:1234",
             "args": [],                                         // 传递给被调试程序的命令行参数(可选)
             "stopAtEntry": false,                               // 是否在程序入口处暂停(可选, 默认 false)
-            "cwd": "${workspaceFolder}/src",                        // 设置当前工作目录 current work dir(可选)
+            "cwd": "${workspaceFolder}",                        // 设置当前工作目录 current work dir(可选)
             "environment": [],                                  // 设置调试时的环境变量(可选)
             "externalConsole": true,                            // 是否使用外部终端运行调试程序(可选, 默认 false)
             "MIMode": "gdb",                                    // 指定调试模式(gdb / lldb)
             "sourceFileMap": {                                  // 源文件映射, 用于调试时将调试信息中的路径映射到本地路径
                 "/root/Linux-0.12": {                           // 这里是编译时的路径
-                    "editorPath": "~/Workspace/c/Linux-0.12/src",   // 这里是在调试时真实的项目路径
+                    "editorPath": "~/Workspace/c/Linux-0.12",   // 这里是在调试时真实的项目路径
                     "useForBreakpoints" : false
                 }
             },

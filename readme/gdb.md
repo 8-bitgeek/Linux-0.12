@@ -1,3 +1,13 @@
+### 打印各个寄存器的信息(qemu gdb only), 可以查看详细信息，比如 DPL
+
+```gdb
+-exec monitor info registers
+
+# 输出示例:
+ES =  0010        00000000  00ffffff   00c09300    DPL=0    DS   [-WA]
+     段选择符       段基地址    段限长     属性字段      DPL          权限标志: (R - 可读, W - 可写, A - 已访问)
+```
+
 ### 使用给定地址打断点
 
 ```gdb

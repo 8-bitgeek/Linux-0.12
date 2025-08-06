@@ -72,7 +72,7 @@ int copy_mem(int nr, struct task_struct * p)
 	// 由于 Linux-0.12 内核还不支持代码段和数据段隔离的情况, 因此这里需要检查代码段和数据段基址是否都相同, 
 	// 并且要求数据段的长度至少不小于代码段的长度, 否则内核显示出错信息, 并停止运行.
 	// get_limit() 和 get_base() 定义在 include/linux/sched.h.
-	code_limit = get_limit(0x0f); 							// 0x0f = 0b-00001-1-11 (LDT 表项 1[从 0 开始] 局部代码段, 特权级 3)
+	code_limit = get_limit(0x0f); 							// 0x0f = 0b-00001-1[LDT]-11[RPL] (LDT 表项 1[从 0 开始] 局部代码段, 特权级 3)
 	data_limit = get_limit(0x17); 							// 父进程(当前进程)的数据段长度: 0x17 = 0b-00010-1-11 (LDT 表项 2, 局部数据段, 特权级 3)
 	old_code_base = get_base(current->ldt[1]); 				// 这里的 ldt 是 task_struct 结构中的 ldt 字段, 即当前任务的局部描述符表
 	old_data_base = get_base(current->ldt[2]); 				// 获取当前进程(父进程)的代码段和数据段基地址.
@@ -88,14 +88,13 @@ int copy_mem(int nr, struct task_struct * p)
 	new_data_base = new_code_base = nr * TASK_SIZE; 		// ** 任务的段基地址 = 任务号 * 64MB ** (线性地址)
 	p->start_code = new_code_base; 							// nr = 1 时, start_code = 64 * 1024 * 1024Byte(设置代码段基地址).
 	// 不同进程设置不同的段基地址是进程之间内存隔离的第一个手段, 比如任务 0 的段基地址是 0x0, 任务 1 的段基地址是 64MB, 
-	// 那么任务 0 访问 0x01 时, 转换为线性地址就是 0x01, 任务 1 访问 0x01 时, 转换为线性地址 64MB + 0x01, 然后再经过不同的页转换为实际的物理内存地址.
-	// 由于此处在 LDT 中设置的段基地址等同于线性地址(所有进程共用同一个页目录表), 所以在线性地址到物理地址转换时, 
-	// 该进程的段基地址就是一个很大的地址, 在查找对应的页目录项时就会定位到该进程对应的页目录项!!!
+	// 那么 TASK-0 访问 0x01 时, 转换为线性地址就是 0x0 + 0x01, 
+	// TASK-1 访问 0x01 时, 转换为线性地址 64MB + 0x01, 然后再经过不同的页转换为实际的物理内存地址.
 	// 以 TASK-1 举例, new_code_base == 67108864 = 64MB, 所以在定位页目录项时, 
 	// 起始页目录项就是 0x4(64MB >> 22 = 16[目录项所在地址] / 4[每个目录项占 4 字节] = 4[项号]), 即页目录表中第五项.
 	// TODO: 我觉得对于不同的进程可以使用不同的 cr3 值来实现不共用同一张页目录表, 
 	// 比如 TASK-0 的 cr3 = 0x0, TASK-1 的 cr3 = 0x4, 这样可以使用不同的页目录表, 从而实现相同不同进程使用相同的线性基地址.
-	set_base(p->ldt[1], new_code_base); 					// 因为 Linux-0.12 中所有进程共用同一个页目录表, 所以, 共用同一个大的线性地址(4GB).
+	set_base(p->ldt[1], new_code_base); 	// 因为 Linux-0.12 中所有进程共用同一个页目录表, 所以, 共用同一个大的线性地址(4GB).
 	set_base(p->ldt[2], new_data_base);
 	if (copy_page_tables(old_data_base, new_data_base, data_limit)) {
 		free_page_tables(new_data_base, data_limit);
@@ -140,8 +139,8 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs,  		// 这几个�
 	if (!p) return -EAGAIN; 						// 如果申请到的空闲页面的物理地址为 0x0, 则表示申请失败, 返回出错码.
 		
 	task[nr] = p; 									// 任务项指向刚申请的进程物理内存地址; task_struct * task[NR_TASKS] 定义在 kernel/sched.c 中.
-	// 复制当前任务(也是新进程的父进程)体信息, 作为新进程的初始信息
-	*p = *current;	/* NOTE! this doesn't copy the supervisor stack */	/* 注意! 这样不会复制超级用户堆栈(只复制当前进程的属性信息) */
+	// 复制当前任务(也是新进程的父进程)体信息, 作为新进程的初始信息. /* 注意! 这样不会复制内核态堆栈(只复制当前进程的属性信息) */
+	*p = *current;	/* NOTE! this doesn't copy the supervisor stack */	
 	// 随后对复制来的进程结构内容进行一些修改, 作为新进程的任务结构. 
 	// 先将新进程的状态置为不可中断等待状态, 以防止内核调度其执行. 
 	// 然后设置新进程的进程号为之前申请的 last_pid, 并初始化进程运行时间片值等于其 priorty 值(一般为 16 个嘀嗒).
