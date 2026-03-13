@@ -212,7 +212,7 @@ int copy_page_tables(unsigned long from, unsigned long to, long size) {
 	unsigned long this_page; 								// 存放页表项的内容.
 	unsigned long * from_dir, * to_dir; 					// 父进程的页目录项地址和子进程的页目录项地址.
 	unsigned long new_page;
-	unsigned long nr;
+	unsigned long nr; 										// 要复制的页目表项数.
 
 	// 首先检测参数给出的源地址 from 和目的地址 to 的有效性. 源地址和目的地址都需要在 4MB 内存边界地址上. 否则出错死机. 
 	// 之所以这样要求是因为一个页表的 1024 项可管理 4MB 内存. 
@@ -232,7 +232,7 @@ int copy_page_tables(unsigned long from, unsigned long to, long size) {
 	// 下面开始对每个页目录项依次申请 1 页内存来保存对应的页表, 并且开始页表项复制操作. 
 	// 如果目的目录项指定的页表已经存在(P = 1), 则出错死机. 
 	// 如果源目录项无效, 即指定的页表不存在(P = 0), 则继续循环处理下一个页目录项.
-	for(; size-- > 0; from_dir++, to_dir++) {
+	for(; size-- > 0; from_dir++, to_dir++) { 							// size 代表要复制的页目录项数.
 		if (1 & *to_dir) { 												// 目的页目录项已存在(P = 1)则报错.
 			panic("copy_page_tables: already exist");
 		}
@@ -257,7 +257,7 @@ int copy_page_tables(unsigned long from, unsigned long to, long size) {
 		// 然后针对当前处理的页目录项对应的页表, 设置需要复制的页面项数. 
 		// 如果是在内核空间(要复制的是内核的页表, 起始地址是 0x0), 则仅需复制前 160 页对应的页表项(nr = 160), 对应于开始 640KB 物理内存. 
 		// 否则需要复制一个页表中的所有 1024 个页表项(nr = 1024), 可映射 4MB 物理内存. (一个页目录项[一个页表]可以映射 4MB 物理内存)
-		nr = (from == 0) ? 0xA0 : 1024; 								// from == 0 说明是第一次 fork 内核空间, 只需要复制页表的前 160 项.
+		nr = (from == 0) ? 160 : 1024; 								// from == 0 说明是第一次 fork 内核空间, 只需要复制页表的前 160 项.
 		// 开始循环复制指定的 nr 个源页表项对新进程的页表中. 
 		// 先取出源页表项内容, 如果当前源页面没有使用(页表项内容为 0), 则不用复制该页表项, 继续处理下一项.
 		/*** !!!由这段代码可以知道, 所有进程对于内核段(640KB 空间)的地址映射都是相同的, 因为都是复制的内核的页表内容!!! ***/
